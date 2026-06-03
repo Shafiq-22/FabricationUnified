@@ -91,7 +91,8 @@ with new_user as (
   insert into auth.users (
     instance_id, id, aud, role, email, encrypted_password,
     email_confirmed_at, created_at, updated_at,
-    raw_app_meta_data, raw_user_meta_data, is_sso_user, is_anonymous
+    raw_app_meta_data, raw_user_meta_data, is_sso_user, is_anonymous,
+    confirmation_token, recovery_token, email_change, email_change_token_new
   )
   values (
     '00000000-0000-0000-0000-000000000000', gen_random_uuid(),
@@ -99,7 +100,8 @@ with new_user as (
     extensions.crypt('CHANGE_ME', extensions.gen_salt('bf')),
     now(), now(), now(),
     jsonb_build_object('provider','email','providers', array['email']),
-    jsonb_build_object('full_name','Fabrication Manager'), false, false
+    jsonb_build_object('full_name','Fabrication Manager'), false, false,
+    '', '', '', ''   -- GoTrue token columns must be '' (not NULL) or login fails
   ) returning id
 ), ident as (
   insert into auth.identities (id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
