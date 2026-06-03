@@ -8,7 +8,7 @@ export function PageHeader({
   children?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-end justify-between gap-4 border-b border-border bg-[hsl(220_18%_11%)] px-6 py-4">
+    <div className="flex flex-wrap items-end justify-between gap-4 border-b border-border bg-card px-6 py-4">
       <div className="min-w-0">
         <h1 className="text-lg font-semibold tracking-tight">{title}</h1>
         {description && (

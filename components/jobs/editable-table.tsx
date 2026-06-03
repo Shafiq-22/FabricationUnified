@@ -111,7 +111,7 @@ export function EditableTable({
       <div className="overflow-x-auto">
         <table className="w-full text-xs tabular">
           <thead>
-            <tr className="border-b border-panel-border text-panel-foreground/60">
+            <tr className="header-band border-b border-panel-border">
               {columns.map((c) => (
                 <th
                   key={c.key}
@@ -149,7 +149,7 @@ export function EditableTable({
                         value={(r[c.key] as string | number | undefined) ?? ""}
                         placeholder={c.placeholder}
                         onChange={(e) => set(r._key, c.key, e.target.value)}
-                        className={`h-7 w-full border-0 bg-transparent px-1 text-xs outline-none focus:bg-white focus:ring-1 focus:ring-steel ${
+                        className={`h-7 w-full border-0 bg-transparent px-1 text-xs outline-none focus:bg-secondary/50 focus:ring-1 focus:ring-steel ${
                           c.align === "right" ? "text-right" : ""
                         }`}
                       />

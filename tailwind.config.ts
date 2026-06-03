@@ -59,20 +59,22 @@ const config: Config = {
           muted: "hsl(var(--panel-muted))",
           border: "hsl(var(--panel-border))",
         },
-        // Status accents used across job badges / KPIs.
+        // Job Book palette: teal #156082, orange #E97132, gold #FFC000, navy.
         steel: {
-          DEFAULT: "hsl(205 85% 52%)",
-          muted: "hsl(205 40% 32%)",
+          DEFAULT: "hsl(197 73% 30%)",
+          muted: "hsl(197 45% 48%)",
         },
         amber: {
-          DEFAULT: "hsl(33 95% 53%)",
-          muted: "hsl(33 50% 35%)",
+          DEFAULT: "hsl(22 81% 55%)",
+          muted: "hsl(22 55% 45%)",
         },
+        gold: "hsl(45 100% 50%)",
+        navy: "hsl(209 61% 15%)",
         status: {
-          qtn: "hsl(215 14% 55%)",
-          inp: "hsl(33 95% 53%)",
-          com: "hsl(142 65% 45%)",
-          del: "hsl(205 85% 55%)",
+          qtn: "hsl(213 14% 45%)",
+          inp: "hsl(38 100% 38%)",
+          com: "hsl(146 100% 33%)",
+          del: "hsl(196 89% 40%)",
         },
       },
       borderRadius: {

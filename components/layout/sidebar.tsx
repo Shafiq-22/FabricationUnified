@@ -17,7 +17,7 @@ export function Sidebar({ tier }: { tier: Tier }) {
   return (
     <aside
       className={cn(
-        "flex h-full flex-col border-r border-border bg-[hsl(220_18%_11%)] transition-[width] duration-150",
+        "flex h-full flex-col border-r border-border bg-card transition-[width] duration-150",
         collapsed ? "w-14" : "w-56",
       )}
     >

@@ -184,7 +184,7 @@ function QuoteFinancials({ job, editable }: { job: JobView; editable: boolean })
             value={qbm}
             disabled={!editable}
             onChange={(e) => setQbm(e.target.value)}
-            className="h-7 bg-white text-xs text-panel-foreground"
+            className="h-7 bg-background text-xs text-panel-foreground"
           />
         </div>
         <div className="space-y-1">
@@ -195,7 +195,7 @@ function QuoteFinancials({ job, editable }: { job: JobView; editable: boolean })
             value={marginPct}
             disabled={!editable}
             onChange={(e) => setMarginPct(e.target.value)}
-            className="h-7 bg-white text-xs text-panel-foreground"
+            className="h-7 bg-background text-xs text-panel-foreground"
           />
         </div>
       </div>
@@ -248,7 +248,7 @@ function ActualFinancials({ job, editable }: { job: JobView; editable: boolean }
             value={actual}
             disabled={!editable}
             onChange={(e) => setActual(e.target.value)}
-            className="h-7 bg-white text-xs text-panel-foreground"
+            className="h-7 bg-background text-xs text-panel-foreground"
           />
         </div>
         <div className="space-y-1">
@@ -259,7 +259,7 @@ function ActualFinancials({ job, editable }: { job: JobView; editable: boolean }
             value={charge}
             disabled={!editable}
             onChange={(e) => setCharge(e.target.value)}
-            className="h-7 bg-white text-xs text-panel-foreground"
+            className="h-7 bg-background text-xs text-panel-foreground"
           />
         </div>
       </div>

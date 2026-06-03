@@ -3,73 +3,48 @@
 @tailwind utilities;
 
 /*
- * Industrial-utilitarian theme: dark-dominant chrome with high-contrast light
- * "instrument panel" data surfaces. Sharp corners, technical typography.
+ * Light theme matching the BAF Job Book workbook:
+ *   teal #156082 (primary) · orange #E97132 (accent) · navy #0E2841 (text)
+ *   blue-grey #D6DCE4 header bands · gold #FFC000 / green #00B050 status.
+ * White data surfaces on a cool near-white background.
  */
 @layer base {
   :root {
-    --background: 220 18% 9%;
-    --foreground: 210 16% 90%;
+    --background: 210 20% 97%;
+    --foreground: 209 61% 15%;
 
-    --card: 220 16% 12%;
-    --card-foreground: 210 16% 90%;
+    --card: 0 0% 100%;
+    --card-foreground: 209 61% 15%;
 
-    --popover: 220 18% 11%;
-    --popover-foreground: 210 16% 90%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 209 61% 15%;
 
-    --primary: 205 85% 52%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 197 73% 30%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 12% 18%;
-    --secondary-foreground: 210 16% 90%;
+    --secondary: 213 27% 87%;
+    --secondary-foreground: 209 61% 18%;
 
-    --muted: 220 12% 16%;
-    --muted-foreground: 215 12% 62%;
+    --muted: 210 20% 93%;
+    --muted-foreground: 213 14% 40%;
 
-    --accent: 33 95% 53%;
-    --accent-foreground: 220 25% 10%;
+    --accent: 22 81% 55%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 72% 45%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 220 12% 20%;
-    --input: 220 12% 22%;
-    --ring: 205 85% 52%;
+    --border: 214 22% 83%;
+    --input: 214 22% 80%;
+    --ring: 197 73% 30%;
 
-    /* Light data panels rendered against the dark chrome. */
-    --panel: 210 24% 96%;
-    --panel-foreground: 220 24% 14%;
-    --panel-muted: 214 18% 88%;
-    --panel-border: 214 16% 80%;
+    /* Data panels mirror the white spreadsheet surface. */
+    --panel: 0 0% 100%;
+    --panel-foreground: 209 61% 15%;
+    --panel-muted: 213 27% 90%;
+    --panel-border: 214 20% 84%;
 
     --radius: 0.25rem;
-  }
-
-  /* Dark is the only theme; mirror tokens under .dark for shadcn components. */
-  .dark {
-    --background: 220 18% 9%;
-    --foreground: 210 16% 90%;
-    --card: 220 16% 12%;
-    --card-foreground: 210 16% 90%;
-    --popover: 220 18% 11%;
-    --popover-foreground: 210 16% 90%;
-    --primary: 205 85% 52%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 220 12% 18%;
-    --secondary-foreground: 210 16% 90%;
-    --muted: 220 12% 16%;
-    --muted-foreground: 215 12% 62%;
-    --accent: 33 95% 53%;
-    --accent-foreground: 220 25% 10%;
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 220 12% 20%;
-    --input: 220 12% 22%;
-    --ring: 205 85% 52%;
-    --panel: 210 24% 96%;
-    --panel-foreground: 220 24% 14%;
-    --panel-muted: 214 18% 88%;
-    --panel-border: 214 16% 80%;
   }
 }
 
@@ -78,13 +53,12 @@
     @apply border-border;
   }
   html {
-    color-scheme: dark;
+    color-scheme: light;
   }
   body {
     @apply bg-background text-foreground font-sans antialiased;
     font-feature-settings: "tnum" 1, "cv03" 1;
   }
-  /* Tabular numbers everywhere data is shown. */
   table,
   .tabular {
     font-variant-numeric: tabular-nums;
@@ -92,7 +66,7 @@
 }
 
 @layer components {
-  /* Light instrument-panel surface for dense data. */
+  /* White instrument-panel surface for dense data. */
   .panel-surface {
     @apply bg-panel text-panel-foreground border border-panel-border;
   }
@@ -100,21 +74,25 @@
   .code-chip {
     @apply font-mono text-xs tracking-tight;
   }
+  /* Blue-grey header band echoing the workbook's column headers. */
+  .header-band {
+    @apply bg-secondary text-secondary-foreground;
+  }
 }
 
-/* Thin industrial scrollbars. */
+/* Light industrial scrollbars. */
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
 ::-webkit-scrollbar-track {
-  background: hsl(220 18% 7%);
+  background: hsl(210 20% 92%);
 }
 ::-webkit-scrollbar-thumb {
-  background: hsl(220 10% 28%);
-  border: 2px solid hsl(220 18% 7%);
+  background: hsl(213 18% 70%);
+  border: 2px solid hsl(210 20% 92%);
   border-radius: 0;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(205 40% 40%);
+  background: hsl(197 73% 40%);
 }

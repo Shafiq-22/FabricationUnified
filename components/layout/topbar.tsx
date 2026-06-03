@@ -10,7 +10,7 @@ export function Topbar() {
   const profile = useProfile();
 
   return (
-    <header className="flex h-12 shrink-0 items-center justify-between border-b border-border bg-[hsl(220_18%_11%)] px-4">
+    <header className="flex h-12 shrink-0 items-center justify-between border-b border-border bg-card px-4">
       <InactivityLogout />
       <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
         Workshop&nbsp;·&nbsp;Steel&nbsp;Fabrication
