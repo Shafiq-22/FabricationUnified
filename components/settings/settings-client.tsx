@@ -6,6 +6,8 @@ import { Plus, Pencil, Save } from "lucide-react";
 import {
   updateRoleName,
   updateCompanyConfig,
+  updateMargins,
+  changeMyPassword,
   addLabourRate,
   updateLabourRate,
   toggleLabourRate,
@@ -48,11 +50,13 @@ export function SettingsClient({
   company,
   department,
   rates,
+  margins,
 }: {
   roles: RoleConfig[];
   company: string;
   department: string;
   rates: LabourRate[];
+  margins: { material: number; workforce: number; consumables: number };
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -87,6 +91,18 @@ export function SettingsClient({
           onSave={(c, d) => run(() => updateCompanyConfig(c, d), "Saved")}
           pending={pending}
         />
+      </Card>
+
+      <Card title="Section Margins (%)">
+        <MarginsForm
+          margins={margins}
+          pending={pending}
+          onSave={(v) => run(() => updateMargins(v), "Margins saved — jobs recomputed")}
+        />
+      </Card>
+
+      <Card title="Change My Password">
+        <PasswordForm />
       </Card>
 
       <div className="lg:col-span-2">
@@ -215,6 +231,92 @@ function CompanyForm({
       </div>
       <Button size="sm" disabled={pending} onClick={() => onSave(c, d)}>
         <Save className="h-3.5 w-3.5" /> Save
+      </Button>
+    </div>
+  );
+}
+
+function MarginsForm({
+  margins,
+  onSave,
+  pending,
+}: {
+  margins: { material: number; workforce: number; consumables: number };
+  onSave: (v: Record<string, string>) => void;
+  pending: boolean;
+}) {
+  const [m, setM] = useState(String(margins.material));
+  const [w, setW] = useState(String(margins.workforce));
+  const [c, setC] = useState(String(margins.consumables));
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-muted-foreground">
+        Applied to every job&apos;s quote: section Total = Sub-total × (1 + margin %).
+        Saving recomputes all jobs.
+      </p>
+      <div className="grid grid-cols-3 gap-2">
+        <div className="space-y-1">
+          <Label className="text-[10px] uppercase text-muted-foreground">Material</Label>
+          <Input type="number" step="0.1" value={m} onChange={(e) => setM(e.target.value)} className="h-8 text-sm" />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-[10px] uppercase text-muted-foreground">Workforce</Label>
+          <Input type="number" step="0.1" value={w} onChange={(e) => setW(e.target.value)} className="h-8 text-sm" />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-[10px] uppercase text-muted-foreground">Consumables</Label>
+          <Input type="number" step="0.1" value={c} onChange={(e) => setC(e.target.value)} className="h-8 text-sm" />
+        </div>
+      </div>
+      <Button
+        size="sm"
+        disabled={pending}
+        onClick={() => onSave({ material_margin: m, workforce_margin: w, consumables_margin: c })}
+      >
+        <Save className="h-3.5 w-3.5" /> Save Margins
+      </Button>
+    </div>
+  );
+}
+
+function PasswordForm() {
+  const { toast } = useToast();
+  const [pending, start] = useTransition();
+  const [pw, setPw] = useState("");
+  const [confirm, setConfirm] = useState("");
+
+  const submit = () => {
+    if (pw.length < 8) {
+      toast({ variant: "destructive", title: "Too short", description: "Minimum 8 characters." });
+      return;
+    }
+    if (pw !== confirm) {
+      toast({ variant: "destructive", title: "Mismatch", description: "Passwords do not match." });
+      return;
+    }
+    start(async () => {
+      const res = await changeMyPassword(pw);
+      if (res.error) toast({ variant: "destructive", title: "Failed", description: res.error });
+      else {
+        toast({ title: "Password changed" });
+        setPw("");
+        setConfirm("");
+      }
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="space-y-1">
+        <Label className="text-[10px] uppercase text-muted-foreground">New Password</Label>
+        <Input type="password" value={pw} onChange={(e) => setPw(e.target.value)} className="h-8 text-sm" autoComplete="new-password" />
+      </div>
+      <div className="space-y-1">
+        <Label className="text-[10px] uppercase text-muted-foreground">Confirm Password</Label>
+        <Input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} className="h-8 text-sm" autoComplete="new-password" />
+      </div>
+      <Button size="sm" disabled={pending} onClick={submit}>
+        <Save className="h-3.5 w-3.5" /> Update Password
       </Button>
     </div>
   );

@@ -63,3 +63,22 @@ export async function setUserActive(id: string, active: boolean) {
   revalidatePath("/users");
   return { error: null };
 }
+
+export async function resetUserPassword(values: Record<string, string>) {
+  try {
+    await requireAdmin();
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+  const id = values.user_id;
+  const password = values.password ?? "";
+  if (!id) return { error: "Missing user." };
+  if (password.length < 8) return { error: "Password must be at least 8 characters." };
+  const supabase = createClient();
+  const { error } = await supabase.rpc("admin_reset_password", {
+    p_user_id: id,
+    p_password: password,
+  });
+  if (error) return { error: error.message };
+  return { error: null };
+}

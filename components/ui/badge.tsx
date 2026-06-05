@@ -18,6 +18,7 @@ const badgeVariants = cva(
         inp: "border-transparent bg-status-inp/20 text-status-inp",
         com: "border-transparent bg-status-com/20 text-status-com",
         del: "border-transparent bg-status-del/20 text-status-del",
+        hal: "border-transparent bg-status-hal/20 text-status-hal",
       },
     },
     defaultVariants: { variant: "default" },

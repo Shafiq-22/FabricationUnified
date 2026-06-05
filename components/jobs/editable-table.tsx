@@ -35,6 +35,7 @@ export function EditableTable({
   computeTotal,
   totalKind = "money",
   emptyHint = "No rows yet.",
+  marginPct = null,
 }: {
   title: string;
   columns: EditCol[];
@@ -44,6 +45,7 @@ export function EditableTable({
   computeTotal?: (row: Record<string, unknown>) => number;
   totalKind?: "money" | "number";
   emptyHint?: string;
+  marginPct?: number | null;
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -182,13 +184,32 @@ export function EditableTable({
           </tbody>
           {total != null && (
             <tfoot>
-              <tr className="border-t border-panel-border font-semibold">
-                <td colSpan={columns.length} className="px-2 py-1.5 text-right uppercase">
-                  {title} total
-                </td>
-                <td className="px-2 py-1.5 text-right">{fmt(total)}</td>
-                {editable && <td />}
-              </tr>
+              {marginPct != null ? (
+                <>
+                  <tr className="border-t border-panel-border">
+                    <td colSpan={columns.length} className="px-2 py-1.5 text-right text-xs uppercase text-panel-foreground/70">
+                      Sub-total
+                    </td>
+                    <td className="px-2 py-1.5 text-right text-xs font-medium">{fmt(total)}</td>
+                    {editable && <td />}
+                  </tr>
+                  <tr className="border-t border-panel-border font-semibold">
+                    <td colSpan={columns.length} className="px-2 py-1.5 text-right uppercase">
+                      Total (+{marginPct}%)
+                    </td>
+                    <td className="px-2 py-1.5 text-right">{fmt(total * (1 + marginPct / 100))}</td>
+                    {editable && <td />}
+                  </tr>
+                </>
+              ) : (
+                <tr className="border-t border-panel-border font-semibold">
+                  <td colSpan={columns.length} className="px-2 py-1.5 text-right uppercase">
+                    {title} total
+                  </td>
+                  <td className="px-2 py-1.5 text-right">{fmt(total)}</td>
+                  {editable && <td />}
+                </tr>
+              )}
             </tfoot>
           )}
         </table>

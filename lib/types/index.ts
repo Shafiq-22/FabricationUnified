@@ -18,6 +18,9 @@ export type QuoteWorkforce = T["job_quote_workforce"]["Row"];
 export type ActualWorkforce = T["job_actual_workforce"]["Row"];
 export type QuotationSummary = T["job_quotation_summary"]["Row"];
 export type ActualSummary = T["job_actual_summary"]["Row"];
+export type QuoteConsumable = T["job_quote_consumables"]["Row"];
+export type ActualConsumable = T["job_actual_consumables"]["Row"];
+export type HistoricPrice = V["historic_prices"]["Row"];
 export type JobComment = T["job_comments"]["Row"];
 export type RoughSheetItem = T["rough_sheet_items"]["Row"];
 export type RoughSheetAggregated = V["rough_sheet_aggregated"]["Row"];
@@ -30,13 +33,24 @@ export type Drawing = T["drawings"]["Row"];
 export type AuditEntry = T["audit_log"]["Row"];
 
 // ---- Domain enums ---------------------------------------------------
-export type JobStatus = "quotation" | "in_progress" | "completed" | "delivered";
+export type JobStatus =
+  | "quotation"
+  | "in_progress"
+  | "completed"
+  | "delivered"
+  | "halt";
 
-export const JOB_STATUSES: { value: JobStatus; label: string; prefix: string; badge: "qtn" | "inp" | "com" | "del" }[] = [
+export const JOB_STATUSES: {
+  value: JobStatus;
+  label: string;
+  prefix: string;
+  badge: "qtn" | "inp" | "com" | "del" | "hal";
+}[] = [
   { value: "quotation", label: "Quotation", prefix: "QTN", badge: "qtn" },
   { value: "in_progress", label: "In Progress", prefix: "INP", badge: "inp" },
   { value: "completed", label: "Completed", prefix: "COM", badge: "com" },
   { value: "delivered", label: "Delivered", prefix: "DEL", badge: "del" },
+  { value: "halt", label: "Halt", prefix: "HAL", badge: "hal" },
 ];
 
 export function statusMeta(status: string | null | undefined) {

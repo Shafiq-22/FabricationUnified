@@ -48,6 +48,52 @@ export async function updateCompanyConfig(companyName: string, departmentName: s
   return { error: null };
 }
 
+const marginsSchema = z.object({
+  material_margin: z.coerce.number().min(0).max(1000),
+  workforce_margin: z.coerce.number().min(0).max(1000),
+  consumables_margin: z.coerce.number().min(0).max(1000),
+});
+
+export async function updateMargins(values: Record<string, string>) {
+  try {
+    await requireAdmin();
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+  const parsed = marginsSchema.safeParse(values);
+  if (!parsed.success) return { error: parsed.error.errors[0]?.message ?? "Invalid input." };
+  const supabase = createClient();
+  const { error } = await supabase.from("app_config").upsert(
+    [
+      { key: "material_margin", value: String(parsed.data.material_margin) },
+      { key: "workforce_margin", value: String(parsed.data.workforce_margin) },
+      { key: "consumables_margin", value: String(parsed.data.consumables_margin) },
+    ],
+    { onConflict: "key" },
+  );
+  if (error) return { error: error.message };
+  // Re-derive every job's quote/final/P&L with the new margins.
+  await supabase.rpc("recompute_all_jobs");
+  revalidatePath("/settings");
+  revalidatePath("/jobs");
+  revalidatePath("/dashboard");
+  return { error: null };
+}
+
+export async function changeMyPassword(newPassword: string) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Not signed in." };
+  if ((newPassword ?? "").length < 8) {
+    return { error: "Password must be at least 8 characters." };
+  }
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) return { error: error.message };
+  return { error: null };
+}
+
 const rateSchema = z.object({
   designation: z.string().trim().min(1, "Designation is required"),
   rate_aed_per_hr: z.coerce.number().nonnegative("Rate must be ≥ 0"),

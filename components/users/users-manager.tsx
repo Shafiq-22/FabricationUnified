@@ -2,8 +2,13 @@
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { UserPlus } from "lucide-react";
-import { inviteUser, setUserTier, setUserActive } from "@/app/(app)/users/actions";
+import { UserPlus, KeyRound } from "lucide-react";
+import {
+  inviteUser,
+  setUserTier,
+  setUserActive,
+  resetUserPassword,
+} from "@/app/(app)/users/actions";
 import { RecordFormDialog, type FieldDef } from "@/components/records/record-form-dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -125,15 +130,27 @@ export function UsersManager({
                 )}
               </TableCell>
               <TableCell>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 text-xs"
-                  disabled={pending}
-                  onClick={() => act(() => setUserActive(u.id, !u.active), "Status updated")}
-                >
-                  {u.active ? "Deactivate" : "Activate"}
-                </Button>
+                <div className="flex items-center gap-1">
+                  <RecordFormDialog
+                    title={`Reset password — ${u.full_name}`}
+                    fields={[{ key: "password", label: "New Temporary Password", required: true }]}
+                    onSubmit={(v) => resetUserPassword({ ...v, user_id: u.id })}
+                    trigger={
+                      <Button variant="ghost" size="icon" className="h-7 w-7" title="Reset password">
+                        <KeyRound className="h-3.5 w-3.5" />
+                      </Button>
+                    }
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs"
+                    disabled={pending}
+                    onClick={() => act(() => setUserActive(u.id, !u.active), "Status updated")}
+                  >
+                    {u.active ? "Deactivate" : "Activate"}
+                  </Button>
+                </div>
               </TableCell>
             </TableRow>
           ))}

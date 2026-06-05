@@ -111,26 +111,6 @@ export function NewJobDialog({
               <Label htmlFor="quotation_ref">Quotation Ref</Label>
               <Input id="quotation_ref" name="quotation_ref" />
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="quote_before_margin">Quote (before margin)</Label>
-              <Input
-                id="quote_before_margin"
-                name="quote_before_margin"
-                type="number"
-                step="0.01"
-                placeholder="AED"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="margin">Margin %</Label>
-              <Input
-                id="margin"
-                name="margin"
-                type="number"
-                step="0.1"
-                defaultValue="15"
-              />
-            </div>
           </div>
 
           {state.error && (

@@ -12,22 +12,13 @@ export type ActionState = { error: string | null };
 const createSchema = z.object({
   site_id: z.string().uuid({ message: "Select a site" }),
   description: z.string().trim().min(1, "Description is required"),
-  status: z.enum(["quotation", "in_progress", "completed", "delivered"]),
+  status: z.enum(["quotation", "in_progress", "completed", "delivered", "halt"]),
   unit: z.string().trim().optional(),
   qty: z.coerce.number().nonnegative().optional(),
   start_date: z.string().optional(),
   company_job_code: z.string().trim().optional(),
   quotation_ref: z.string().trim().optional(),
-  quote_before_margin: z.coerce.number().nonnegative().optional(),
-  // Accepts a percentage (e.g. 15) or a fraction (e.g. 0.15); normalised below.
-  margin: z.coerce.number().min(0).max(100).optional(),
 });
-
-/** Treat margin > 1 as a percentage entry (15 -> 0.15). */
-function normaliseMargin(m: number | undefined): number {
-  if (m == null) return 0.15;
-  return m > 1 ? m / 100 : m;
-}
 
 // NOTE: jobs base-table SELECT is revoked from `authenticated`; we generate the
 // id client-side and never chain .select() on jobs. Reads go via jobs_view.
@@ -56,8 +47,6 @@ export async function createJob(
     start_date: v.start_date || null,
     company_job_code: v.company_job_code || null,
     quotation_ref: v.quotation_ref || null,
-    quote_before_margin: v.quote_before_margin ?? 0,
-    margin: normaliseMargin(v.margin),
     created_by: profile.id,
   });
 

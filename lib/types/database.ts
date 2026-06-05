@@ -284,6 +284,68 @@ export type Database = {
         }
         Relationships: []
       }
+      job_actual_consumables: {
+        Row: {
+          id: string
+          item_name: string | null
+          job_id: string
+          qty: number | null
+          seq_no: number | null
+          total_cost: number | null
+          unit: string | null
+          unit_cost: number | null
+        }
+        Insert: {
+          id?: string
+          item_name?: string | null
+          job_id: string
+          qty?: number | null
+          seq_no?: number | null
+          unit?: string | null
+          unit_cost?: number | null
+        }
+        Update: {
+          id?: string
+          item_name?: string | null
+          job_id?: string
+          qty?: number | null
+          seq_no?: number | null
+          unit?: string | null
+          unit_cost?: number | null
+        }
+        Relationships: []
+      }
+      job_quote_consumables: {
+        Row: {
+          id: string
+          item_name: string | null
+          job_id: string
+          qty: number | null
+          seq_no: number | null
+          total_cost: number | null
+          unit: string | null
+          unit_cost: number | null
+        }
+        Insert: {
+          id?: string
+          item_name?: string | null
+          job_id: string
+          qty?: number | null
+          seq_no?: number | null
+          unit?: string | null
+          unit_cost?: number | null
+        }
+        Update: {
+          id?: string
+          item_name?: string | null
+          job_id?: string
+          qty?: number | null
+          seq_no?: number | null
+          unit?: string | null
+          unit_cost?: number | null
+        }
+        Relationships: []
+      }
       job_actual_workforce: {
         Row: {
           date: string | null
@@ -292,6 +354,7 @@ export type Database = {
           id: string
           job_id: string
           qty: number | null
+          rate_aed_per_hr: number | null
           seq_no: number | null
           total_hours: number | null
         }
@@ -302,6 +365,7 @@ export type Database = {
           id?: string
           job_id: string
           qty?: number | null
+          rate_aed_per_hr?: number | null
           seq_no?: number | null
         }
         Update: {
@@ -311,6 +375,7 @@ export type Database = {
           id?: string
           job_id?: string
           qty?: number | null
+          rate_aed_per_hr?: number | null
           seq_no?: number | null
         }
         Relationships: []
@@ -474,6 +539,7 @@ export type Database = {
           id: string
           job_id: string
           qty: number | null
+          rate_aed_per_hr: number | null
           seq_no: number | null
           total_hours: number | null
         }
@@ -484,6 +550,7 @@ export type Database = {
           id?: string
           job_id: string
           qty?: number | null
+          rate_aed_per_hr?: number | null
           seq_no?: number | null
         }
         Update: {
@@ -493,6 +560,7 @@ export type Database = {
           id?: string
           job_id?: string
           qty?: number | null
+          rate_aed_per_hr?: number | null
           seq_no?: number | null
         }
         Relationships: []
@@ -758,6 +826,18 @@ export type Database = {
       }
     }
     Views: {
+      historic_prices: {
+        Row: {
+          avg_price: number | null
+          item_key: string | null
+          item_name: string | null
+          last_date: string | null
+          last_price: number | null
+          order_count: number | null
+          supplier: string | null
+        }
+        Relationships: []
+      }
       cut_list_plates_aggregated: {
         Row: {
           area_used: number | null
@@ -826,10 +906,16 @@ export type Database = {
         }
         Returns: string
       }
+      admin_reset_password: {
+        Args: { p_password: string; p_user_id: string }
+        Returns: undefined
+      }
       auth_is_admin: { Args: Record<string, never>; Returns: boolean }
       auth_user_tier: { Args: Record<string, never>; Returns: number }
       dashboard_financial_kpis: { Args: { p_month: string }; Returns: Json }
       next_job_seq: { Args: { p_year_month: string }; Returns: number }
+      recompute_all_jobs: { Args: Record<string, never>; Returns: undefined }
+      recompute_job_financials: { Args: { p_job_id: string }; Returns: undefined }
       status_to_prefix: { Args: { p_status: string }; Returns: string }
     }
     Enums: {

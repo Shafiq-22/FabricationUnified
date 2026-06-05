@@ -1,25 +1,13 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { Save } from "lucide-react";
 import { EditableTable } from "@/components/jobs/editable-table";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useToast } from "@/lib/hooks/use-toast";
-import { formatAED, formatPercent } from "@/lib/utils";
+import { WorkforceEditor } from "@/components/jobs/workforce-editor";
+import { AnalyticsPanel } from "@/components/jobs/analytics-panel";
+import { TentativePanel, type HistoricLookup } from "@/components/jobs/tentative-panel";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { replaceJobLines, type Row } from "@/app/(app)/jobs/[id]/worksheet/actions";
-import { updateJobDetails } from "@/app/(app)/jobs/actions";
-import type {
-  JobView,
-  QuoteMaterial,
-  QuoteWorkforce,
-  QuotationSummary,
-  ActualMaterial,
-  ActualWorkforce,
-  ActualSummary,
-} from "@/lib/types";
+import { formatAED } from "@/lib/utils";
+import type { JobView } from "@/lib/types";
 
 const matCols = [
   { key: "material_name", label: "Material", type: "text" as const },
@@ -27,260 +15,235 @@ const matCols = [
   { key: "qty", label: "Qty", type: "number" as const, align: "right" as const, step: "0.01" },
   { key: "unit_cost", label: "Unit Cost", type: "number" as const, align: "right" as const, step: "0.01" },
 ];
-const wfCols = [
-  { key: "designation", label: "Designation", type: "text" as const },
-  { key: "qty", label: "Qty", type: "number" as const, align: "right" as const, step: "1" },
-  { key: "hrs_per_person", label: "Hrs/Person", type: "number" as const, align: "right" as const, step: "0.5" },
-  { key: "date", label: "Date", type: "date" as const },
-];
-const sumCols = [
+const consCols = [
   { key: "item_name", label: "Item", type: "text" as const },
   { key: "unit", label: "Unit", type: "text" as const },
   { key: "qty", label: "Qty", type: "number" as const, align: "right" as const, step: "0.01" },
   { key: "unit_cost", label: "Unit Cost", type: "number" as const, align: "right" as const, step: "0.01" },
 ];
 
-const mat = (r: Record<string, unknown>) => Number(r.qty || 0) * Number(r.unit_cost || 0);
-const wf = (r: Record<string, unknown>) => Number(r.qty || 0) * Number(r.hrs_per_person || 0);
+const sumCost = (rows: Row[]) =>
+  rows.reduce((s, r) => s + Number(r.qty || 0) * Number(r.unit_cost || 0), 0);
+const sumWf = (rows: Row[]) =>
+  rows.reduce(
+    (s, r) => s + Number(r.qty || 0) * Number(r.hrs_per_person || 0) * Number(r.rate_aed_per_hr || 0),
+    0,
+  );
 
 export function WorksheetPanels({
   job,
   editable,
+  margins,
+  rates,
+  historic,
   quoteMaterials,
   quoteWorkforce,
-  quotationSummary,
+  quoteConsumables,
   actualMaterials,
   actualWorkforce,
-  actualSummary,
+  actualConsumables,
 }: {
   job: JobView;
   editable: boolean;
-  quoteMaterials: QuoteMaterial[];
-  quoteWorkforce: QuoteWorkforce[];
-  quotationSummary: QuotationSummary[];
-  actualMaterials: ActualMaterial[];
-  actualWorkforce: ActualWorkforce[];
-  actualSummary: ActualSummary[];
+  margins: { material: number; workforce: number; consumables: number };
+  rates: { designation: string; rate: number }[];
+  historic: HistoricLookup;
+  quoteMaterials: Row[];
+  quoteWorkforce: Row[];
+  quoteConsumables: Row[];
+  actualMaterials: Row[];
+  actualWorkforce: Row[];
+  actualConsumables: Row[];
 }) {
   const jobId = job.id as string;
   const save = (table: Parameters<typeof replaceJobLines>[1]) => (rows: Row[]) =>
     replaceJobLines(jobId, table, rows);
 
+  // Saved-state subtotals (refresh after each save keeps these current).
+  const mSub = sumCost(quoteMaterials);
+  const wSub = sumWf(quoteWorkforce);
+  const cSub = sumCost(quoteConsumables);
+  const mTot = mSub * (1 + margins.material / 100);
+  const wTot = wSub * (1 + margins.workforce / 100);
+  const cTot = cSub * (1 + margins.consumables / 100);
+  const qbm = mSub + wSub + cSub;
+  const finalQuote = mTot + wTot + cTot;
+  const unitCost = job.qty && job.qty !== 0 ? finalQuote / job.qty : null;
+
+  const amSub = sumCost(actualMaterials);
+  const awSub = sumWf(actualWorkforce);
+  const acSub = sumCost(actualConsumables);
+  const hasActual =
+    actualMaterials.length + actualWorkforce.length + actualConsumables.length > 0;
+  const actualCost = hasActual ? amSub + awSub + acSub : null;
+  const marginPct = qbm === 0 ? 0 : (finalQuote / qbm - 1) * 100;
+
+  const tentativeItems = [
+    ...quoteMaterials.map((r) => ({
+      name: String(r.material_name ?? ""),
+      unit: (r.unit as string) ?? null,
+      qty: r.qty == null ? null : Number(r.qty),
+      kind: "Material" as const,
+    })),
+    ...quoteConsumables.map((r) => ({
+      name: String(r.item_name ?? ""),
+      unit: (r.unit as string) ?? null,
+      qty: r.qty == null ? null : Number(r.qty),
+      kind: "Consumable" as const,
+    })),
+  ].filter((i) => i.name);
+
   return (
-    <div className="grid gap-4 p-6 lg:grid-cols-3">
-      {/* LEFT — Quote */}
-      <section className="space-y-4">
-        <PanelHeading label="Quote" tone="steel" />
-        <EditableTable
-          title="Material MTO"
-          columns={matCols}
-          initialRows={quoteMaterials as unknown as Row[]}
-          editable={editable}
-          onSave={save("job_quote_materials")}
-          computeTotal={mat}
-        />
-        <EditableTable
-          title="Workforce"
-          columns={wfCols}
-          initialRows={quoteWorkforce as unknown as Row[]}
-          editable={editable}
-          onSave={save("job_quote_workforce")}
-          computeTotal={wf}
-          totalKind="number"
-        />
-      </section>
+    <div className="p-6">
+      <Tabs defaultValue="quotation">
+        <TabsList>
+          <TabsTrigger value="quotation">Quotation</TabsTrigger>
+          <TabsTrigger value="actual">Actual</TabsTrigger>
+          <TabsTrigger value="tentative">Tentative</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+        </TabsList>
 
-      {/* CENTRE — Quotation Summary + financials */}
-      <section className="space-y-4">
-        <PanelHeading label="Quotation Summary" tone="amber" />
-        <EditableTable
-          title="Summary Line Items"
-          columns={sumCols}
-          initialRows={quotationSummary as unknown as Row[]}
-          editable={editable}
-          onSave={save("job_quotation_summary")}
-          computeTotal={mat}
-        />
-        <QuoteFinancials job={job} editable={editable} />
-      </section>
+        {/* QUOTATION */}
+        <TabsContent value="quotation" className="space-y-4">
+          <EditableTable
+            title="Material MTO"
+            columns={matCols}
+            initialRows={quoteMaterials}
+            editable={editable}
+            onSave={save("job_quote_materials")}
+            computeTotal={(r) => Number(r.qty || 0) * Number(r.unit_cost || 0)}
+            marginPct={margins.material}
+          />
+          <WorkforceEditor
+            title="Workforce"
+            jobId={jobId}
+            table="job_quote_workforce"
+            rows={quoteWorkforce}
+            editable={editable}
+            rates={rates}
+            marginPct={margins.workforce}
+          />
+          <EditableTable
+            title="Consumables"
+            columns={consCols}
+            initialRows={quoteConsumables}
+            editable={editable}
+            onSave={save("job_quote_consumables")}
+            computeTotal={(r) => Number(r.qty || 0) * Number(r.unit_cost || 0)}
+            marginPct={margins.consumables}
+          />
+          <SummaryCard
+            description={job.description}
+            unit={job.unit}
+            qty={job.qty}
+            unitCost={unitCost}
+            total={finalQuote}
+          />
+        </TabsContent>
 
-      {/* RIGHT — Actual */}
-      <section className="space-y-4">
-        <PanelHeading label="Actual" tone="steel" />
-        <EditableTable
-          title="Actual Material MTO"
-          columns={matCols}
-          initialRows={actualMaterials as unknown as Row[]}
-          editable={editable}
-          onSave={save("job_actual_materials")}
-          computeTotal={mat}
-        />
-        <EditableTable
-          title="Actual Workforce Log"
-          columns={wfCols}
-          initialRows={actualWorkforce as unknown as Row[]}
-          editable={editable}
-          onSave={save("job_actual_workforce")}
-          computeTotal={wf}
-          totalKind="number"
-        />
-        <EditableTable
-          title="Actual Cost Summary"
-          columns={sumCols}
-          initialRows={actualSummary as unknown as Row[]}
-          editable={editable}
-          onSave={save("job_actual_summary")}
-          computeTotal={mat}
-        />
-        <ActualFinancials job={job} editable={editable} />
-      </section>
+        {/* ACTUAL (cost only, no margin) */}
+        <TabsContent value="actual" className="space-y-4">
+          <EditableTable
+            title="Actual Material MTO"
+            columns={matCols}
+            initialRows={actualMaterials}
+            editable={editable}
+            onSave={save("job_actual_materials")}
+            computeTotal={(r) => Number(r.qty || 0) * Number(r.unit_cost || 0)}
+          />
+          <WorkforceEditor
+            title="Actual Workforce Log"
+            jobId={jobId}
+            table="job_actual_workforce"
+            rows={actualWorkforce}
+            editable={editable}
+            rates={rates}
+            marginPct={null}
+          />
+          <EditableTable
+            title="Actual Consumables"
+            columns={consCols}
+            initialRows={actualConsumables}
+            editable={editable}
+            onSave={save("job_actual_consumables")}
+            computeTotal={(r) => Number(r.qty || 0) * Number(r.unit_cost || 0)}
+          />
+          <div className="panel-surface flex items-center justify-between p-3">
+            <span className="text-xs font-semibold uppercase">Total Actual Cost</span>
+            <span className="font-mono text-base font-bold">{formatAED(actualCost ?? 0)}</span>
+          </div>
+        </TabsContent>
+
+        {/* TENTATIVE */}
+        <TabsContent value="tentative">
+          <TentativePanel items={tentativeItems} historic={historic} />
+        </TabsContent>
+
+        {/* ANALYTICS */}
+        <TabsContent value="analytics">
+          <AnalyticsPanel
+            quoteBeforeMargin={qbm}
+            finalQuote={finalQuote}
+            marginPct={marginPct}
+            actualCost={actualCost}
+            categories={[
+              { name: "Material", quote: mSub, actual: amSub },
+              { name: "Workforce", quote: wSub, actual: awSub },
+              { name: "Consumables", quote: cSub, actual: acSub },
+            ]}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
 
-function PanelHeading({ label, tone }: { label: string; tone: "steel" | "amber" }) {
+function SummaryCard({
+  description,
+  unit,
+  qty,
+  unitCost,
+  total,
+}: {
+  description: string | null;
+  unit: string | null;
+  qty: number | null;
+  unitCost: number | null;
+  total: number;
+}) {
   return (
-    <div
-      className={`border-l-2 pl-2 font-mono text-xs font-semibold uppercase tracking-[0.2em] ${
-        tone === "steel" ? "border-steel text-steel" : "border-amber text-amber"
-      }`}
-    >
-      {label}
-    </div>
-  );
-}
-
-function QuoteFinancials({ job, editable }: { job: JobView; editable: boolean }) {
-  const router = useRouter();
-  const { toast } = useToast();
-  const [pending, start] = useTransition();
-  const [qbm, setQbm] = useState(String(job.quote_before_margin ?? 0));
-  const [marginPct, setMarginPct] = useState(String(((job.margin ?? 0) * 100).toFixed(2)));
-
-  const finalQuote = Number(qbm || 0) * (1 + Number(marginPct || 0) / 100);
-
-  const save = () =>
-    start(async () => {
-      const res = await updateJobDetails(job.id as string, {
-        quote_before_margin: Number(qbm || 0),
-        margin: Number(marginPct || 0) / 100,
-      });
-      if (res?.error) toast({ variant: "destructive", title: "Save failed", description: res.error });
-      else {
-        toast({ title: "Quote updated" });
-        router.refresh();
-      }
-    });
-
-  return (
-    <div className="panel-surface p-3">
-      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide">Quote Financials</h3>
-      <div className="grid grid-cols-2 gap-2">
-        <div className="space-y-1">
-          <Label className="text-[10px] uppercase text-panel-foreground/60">Quote (before margin)</Label>
-          <Input
-            type="number"
-            step="0.01"
-            value={qbm}
-            disabled={!editable}
-            onChange={(e) => setQbm(e.target.value)}
-            className="h-7 bg-background text-xs text-panel-foreground"
-          />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-[10px] uppercase text-panel-foreground/60">Margin %</Label>
-          <Input
-            type="number"
-            step="0.1"
-            value={marginPct}
-            disabled={!editable}
-            onChange={(e) => setMarginPct(e.target.value)}
-            className="h-7 bg-background text-xs text-panel-foreground"
-          />
-        </div>
+    <div className="panel-surface">
+      <div className="border-b border-panel-border px-3 py-2">
+        <h3 className="text-xs font-semibold uppercase tracking-wide">Quotation Summary</h3>
       </div>
-      <div className="mt-3 flex items-center justify-between border-t border-panel-border pt-2">
-        <span className="text-xs font-semibold uppercase">Final Quote</span>
-        <span className="font-mono text-base font-bold">{formatAED(finalQuote)}</span>
-      </div>
-      {editable && (
-        <Button size="sm" className="mt-2 h-7 w-full" onClick={save} disabled={pending} type="button">
-          <Save className="h-3.5 w-3.5" /> {pending ? "Saving…" : "Save Quote"}
-        </Button>
-      )}
-    </div>
-  );
-}
-
-function ActualFinancials({ job, editable }: { job: JobView; editable: boolean }) {
-  const router = useRouter();
-  const { toast } = useToast();
-  const [pending, start] = useTransition();
-  const [actual, setActual] = useState(
-    job.actual_cost == null ? "" : String(job.actual_cost),
-  );
-  const [charge, setCharge] = useState(
-    job.charge_to_site == null ? "" : String(job.charge_to_site),
-  );
-
-  const save = () =>
-    start(async () => {
-      const res = await updateJobDetails(job.id as string, {
-        actual_cost: actual === "" ? null : Number(actual),
-        charge_to_site: charge === "" ? null : Number(charge),
-      });
-      if (res?.error) toast({ variant: "destructive", title: "Save failed", description: res.error });
-      else {
-        toast({ title: "Actuals updated" });
-        router.refresh();
-      }
-    });
-
-  return (
-    <div className="panel-surface p-3">
-      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide">Actual Cost &amp; P/L</h3>
-      <div className="grid grid-cols-2 gap-2">
-        <div className="space-y-1">
-          <Label className="text-[10px] uppercase text-panel-foreground/60">Actual Cost</Label>
-          <Input
-            type="number"
-            step="0.01"
-            value={actual}
-            disabled={!editable}
-            onChange={(e) => setActual(e.target.value)}
-            className="h-7 bg-background text-xs text-panel-foreground"
-          />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-[10px] uppercase text-panel-foreground/60">Charge to Site</Label>
-          <Input
-            type="number"
-            step="0.01"
-            value={charge}
-            disabled={!editable}
-            onChange={(e) => setCharge(e.target.value)}
-            className="h-7 bg-background text-xs text-panel-foreground"
-          />
-        </div>
-      </div>
-      <div className="mt-3 space-y-1 border-t border-panel-border pt-2 text-xs">
-        <Stat label="Profit / Loss" value={formatAED(job.profit_loss)} />
-        <Stat label="P/L %" value={formatPercent(job.pl_percentage)} />
-      </div>
-      {editable && (
-        <Button size="sm" className="mt-2 h-7 w-full" onClick={save} disabled={pending} type="button">
-          <Save className="h-3.5 w-3.5" /> {pending ? "Saving…" : "Save Actuals"}
-        </Button>
-      )}
-    </div>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between">
-      <span className="uppercase text-panel-foreground/60">{label}</span>
-      <span className="font-mono font-semibold">{value}</span>
+      <table className="w-full text-xs tabular">
+        <thead>
+          <tr className="header-band border-b border-panel-border">
+            <th className="px-2 py-1.5 text-left font-semibold uppercase">Description</th>
+            <th className="px-2 py-1.5 text-left font-semibold uppercase">Unit</th>
+            <th className="px-2 py-1.5 text-right font-semibold uppercase">Qty</th>
+            <th className="px-2 py-1.5 text-right font-semibold uppercase">Unit Cost</th>
+            <th className="px-2 py-1.5 text-right font-semibold uppercase">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr className="border-b border-panel-border/60">
+            <td className="px-2 py-1.5">{description ?? "—"}</td>
+            <td className="px-2 py-1.5">{unit ?? "—"}</td>
+            <td className="px-2 py-1.5 text-right">{qty ?? "—"}</td>
+            <td className="px-2 py-1.5 text-right">{unitCost == null ? "—" : formatAED(unitCost)}</td>
+            <td className="px-2 py-1.5 text-right font-medium">{formatAED(total)}</td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr className="border-t border-panel-border font-semibold">
+            <td colSpan={4} className="px-2 py-1.5 text-right uppercase">
+              Final Quote
+            </td>
+            <td className="px-2 py-1.5 text-right text-sm">{formatAED(total)}</td>
+          </tr>
+        </tfoot>
+      </table>
     </div>
   );
 }

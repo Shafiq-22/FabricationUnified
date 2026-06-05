@@ -75,6 +75,7 @@ const config: Config = {
           inp: "hsl(38 100% 38%)",
           com: "hsl(146 100% 33%)",
           del: "hsl(196 89% 40%)",
+          hal: "hsl(0 60% 45%)",
         },
       },
       borderRadius: {

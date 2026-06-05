@@ -8,10 +8,12 @@ import { getProfile } from "@/lib/auth";
 const CHILD_TABLES = {
   job_quote_materials: ["material_name", "unit", "qty", "unit_cost"],
   job_actual_materials: ["material_name", "unit", "qty", "unit_cost"],
-  job_quote_workforce: ["designation", "qty", "hrs_per_person", "date"],
-  job_actual_workforce: ["designation", "qty", "hrs_per_person", "date"],
+  job_quote_workforce: ["designation", "qty", "hrs_per_person", "date", "rate_aed_per_hr"],
+  job_actual_workforce: ["designation", "qty", "hrs_per_person", "date", "rate_aed_per_hr"],
   job_quotation_summary: ["item_name", "unit", "qty", "unit_cost"],
   job_actual_summary: ["item_name", "unit", "qty", "unit_cost"],
+  job_quote_consumables: ["item_name", "unit", "qty", "unit_cost"],
+  job_actual_consumables: ["item_name", "unit", "qty", "unit_cost"],
   rough_sheet_items: ["profile_type", "dimension", "length_m", "qty"],
   cut_list_plates: ["thickness_mm", "plate_size", "length_mm", "width_mm", "qty"],
 } as const;
@@ -22,6 +24,7 @@ const NUMERIC = new Set([
   "qty",
   "unit_cost",
   "hrs_per_person",
+  "rate_aed_per_hr",
   "length_m",
   "length_mm",
   "width_mm",
@@ -87,7 +90,12 @@ export async function replaceJobLines(
     if (error) return { error: error.message };
   }
 
+  // Re-derive the job's quote/final/margin/actual/P&L from all sections.
+  await supabase.rpc("recompute_job_financials", { p_job_id: jobId });
+
   revalidatePath(`/jobs/${jobId}/worksheet`);
+  revalidatePath("/jobs");
+  revalidatePath("/dashboard");
   return { error: null };
 }
 
