@@ -32,6 +32,10 @@ export default async function SettingsPage() {
             workforce: Number(cfg.workforce_margin ?? 15),
             consumables: Number(cfg.consumables_margin ?? 15),
           }}
+          timesheetRates={{
+            normal: Number(cfg.timesheet_normal_rate ?? 30),
+            ot: Number(cfg.timesheet_ot_rate ?? 45),
+          }}
         />
       </div>
     </div>

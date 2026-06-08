@@ -80,6 +80,33 @@ export async function updateMargins(values: Record<string, string>) {
   return { error: null };
 }
 
+const tsRatesSchema = z.object({
+  timesheet_normal_rate: z.coerce.number().min(0),
+  timesheet_ot_rate: z.coerce.number().min(0),
+});
+
+export async function updateTimesheetRates(values: Record<string, string>) {
+  try {
+    await requireAdmin();
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+  const parsed = tsRatesSchema.safeParse(values);
+  if (!parsed.success) return { error: parsed.error.errors[0]?.message ?? "Invalid input." };
+  const supabase = createClient();
+  const { error } = await supabase.from("app_config").upsert(
+    [
+      { key: "timesheet_normal_rate", value: String(parsed.data.timesheet_normal_rate) },
+      { key: "timesheet_ot_rate", value: String(parsed.data.timesheet_ot_rate) },
+    ],
+    { onConflict: "key" },
+  );
+  if (error) return { error: error.message };
+  revalidatePath("/settings");
+  revalidatePath("/records");
+  return { error: null };
+}
+
 export async function changeMyPassword(newPassword: string) {
   const supabase = createClient();
   const {

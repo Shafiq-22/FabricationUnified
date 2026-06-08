@@ -7,6 +7,7 @@ import {
   updateRoleName,
   updateCompanyConfig,
   updateMargins,
+  updateTimesheetRates,
   changeMyPassword,
   addLabourRate,
   updateLabourRate,
@@ -51,12 +52,14 @@ export function SettingsClient({
   department,
   rates,
   margins,
+  timesheetRates,
 }: {
   roles: RoleConfig[];
   company: string;
   department: string;
   rates: LabourRate[];
   margins: { material: number; workforce: number; consumables: number };
+  timesheetRates: { normal: number; ot: number };
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -98,6 +101,14 @@ export function SettingsClient({
           margins={margins}
           pending={pending}
           onSave={(v) => run(() => updateMargins(v), "Margins saved — jobs recomputed")}
+        />
+      </Card>
+
+      <Card title="Timesheet Rates (AED/hr)">
+        <TimesheetRatesForm
+          rates={timesheetRates}
+          pending={pending}
+          onSave={(v) => run(() => updateTimesheetRates(v), "Timesheet rates saved")}
         />
       </Card>
 
@@ -274,6 +285,43 @@ function MarginsForm({
         onClick={() => onSave({ material_margin: m, workforce_margin: w, consumables_margin: c })}
       >
         <Save className="h-3.5 w-3.5" /> Save Margins
+      </Button>
+    </div>
+  );
+}
+
+function TimesheetRatesForm({
+  rates,
+  onSave,
+  pending,
+}: {
+  rates: { normal: number; ot: number };
+  onSave: (v: Record<string, string>) => void;
+  pending: boolean;
+}) {
+  const [n, setN] = useState(String(rates.normal));
+  const [o, setO] = useState(String(rates.ot));
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-muted-foreground">
+        Used to cost personnel timesheets (normal & overtime hours).
+      </p>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-1">
+          <Label className="text-[10px] uppercase text-muted-foreground">Normal</Label>
+          <Input type="number" step="0.01" value={n} onChange={(e) => setN(e.target.value)} className="h-8 text-sm" />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-[10px] uppercase text-muted-foreground">Overtime</Label>
+          <Input type="number" step="0.01" value={o} onChange={(e) => setO(e.target.value)} className="h-8 text-sm" />
+        </div>
+      </div>
+      <Button
+        size="sm"
+        disabled={pending}
+        onClick={() => onSave({ timesheet_normal_rate: n, timesheet_ot_rate: o })}
+      >
+        <Save className="h-3.5 w-3.5" /> Save Rates
       </Button>
     </div>
   );

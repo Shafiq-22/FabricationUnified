@@ -51,6 +51,30 @@ export type Database = {
         }
         Relationships: []
       }
+      personnel: {
+        Row: { active: boolean; created_at: string; created_by: string | null; ho_no: string | null; id: string; name: string; trade: string | null }
+        Insert: { active?: boolean; created_at?: string; created_by?: string | null; ho_no?: string | null; id?: string; name: string; trade?: string | null }
+        Update: { active?: boolean; created_at?: string; created_by?: string | null; ho_no?: string | null; id?: string; name?: string; trade?: string | null }
+        Relationships: []
+      }
+      equipment: {
+        Row: { active: boolean; bare_rate: number | null; created_at: string; created_by: string | null; device_group: string | null; driver_rate: number | null; id: string; machine: string; make: string | null; sixco_no: string | null; type: string | null }
+        Insert: { active?: boolean; bare_rate?: number | null; created_at?: string; created_by?: string | null; device_group?: string | null; driver_rate?: number | null; id?: string; machine: string; make?: string | null; sixco_no?: string | null; type?: string | null }
+        Update: { active?: boolean; bare_rate?: number | null; created_at?: string; created_by?: string | null; device_group?: string | null; driver_rate?: number | null; id?: string; machine?: string; make?: string | null; sixco_no?: string | null; type?: string | null }
+        Relationships: []
+      }
+      timesheet_entries: {
+        Row: { begin_time: string | null; created_at: string; created_by: string | null; end_time: string | null; entry_date: string; id: string; job_description: string | null; job_ref: string | null; normal_hours: number | null; ot_hours: number | null; personnel_id: string; site: string | null }
+        Insert: { begin_time?: string | null; created_at?: string; created_by?: string | null; end_time?: string | null; entry_date: string; id?: string; job_description?: string | null; job_ref?: string | null; normal_hours?: number | null; ot_hours?: number | null; personnel_id: string; site?: string | null }
+        Update: { begin_time?: string | null; created_at?: string; created_by?: string | null; end_time?: string | null; entry_date?: string; id?: string; job_description?: string | null; job_ref?: string | null; normal_hours?: number | null; ot_hours?: number | null; personnel_id?: string; site?: string | null }
+        Relationships: []
+      }
+      equipment_usage: {
+        Row: { created_at: string; created_by: string | null; equipment_id: string; id: string; status_code: string; usage_date: string }
+        Insert: { created_at?: string; created_by?: string | null; equipment_id: string; id?: string; status_code: string; usage_date: string }
+        Update: { created_at?: string; created_by?: string | null; equipment_id?: string; id?: string; status_code?: string; usage_date?: string }
+        Relationships: []
+      }
       consumables: {
         Row: {
           created_at: string
