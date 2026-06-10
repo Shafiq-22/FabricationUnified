@@ -9,29 +9,37 @@ import { useToast } from "@/lib/hooks/use-toast";
 import { formatAED } from "@/lib/utils";
 import type { Personnel, TimesheetEntry } from "@/lib/types";
 
+export interface JobOption {
+  id: string;
+  job_code: string;
+  site_code: string | null;
+  ref: string | null;
+}
+export interface SiteOption {
+  code: string;
+  name: string;
+}
+
 type Cell = {
+  job_id: string;
+  site: string;
   begin_time: string;
   end_time: string;
   normal_hours: string;
   ot_hours: string;
-  site: string;
   job_description: string;
   job_ref: string;
 };
-const blank = (): Cell => ({ begin_time: "", end_time: "", normal_hours: "", ot_hours: "", site: "", job_description: "", job_ref: "" });
+const blank = (): Cell => ({
+  job_id: "", site: "", begin_time: "", end_time: "",
+  normal_hours: "", ot_hours: "", job_description: "", job_ref: "",
+});
 
-const FIELDS: { key: keyof Cell; label: string; w: string; num?: boolean }[] = [
-  { key: "begin_time", label: "Begin", w: "w-20" },
-  { key: "end_time", label: "End", w: "w-20" },
-  { key: "normal_hours", label: "Nor", w: "w-16", num: true },
-  { key: "ot_hours", label: "O/T", w: "w-16", num: true },
-  { key: "site", label: "Site", w: "w-28" },
-  { key: "job_description", label: "Job Description", w: "w-56" },
-  { key: "job_ref", label: "Job Ref No", w: "w-32" },
-];
+const cellCss =
+  "h-7 w-full border border-transparent bg-transparent px-1 outline-none focus:border-input focus:bg-background";
 
 export function TimesheetGrid({
-  date, personnel, entries, editable, normalRate, otRate,
+  date, personnel, entries, editable, normalRate, otRate, jobs, sites,
 }: {
   date: string;
   personnel: Personnel[];
@@ -39,6 +47,8 @@ export function TimesheetGrid({
   editable: boolean;
   normalRate: number;
   otRate: number;
+  jobs: JobOption[];
+  sites: SiteOption[];
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -49,10 +59,11 @@ export function TimesheetGrid({
     for (const p of personnel) byId[p.id] = blank();
     for (const e of entries) {
       byId[e.personnel_id] = {
+        job_id: e.job_id ?? "", site: e.site ?? "",
         begin_time: e.begin_time ?? "", end_time: e.end_time ?? "",
         normal_hours: e.normal_hours == null ? "" : String(e.normal_hours),
         ot_hours: e.ot_hours == null ? "" : String(e.ot_hours),
-        site: e.site ?? "", job_description: e.job_description ?? "", job_ref: e.job_ref ?? "",
+        job_description: e.job_description ?? "", job_ref: e.job_ref ?? "",
       };
     }
     return byId;
@@ -62,6 +73,23 @@ export function TimesheetGrid({
     setData((d) => ({ ...d, [pid]: { ...d[pid], [key]: v } }));
     setDirty(true);
   };
+
+  // Selecting a job autofills Site and Job Ref (when empty or still matching the previous job).
+  const onJob = (pid: string, jobId: string) => {
+    setData((d) => {
+      const row = d[pid] ?? blank();
+      const job = jobs.find((j) => j.id === jobId);
+      const prev = jobs.find((j) => j.id === row.job_id);
+      const next: Cell = { ...row, job_id: jobId };
+      if (job) {
+        if (!row.site || row.site === (prev?.site_code ?? "")) next.site = job.site_code ?? "";
+        if (!row.job_ref || row.job_ref === (prev?.ref ?? "")) next.job_ref = job.ref ?? "";
+      }
+      return { ...d, [pid]: next };
+    });
+    setDirty(true);
+  };
+
   const cost = (c: Cell) => Number(c.normal_hours || 0) * normalRate + Number(c.ot_hours || 0) * otRate;
   const totalNor = personnel.reduce((s, p) => s + Number(data[p.id]?.normal_hours || 0), 0);
   const totalOt = personnel.reduce((s, p) => s + Number(data[p.id]?.ot_hours || 0), 0);
@@ -73,6 +101,7 @@ export function TimesheetGrid({
         const c = data[p.id] ?? blank();
         return {
           personnel_id: p.id,
+          job_id: c.job_id || null,
           begin_time: c.begin_time, end_time: c.end_time,
           normal_hours: c.normal_hours === "" ? null : Number(c.normal_hours),
           ot_hours: c.ot_hours === "" ? null : Number(c.ot_hours),
@@ -106,12 +135,9 @@ export function TimesheetGrid({
         <table className="w-full text-xs tabular">
           <thead>
             <tr className="header-band border-b border-border">
-              <th className="px-2 py-1.5 text-left font-semibold uppercase">#</th>
-              <th className="px-2 py-1.5 text-left font-semibold uppercase">HO No</th>
-              <th className="px-2 py-1.5 text-left font-semibold uppercase">Name</th>
-              <th className="px-2 py-1.5 text-left font-semibold uppercase">Trade</th>
-              {FIELDS.map((f) => <th key={f.key} className="px-2 py-1.5 text-left font-semibold uppercase">{f.label}</th>)}
-              <th className="px-2 py-1.5 text-right font-semibold uppercase">T~Hrs</th>
+              {["#", "HO No", "Name", "Trade", "Begin", "End", "Nor", "O/T", "T~Hrs", "Site", "Job Name", "Job Description", "Job Ref"].map((h) => (
+                <th key={h} className="px-2 py-1.5 text-left font-semibold uppercase">{h}</th>
+              ))}
               <th className="px-2 py-1.5 text-right font-semibold uppercase">Cost</th>
             </tr>
           </thead>
@@ -123,21 +149,38 @@ export function TimesheetGrid({
                 <tr key={p.id} className="border-b border-border/60">
                   <td className="px-2 py-0.5 text-muted-foreground">{i + 1}</td>
                   <td className="px-2 py-0.5 code-chip">{p.ho_no}</td>
-                  <td className="px-2 py-0.5">{p.name}</td>
+                  <td className="whitespace-nowrap px-2 py-0.5">{p.name}</td>
                   <td className="px-2 py-0.5 text-muted-foreground">{p.trade}</td>
-                  {FIELDS.map((f) => (
-                    <td key={f.key} className="px-0.5 py-0.5">
-                      <input
-                        type={f.num ? "number" : "text"}
-                        step={f.num ? "0.5" : undefined}
-                        disabled={!editable}
-                        value={c[f.key]}
-                        onChange={(e) => set(p.id, f.key, e.target.value)}
-                        className={`h-7 ${f.w} max-w-full border border-transparent bg-transparent px-1 outline-none focus:border-input focus:bg-background ${f.num ? "text-right" : ""}`}
-                      />
+                  {(["begin_time", "end_time"] as const).map((k) => (
+                    <td key={k} className="px-0.5 py-0.5">
+                      <input disabled={!editable} value={c[k]} onChange={(e) => set(p.id, k, e.target.value)} className={`${cellCss} w-16`} placeholder="--:--" />
+                    </td>
+                  ))}
+                  {(["normal_hours", "ot_hours"] as const).map((k) => (
+                    <td key={k} className="px-0.5 py-0.5">
+                      <input type="number" step="0.5" disabled={!editable} value={c[k]} onChange={(e) => set(p.id, k, e.target.value)} className={`${cellCss} w-14 text-right`} />
                     </td>
                   ))}
                   <td className="px-2 py-0.5 text-right">{tHrs || ""}</td>
+                  <td className="px-0.5 py-0.5">
+                    <select disabled={!editable} value={c.site} onChange={(e) => set(p.id, "site", e.target.value)} className={`${cellCss} w-28`}>
+                      <option value="" />
+                      {sites.map((s) => <option key={s.code} value={s.code} title={s.name}>{s.code}</option>)}
+                      {c.site && !sites.some((s) => s.code === c.site) && <option value={c.site}>{c.site}</option>}
+                    </select>
+                  </td>
+                  <td className="px-0.5 py-0.5">
+                    <select disabled={!editable} value={c.job_id} onChange={(e) => onJob(p.id, e.target.value)} className={`${cellCss} w-44`}>
+                      <option value="" />
+                      {jobs.map((j) => <option key={j.id} value={j.id}>{j.job_code}</option>)}
+                    </select>
+                  </td>
+                  <td className="px-0.5 py-0.5">
+                    <input disabled={!editable} value={c.job_description} onChange={(e) => set(p.id, "job_description", e.target.value)} className={`${cellCss} w-56`} />
+                  </td>
+                  <td className="px-0.5 py-0.5">
+                    <input disabled={!editable} value={c.job_ref} onChange={(e) => set(p.id, "job_ref", e.target.value)} className={`${cellCss} w-32`} />
+                  </td>
                   <td className="px-2 py-0.5 text-right font-medium">{formatAED(cost(c))}</td>
                 </tr>
               );
@@ -148,8 +191,8 @@ export function TimesheetGrid({
               <td colSpan={6} className="px-2 py-1.5 text-right uppercase">Totals</td>
               <td className="px-2 py-1.5 text-right">{totalNor || ""}</td>
               <td className="px-2 py-1.5 text-right">{totalOt || ""}</td>
-              <td colSpan={3} />
               <td className="px-2 py-1.5 text-right">{(totalNor + totalOt) || ""}</td>
+              <td colSpan={4} />
               <td className="px-2 py-1.5 text-right">{formatAED(totalCost)}</td>
             </tr>
           </tfoot>

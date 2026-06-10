@@ -146,6 +146,7 @@ export async function deleteEquipment(id: string) {
 // ---- Daily timesheet (replace-for-date) ----------------------------
 export interface TimesheetRow {
   personnel_id: string;
+  job_id?: string | null;
   begin_time?: string | null;
   end_time?: string | null;
   normal_hours?: number | null;
@@ -166,11 +167,12 @@ export async function saveTimesheet(date: string, rows: TimesheetRow[]) {
   const payload = rows
     .filter((r) =>
       r.normal_hours != null || r.ot_hours != null || r.begin_time || r.end_time ||
-      r.site || r.job_description || r.job_ref,
+      r.site || r.job_description || r.job_ref || r.job_id,
     )
     .map((r) => ({
       personnel_id: r.personnel_id,
       entry_date: date,
+      job_id: r.job_id || null,
       begin_time: r.begin_time || null,
       end_time: r.end_time || null,
       normal_hours: r.normal_hours ?? null,

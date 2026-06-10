@@ -64,9 +64,9 @@ export type Database = {
         Relationships: []
       }
       timesheet_entries: {
-        Row: { begin_time: string | null; created_at: string; created_by: string | null; end_time: string | null; entry_date: string; id: string; job_description: string | null; job_ref: string | null; normal_hours: number | null; ot_hours: number | null; personnel_id: string; site: string | null }
-        Insert: { begin_time?: string | null; created_at?: string; created_by?: string | null; end_time?: string | null; entry_date: string; id?: string; job_description?: string | null; job_ref?: string | null; normal_hours?: number | null; ot_hours?: number | null; personnel_id: string; site?: string | null }
-        Update: { begin_time?: string | null; created_at?: string; created_by?: string | null; end_time?: string | null; entry_date?: string; id?: string; job_description?: string | null; job_ref?: string | null; normal_hours?: number | null; ot_hours?: number | null; personnel_id?: string; site?: string | null }
+        Row: { begin_time: string | null; created_at: string; created_by: string | null; end_time: string | null; entry_date: string; id: string; job_description: string | null; job_id: string | null; job_ref: string | null; normal_hours: number | null; ot_hours: number | null; personnel_id: string; site: string | null }
+        Insert: { begin_time?: string | null; created_at?: string; created_by?: string | null; end_time?: string | null; entry_date: string; id?: string; job_description?: string | null; job_id?: string | null; job_ref?: string | null; normal_hours?: number | null; ot_hours?: number | null; personnel_id: string; site?: string | null }
+        Update: { begin_time?: string | null; created_at?: string; created_by?: string | null; end_time?: string | null; entry_date?: string; id?: string; job_description?: string | null; job_id?: string | null; job_ref?: string | null; normal_hours?: number | null; ot_hours?: number | null; personnel_id?: string; site?: string | null }
         Relationships: []
       }
       equipment_usage: {
