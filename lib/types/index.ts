@@ -32,6 +32,17 @@ export type HandoverItem = T["handover_items"]["Row"];
 export type Drawing = T["drawings"]["Row"];
 export type AuditEntry = T["audit_log"]["Row"];
 export type Supplier = T["suppliers"]["Row"];
+export type DocumentRow = T["documents"]["Row"];
+
+export const DOC_TYPES = [
+  { value: "drawing", label: "Drawing" },
+  { value: "po", label: "Purchase Order" },
+  { value: "invoice", label: "Invoice" },
+  { value: "inspection_report", label: "Inspection Report" },
+  { value: "photo", label: "Photo" },
+  { value: "email", label: "Email" },
+  { value: "other", label: "Other" },
+] as const;
 export type InventoryItem = T["inventory_items"]["Row"];
 export type InventoryItemView = V["inventory_items_view"]["Row"];
 export type InventoryMovement = T["inventory_movements"]["Row"];

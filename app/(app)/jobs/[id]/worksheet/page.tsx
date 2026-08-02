@@ -12,7 +12,10 @@ import { WorksheetPanels } from "@/components/jobs/worksheet-panels";
 import { JobMetaForm } from "@/components/jobs/job-meta-form";
 import { CommentsThread } from "@/components/jobs/comments-thread";
 import { QuotationPdfButton } from "@/components/pdf/quotation-pdf-button";
+import { DocumentUpload } from "@/components/documents/document-upload";
+import { DocumentsTable } from "@/components/documents/documents-table";
 import { Button } from "@/components/ui/button";
+import type { DocumentRow } from "@/lib/types";
 import type { HistoricLookup } from "@/components/jobs/tentative-panel";
 
 export const dynamic = "force-dynamic";
@@ -72,11 +75,18 @@ export default async function WorksheetPage({
     });
   }
 
-  const { data: comments } = await supabase
-    .from("job_comments")
-    .select("*")
-    .eq("job_id", params.id)
-    .order("created_at", { ascending: true });
+  const [{ data: comments }, { data: docs }] = await Promise.all([
+    supabase
+      .from("job_comments")
+      .select("*")
+      .eq("job_id", params.id)
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("documents")
+      .select("*")
+      .eq("job_id", params.id)
+      .order("uploaded_at", { ascending: false }),
+  ]);
 
   const { data: users } = await supabase.from("users").select("id, full_name");
   const authorNames = Object.fromEntries((users ?? []).map((u) => [u.id, u.full_name]));
@@ -177,6 +187,29 @@ export default async function WorksheetPage({
       )}
 
       <div className="space-y-4 px-6">
+        <section className="border border-border bg-card">
+          <div className="flex items-center justify-between border-b border-border px-4 py-2">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Documents <span className="text-muted-foreground/60">({(docs ?? []).length})</span>
+            </h3>
+            {editable && (
+              <DocumentUpload
+                jobOptions={[{ value: params.id, label: job.job_code ?? "This job" }]}
+                defaultJobId={params.id}
+                label="Upload"
+              />
+            )}
+          </div>
+          <DocumentsTable
+            rows={(docs ?? []) as DocumentRow[]}
+            jobCodes={{ [params.id]: job.job_code ?? "" }}
+            jobOptions={[{ value: params.id, label: job.job_code ?? "This job" }]}
+            uploaderNames={authorNames}
+            canEdit={editable}
+            canDelete={profile.role_tier >= 3}
+            compact
+          />
+        </section>
         <JobMetaForm job={job} editable={editable} />
         <CommentsThread jobId={params.id} initial={comments ?? []} authorNames={authorNames} />
       </div>

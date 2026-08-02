@@ -1,6 +1,7 @@
 import {
   LayoutDashboard,
   ClipboardList,
+  FileText,
   Truck,
   PackageCheck,
   Boxes,
@@ -22,6 +23,7 @@ export interface NavItem {
 export const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, minTier: 1 },
   { href: "/jobs", label: "Jobs", icon: ClipboardList, minTier: 1 },
+  { href: "/documents", label: "Documents", icon: FileText, minTier: 1 },
   { href: "/procurement", label: "Procurement", icon: Truck, minTier: 2 },
   { href: "/inventory", label: "Inventory", icon: Boxes, minTier: 1 },
   { href: "/handover", label: "Handover", icon: PackageCheck, minTier: 1 },

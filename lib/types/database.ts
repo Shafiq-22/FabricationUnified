@@ -75,6 +75,12 @@ export type Database = {
         Update: { created_at?: string; created_by?: string | null; equipment_id?: string; id?: string; status_code?: string; usage_date?: string }
         Relationships: []
       }
+      documents: {
+        Row: { deleted_at: string | null; doc_type: string; file_path: string; id: string; job_id: string | null; mime_type: string | null; notes: string | null; original_filename: string | null; project_id: string | null; revision: string | null; size_bytes: number | null; title: string | null; uploaded_at: string; uploaded_by: string | null }
+        Insert: { deleted_at?: string | null; doc_type?: string; file_path: string; id?: string; job_id?: string | null; mime_type?: string | null; notes?: string | null; original_filename?: string | null; project_id?: string | null; revision?: string | null; size_bytes?: number | null; title?: string | null; uploaded_at?: string; uploaded_by?: string | null }
+        Update: { deleted_at?: string | null; doc_type?: string; file_path?: string; id?: string; job_id?: string | null; mime_type?: string | null; notes?: string | null; original_filename?: string | null; project_id?: string | null; revision?: string | null; size_bytes?: number | null; title?: string | null; uploaded_at?: string; uploaded_by?: string | null }
+        Relationships: []
+      }
       inventory_items: {
         Row: { active: boolean; created_at: string; created_by: string | null; description: string; dimensions: string | null; id: string; item_code: string | null; item_type: string; material_grade: string | null; parent_item_id: string | null; quantity_on_hand: number; reorder_threshold: number | null; source_job_id: string | null; unit: string | null; unit_cost: number | null; updated_at: string; warehouse_location: string | null }
         Insert: { active?: boolean; created_at?: string; created_by?: string | null; description: string; dimensions?: string | null; id?: string; item_code?: string | null; item_type?: string; material_grade?: string | null; parent_item_id?: string | null; reorder_threshold?: number | null; source_job_id?: string | null; unit?: string | null; unit_cost?: number | null; warehouse_location?: string | null }
