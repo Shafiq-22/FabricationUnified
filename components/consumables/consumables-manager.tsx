@@ -24,9 +24,16 @@ import { formatAED } from "@/lib/utils";
 import { fmtDate } from "@/lib/date";
 import type { Consumable } from "@/lib/types";
 
-const fields: FieldDef[] = [
+const buildFields = (
+  supplierOptions: { value: string; label: string }[],
+): FieldDef[] => [
   { key: "order_date", label: "Order Date", type: "date" },
-  { key: "supplier", label: "Supplier" },
+  {
+    key: "supplier_id",
+    label: "Supplier",
+    type: "select",
+    options: [{ value: "none", label: "— None —" }, ...supplierOptions],
+  },
   { key: "item_name", label: "Item", required: true, colSpan: 2 },
   { key: "unit", label: "Unit" },
   { key: "qty", label: "Qty", type: "number", step: "0.01" },
@@ -41,14 +48,17 @@ export function ConsumablesManager({
   rows,
   editable,
   canDelete,
+  supplierOptions,
 }: {
   rows: Consumable[];
   editable: boolean;
   canDelete: boolean;
+  supplierOptions: { value: string; label: string }[];
 }) {
   const router = useRouter();
   const { toast } = useToast();
   const [pending, start] = useTransition();
+  const fields = buildFields(supplierOptions);
 
   const total = rows.reduce((s, r) => s + (r.total_price ?? 0), 0);
 

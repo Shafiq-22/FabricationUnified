@@ -10,6 +10,7 @@ import { CsvExportButton } from "@/components/records/csv-export-button";
 import { ProcurementFilters } from "@/components/procurement/procurement-filters";
 import { ProcurementManager } from "@/components/procurement/procurement-manager";
 import { ConsumablesManager } from "@/components/consumables/consumables-manager";
+import { SuppliersManager } from "@/components/procurement/suppliers-manager";
 import {
   Table,
   TableBody,
@@ -18,7 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { JobMaterial, Consumable, HistoricPrice } from "@/lib/types";
+import type { JobMaterial, Consumable, HistoricPrice, Supplier } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +38,25 @@ const CONS_CSV = [
 ];
 
 const monthOf = (d: string | null) => (d ?? "").slice(0, 7);
-type Tab = "procurement" | "consumables" | "historic";
+type Tab = "procurement" | "consumables" | "suppliers" | "historic";
+
+/** Active suppliers as dialog `select` options, plus per-supplier usage counts. */
+async function loadSuppliers(supabase: any) {
+  const [{ data: sup }, { data: jm }, { data: cons }] = await Promise.all([
+    supabase.from("suppliers").select("*").order("name"),
+    supabase.from("job_materials").select("supplier_id").not("supplier_id", "is", null),
+    supabase.from("consumables").select("supplier_id").not("supplier_id", "is", null),
+  ]);
+  const rows = (sup ?? []) as Supplier[];
+  const usageCounts: Record<string, number> = {};
+  [...(jm ?? []), ...(cons ?? [])].forEach((r: any) => {
+    if (r.supplier_id) usageCounts[r.supplier_id] = (usageCounts[r.supplier_id] ?? 0) + 1;
+  });
+  const options = rows
+    .filter((s) => s.active)
+    .map((s) => ({ value: s.id, label: s.name }));
+  return { rows, options, usageCounts };
+}
 
 export default async function ProcurementPage({
   searchParams,
@@ -49,12 +68,16 @@ export default async function ProcurementPage({
   const supabase = createClient();
   const canDelete = profile.role_tier >= 3;
 
+  const suppliers = await loadSuppliers(supabase);
+
   const body =
     tab === "consumables"
-      ? await ConsumablesSection(supabase, searchParams, true, canDelete)
-      : tab === "historic"
-        ? await HistoricSection(supabase, searchParams)
-        : await ProcurementSection(supabase, searchParams, true, canDelete);
+      ? await ConsumablesSection(supabase, searchParams, true, canDelete, suppliers.options)
+      : tab === "suppliers"
+        ? SuppliersSection(suppliers, canDelete)
+        : tab === "historic"
+          ? await HistoricSection(supabase, searchParams)
+          : await ProcurementSection(supabase, searchParams, true, canDelete, suppliers.options);
 
   return (
     <div>
@@ -65,6 +88,7 @@ export default async function ProcurementPage({
       <div className="flex gap-1 border-b border-border bg-card px-6">
         <TabLink current={tab} value="procurement" label="Job Material" params={searchParams} />
         <TabLink current={tab} value="consumables" label="Consumables" params={searchParams} />
+        <TabLink current={tab} value="suppliers" label="Suppliers" params={searchParams} />
         <TabLink current={tab} value="historic" label="Historic Prices" params={searchParams} />
       </div>
       {body}
@@ -104,7 +128,28 @@ function TabLink({
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-async function ProcurementSection(supabase: any, sp: any, editable: boolean, canDelete: boolean) {
+function SuppliersSection(
+  suppliers: { rows: Supplier[]; usageCounts: Record<string, number> },
+  canDelete: boolean,
+) {
+  return (
+    <div className="p-6">
+      <SuppliersManager
+        rows={suppliers.rows}
+        canDelete={canDelete}
+        usageCounts={suppliers.usageCounts}
+      />
+    </div>
+  );
+}
+
+async function ProcurementSection(
+  supabase: any,
+  sp: any,
+  editable: boolean,
+  canDelete: boolean,
+  supplierOptions: { value: string; label: string }[],
+) {
   let query = supabase
     .from("job_materials")
     .select("*")
@@ -140,13 +185,19 @@ async function ProcurementSection(supabase: any, sp: any, editable: boolean, can
         <CsvExportButton filename="procurement.csv" columns={PROC_CSV} rows={csvRows as any} />
       </div>
       <div className="p-6 pt-4">
-        <ProcurementManager rows={rows} jobOptions={jobOptions} jobCodes={jobCodes} editable={editable} canDelete={canDelete} />
+        <ProcurementManager rows={rows} jobOptions={jobOptions} jobCodes={jobCodes} editable={editable} canDelete={canDelete} supplierOptions={supplierOptions} />
       </div>
     </div>
   );
 }
 
-async function ConsumablesSection(supabase: any, sp: any, editable: boolean, canDelete: boolean) {
+async function ConsumablesSection(
+  supabase: any,
+  sp: any,
+  editable: boolean,
+  canDelete: boolean,
+  supplierOptions: { value: string; label: string }[],
+) {
   const month = sp.month ?? currentMonthKey();
   const { data } = await supabase
     .from("consumables").select("*").eq("month_year", month).order("order_date", { ascending: false });
@@ -161,7 +212,7 @@ async function ConsumablesSection(supabase: any, sp: any, editable: boolean, can
         </div>
       </div>
       <div className="p-6 pt-4">
-        <ConsumablesManager rows={rows} editable={editable} canDelete={canDelete} />
+        <ConsumablesManager rows={rows} editable={editable} canDelete={canDelete} supplierOptions={supplierOptions} />
       </div>
     </div>
   );

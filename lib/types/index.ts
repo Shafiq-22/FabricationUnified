@@ -31,6 +31,7 @@ export type JobMaterial = T["job_materials"]["Row"];
 export type HandoverItem = T["handover_items"]["Row"];
 export type Drawing = T["drawings"]["Row"];
 export type AuditEntry = T["audit_log"]["Row"];
+export type Supplier = T["suppliers"]["Row"];
 export type Personnel = T["personnel"]["Row"];
 export type Equipment = T["equipment"]["Row"];
 export type TimesheetEntry = T["timesheet_entries"]["Row"];

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/auth";
+import { supplierNameFor } from "@/app/(app)/procurement/supplier-actions";
 
 const optNum = z.preprocess(
   (v) => (v === "" || v == null ? undefined : Number(v)),
@@ -25,11 +26,19 @@ const schema = z.object({
   invoice_dn_no: optStr,
   delivery_date: optStr,
   supplier: optStr,
+  supplier_id: optStr,
 });
 
-function payload(v: z.infer<typeof schema>) {
-  // undefined -> null so updates can clear fields. total_price/month_year are generated.
+/**
+ * `supplierName` is resolved from supplier_id by the caller; the legacy
+ * free-text `supplier` column is kept populated for backwards compatibility.
+ * undefined -> null so updates can clear fields. total_price/month_year are generated.
+ */
+function payload(v: z.infer<typeof schema>, supplierName: string | null) {
+  const supplierId = v.supplier_id && v.supplier_id !== "none" ? v.supplier_id : null;
   return {
+    supplier_id: supplierId,
+    supplier: supplierName ?? v.supplier ?? null,
     order_date: v.order_date ?? null,
     item_name: v.item_name,
     unit: v.unit ?? null,
@@ -39,7 +48,6 @@ function payload(v: z.infer<typeof schema>) {
     lpo_no: v.lpo_no ?? null,
     invoice_dn_no: v.invoice_dn_no ?? null,
     delivery_date: v.delivery_date ?? null,
-    supplier: v.supplier ?? null,
   };
 }
 
@@ -50,9 +58,10 @@ export async function createConsumable(values: Record<string, string>) {
   if (!parsed.success) return { error: parsed.error.errors[0]?.message ?? "Invalid input." };
 
   const supabase = createClient();
+  const supplierName = await supplierNameFor(parsed.data.supplier_id);
   const { error } = await supabase
     .from("consumables")
-    .insert({ ...payload(parsed.data), created_by: profile.id });
+    .insert({ ...payload(parsed.data, supplierName), created_by: profile.id });
   if (error) return { error: error.message };
   revalidatePath("/consumables");
   revalidatePath("/dashboard");
@@ -66,7 +75,11 @@ export async function updateConsumable(id: string, values: Record<string, string
   if (!parsed.success) return { error: parsed.error.errors[0]?.message ?? "Invalid input." };
 
   const supabase = createClient();
-  const { error } = await supabase.from("consumables").update(payload(parsed.data)).eq("id", id);
+  const supplierName = await supplierNameFor(parsed.data.supplier_id);
+  const { error } = await supabase
+    .from("consumables")
+    .update(payload(parsed.data, supplierName))
+    .eq("id", id);
   if (error) return { error: error.message };
   revalidatePath("/consumables");
   revalidatePath("/dashboard");

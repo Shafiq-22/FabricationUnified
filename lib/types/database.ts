@@ -75,6 +75,12 @@ export type Database = {
         Update: { created_at?: string; created_by?: string | null; equipment_id?: string; id?: string; status_code?: string; usage_date?: string }
         Relationships: []
       }
+      suppliers: {
+        Row: { active: boolean; category: string | null; contact_email: string | null; contact_name: string | null; contact_phone: string | null; created_at: string; created_by: string | null; id: string; name: string }
+        Insert: { active?: boolean; category?: string | null; contact_email?: string | null; contact_name?: string | null; contact_phone?: string | null; created_at?: string; created_by?: string | null; id?: string; name: string }
+        Update: { active?: boolean; category?: string | null; contact_email?: string | null; contact_name?: string | null; contact_phone?: string | null; created_at?: string; created_by?: string | null; id?: string; name?: string }
+        Relationships: []
+      }
       consumables: {
         Row: {
           created_at: string
@@ -90,6 +96,7 @@ export type Database = {
           pr_no: string | null
           qty: number | null
           supplier: string | null
+          supplier_id: string | null
           total_price: number | null
           unit: string | null
           unit_price: number | null
@@ -108,6 +115,7 @@ export type Database = {
           pr_no?: string | null
           qty?: number | null
           supplier?: string | null
+          supplier_id?: string | null
           total_price?: number | null
           unit?: string | null
           unit_price?: number | null
@@ -126,6 +134,7 @@ export type Database = {
           pr_no?: string | null
           qty?: number | null
           supplier?: string | null
+          supplier_id?: string | null
           total_price?: number | null
           unit?: string | null
           unit_price?: number | null
@@ -450,6 +459,7 @@ export type Database = {
           qty: number | null
           request_date: string | null
           supplier: string | null
+          supplier_id: string | null
           time_to_deliver_days: number | null
           total_price: number | null
           unit: string | null
@@ -470,6 +480,7 @@ export type Database = {
           qty?: number | null
           request_date?: string | null
           supplier?: string | null
+          supplier_id?: string | null
           unit?: string | null
           unit_price?: number | null
         }
@@ -488,6 +499,7 @@ export type Database = {
           qty?: number | null
           request_date?: string | null
           supplier?: string | null
+          supplier_id?: string | null
           unit?: string | null
           unit_price?: number | null
         }
@@ -859,6 +871,7 @@ export type Database = {
           last_price: number | null
           order_count: number | null
           supplier: string | null
+          supplier_id: string | null
         }
         Relationships: []
       }

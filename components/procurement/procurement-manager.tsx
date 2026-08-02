@@ -30,12 +30,14 @@ export function ProcurementManager({
   jobCodes,
   editable,
   canDelete,
+  supplierOptions,
 }: {
   rows: JobMaterial[];
   jobOptions: { value: string; label: string }[];
   jobCodes: Record<string, string>;
   editable: boolean;
   canDelete: boolean;
+  supplierOptions: { value: string; label: string }[];
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -55,7 +57,12 @@ export function ProcurementManager({
     { key: "unit", label: "Unit" },
     { key: "qty", label: "Qty", type: "number", step: "0.01" },
     { key: "unit_price", label: "Unit Price (AED)", type: "number", step: "0.01" },
-    { key: "supplier", label: "Supplier" },
+    {
+      key: "supplier_id",
+      label: "Supplier",
+      type: "select",
+      options: [{ value: "none", label: "— None —" }, ...supplierOptions],
+    },
     { key: "pr_no", label: "PR No" },
     { key: "lpo_no", label: "LPO No" },
     { key: "invoice_dn_no", label: "Invoice / DN No" },
