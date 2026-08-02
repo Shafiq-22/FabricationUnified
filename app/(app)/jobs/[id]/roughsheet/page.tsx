@@ -37,13 +37,43 @@ export default async function RoughSheetPage({
     .maybeSingle();
   if (!job) notFound();
 
-  const [{ data: items }, { data: plates }, { data: agg }, { data: plateAgg }] =
+  const [{ data: items }, { data: plates }, { data: agg }, { data: plateAgg }, { data: stock }] =
     await Promise.all([
       supabase.from("rough_sheet_items").select("*").eq("job_id", params.id).order("seq_no"),
       supabase.from("cut_list_plates").select("*").eq("job_id", params.id).order("seq_no"),
       supabase.from("rough_sheet_aggregated").select("*").eq("job_id", params.id),
       supabase.from("cut_list_plates_aggregated").select("*").eq("job_id", params.id),
+      supabase
+        .from("inventory_items_view")
+        .select("description, material_grade, dimensions, quantity_on_hand, unit, item_type")
+        .eq("active", true),
     ]);
+
+  // Match aggregated order lines against stock by normalised dimension so an
+  // engineer sees what is already on the shelf (incl. remnants) before ordering.
+  type StockRow = {
+    description: string | null;
+    material_grade: string | null;
+    dimensions: string | null;
+    quantity_on_hand: number | null;
+    unit: string | null;
+    item_type: string | null;
+  };
+  const norm = (s: string | null | undefined) => (s ?? "").toLowerCase().replace(/[\s*x×]/g, "");
+  const stockRows = (stock ?? []) as StockRow[];
+  const stockFor = (dimension: string | null) => {
+    const d = norm(dimension);
+    if (!d) return null;
+    const hits = stockRows.filter(
+      (s) => norm(s.dimensions) === d || (d.length > 2 && norm(s.description).includes(d)),
+    );
+    if (hits.length === 0) return null;
+    return {
+      qty: hits.reduce((sum, h) => sum + Number(h.quantity_on_hand ?? 0), 0),
+      unit: hits[0].unit ?? "",
+      isRemnant: hits.some((h) => h.item_type === "remnant"),
+    };
+  };
 
   return (
     <div className="pb-10">
@@ -71,12 +101,13 @@ export default async function RoughSheetPage({
                 <TableHead className="text-right">Total Len (m)</TableHead>
                 <TableHead className="text-right">Theoretical</TableHead>
                 <TableHead className="text-right">Order Qty</TableHead>
+                <TableHead className="text-right">In Stock</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {(agg ?? []).length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={5} className="py-6 text-center text-xs text-panel-foreground/50">
+                  <TableCell colSpan={6} className="py-6 text-center text-xs text-panel-foreground/50">
                     Save cut-list rows to compute the order list.
                   </TableCell>
                 </TableRow>
@@ -89,6 +120,21 @@ export default async function RoughSheetPage({
                   <TableCell className="text-right text-xs">{a.theoretical_qty}</TableCell>
                   <TableCell className="text-right text-xs font-bold text-amber">
                     {a.order_qty}
+                  </TableCell>
+                  <TableCell className="text-right text-xs">
+                    {(() => {
+                      const s = stockFor(a.dimension);
+                      if (!s || s.qty <= 0)
+                        return <span className="text-panel-foreground/40">—</span>;
+                      return (
+                        <span
+                          className={s.isRemnant ? "font-semibold text-steel" : "font-semibold"}
+                          title={s.isRemnant ? "Includes remnant stock" : "Available in stock"}
+                        >
+                          {s.qty} {s.unit}
+                        </span>
+                      );
+                    })()}
                   </TableCell>
                 </TableRow>
               ))}

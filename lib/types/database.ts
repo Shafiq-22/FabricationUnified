@@ -75,6 +75,18 @@ export type Database = {
         Update: { created_at?: string; created_by?: string | null; equipment_id?: string; id?: string; status_code?: string; usage_date?: string }
         Relationships: []
       }
+      inventory_items: {
+        Row: { active: boolean; created_at: string; created_by: string | null; description: string; dimensions: string | null; id: string; item_code: string | null; item_type: string; material_grade: string | null; parent_item_id: string | null; quantity_on_hand: number; reorder_threshold: number | null; source_job_id: string | null; unit: string | null; unit_cost: number | null; updated_at: string; warehouse_location: string | null }
+        Insert: { active?: boolean; created_at?: string; created_by?: string | null; description: string; dimensions?: string | null; id?: string; item_code?: string | null; item_type?: string; material_grade?: string | null; parent_item_id?: string | null; reorder_threshold?: number | null; source_job_id?: string | null; unit?: string | null; unit_cost?: number | null; warehouse_location?: string | null }
+        Update: { active?: boolean; created_at?: string; created_by?: string | null; description?: string; dimensions?: string | null; id?: string; item_code?: string | null; item_type?: string; material_grade?: string | null; parent_item_id?: string | null; reorder_threshold?: number | null; source_job_id?: string | null; unit?: string | null; unit_cost?: number | null; warehouse_location?: string | null }
+        Relationships: []
+      }
+      inventory_movements: {
+        Row: { created_at: string; created_by: string | null; id: string; inventory_item_id: string; job_id: string | null; job_material_id: string | null; moved_on: string; movement_type: string; note: string | null; qty: number }
+        Insert: { created_at?: string; created_by?: string | null; id?: string; inventory_item_id: string; job_id?: string | null; job_material_id?: string | null; moved_on?: string; movement_type: string; note?: string | null; qty: number }
+        Update: { created_at?: string; created_by?: string | null; id?: string; inventory_item_id?: string; job_id?: string | null; job_material_id?: string | null; moved_on?: string; movement_type?: string; note?: string | null; qty?: number }
+        Relationships: []
+      }
       suppliers: {
         Row: { active: boolean; category: string | null; contact_email: string | null; contact_name: string | null; contact_phone: string | null; created_at: string; created_by: string | null; id: string; name: string }
         Insert: { active?: boolean; category?: string | null; contact_email?: string | null; contact_name?: string | null; contact_phone?: string | null; created_at?: string; created_by?: string | null; id?: string; name: string }
@@ -862,6 +874,14 @@ export type Database = {
       }
     }
     Views: {
+      inventory_items_view: {
+        Row: { active: boolean | null; created_at: string | null; description: string | null; dimensions: string | null; id: string | null; item_code: string | null; item_type: string | null; low_stock: boolean | null; material_grade: string | null; parent_item_id: string | null; quantity_on_hand: number | null; reorder_threshold: number | null; source_job_code: string | null; source_job_id: string | null; stock_value: number | null; unit: string | null; unit_cost: number | null; updated_at: string | null; warehouse_location: string | null }
+        Relationships: []
+      }
+      inventory_low_stock: {
+        Row: { active: boolean | null; created_at: string | null; description: string | null; dimensions: string | null; id: string | null; item_code: string | null; item_type: string | null; low_stock: boolean | null; material_grade: string | null; parent_item_id: string | null; quantity_on_hand: number | null; reorder_threshold: number | null; source_job_code: string | null; source_job_id: string | null; stock_value: number | null; unit: string | null; unit_cost: number | null; updated_at: string | null; warehouse_location: string | null }
+        Relationships: []
+      }
       historic_prices: {
         Row: {
           avg_price: number | null

@@ -32,6 +32,17 @@ export type HandoverItem = T["handover_items"]["Row"];
 export type Drawing = T["drawings"]["Row"];
 export type AuditEntry = T["audit_log"]["Row"];
 export type Supplier = T["suppliers"]["Row"];
+export type InventoryItem = T["inventory_items"]["Row"];
+export type InventoryItemView = V["inventory_items_view"]["Row"];
+export type InventoryMovement = T["inventory_movements"]["Row"];
+
+export const INVENTORY_TYPES = ["plate", "section", "consumable", "remnant"] as const;
+export const MOVEMENT_TYPES = [
+  { value: "receipt", label: "Receipt (in)", sign: 1 },
+  { value: "issue", label: "Issue to job (out)", sign: -1 },
+  { value: "remnant", label: "Remnant returned (in)", sign: 1 },
+  { value: "adjustment", label: "Adjustment (±)", sign: 1 },
+] as const;
 export type Personnel = T["personnel"]["Row"];
 export type Equipment = T["equipment"]["Row"];
 export type TimesheetEntry = T["timesheet_entries"]["Row"];
