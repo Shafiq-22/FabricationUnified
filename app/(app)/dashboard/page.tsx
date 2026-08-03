@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/auth";
 import { canSeeFinancials, statusMeta, JOB_STATUSES, type JobView } from "@/lib/types";
@@ -49,6 +50,34 @@ export default async function DashboardPage({
     kpis = (data as unknown as Kpis) ?? { authorized: false };
   }
 
+  // Operational counters (non-financial, so every tier sees them).
+  const [{ count: lowStock }, { count: openNcrs }, { count: docCount }, { data: pending }] =
+    await Promise.all([
+      supabase.from("inventory_low_stock").select("id", { count: "exact", head: true }),
+      supabase
+        .from("ncrs")
+        .select("id", { count: "exact", head: true })
+        .neq("status", "closed")
+        .is("deleted_at", null),
+      supabase
+        .from("documents")
+        .select("id", { count: "exact", head: true })
+        .is("deleted_at", null),
+      supabase
+        .from("job_materials")
+        .select("order_date")
+        .is("delivery_date", null)
+        .not("order_date", "is", null)
+        .is("deleted_at", null)
+        .limit(1000),
+    ]);
+
+  // "Overdue" = ordered more than 14 days ago and still not delivered.
+  const cutoff = new Date(Date.now() - 14 * 86_400_000).toISOString().slice(0, 10);
+  const overdueDeliveries = (pending ?? []).filter(
+    (r: { order_date: string | null }) => (r.order_date ?? "") < cutoff,
+  ).length;
+
   return (
     <div>
       <PageHeader title="Dashboard" description={`Workshop performance — ${monthLabel(month)}`}>
@@ -81,6 +110,34 @@ export default async function DashboardPage({
               Financial figures are restricted for your role.
             </div>
           )}
+        </div>
+
+        {/* Operational counters */}
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <Link href="/inventory">
+            <KpiCard
+              label="Low Stock"
+              value={String(lowStock ?? 0)}
+              accent={(lowStock ?? 0) > 0 ? "negative" : "positive"}
+            />
+          </Link>
+          <Link href="/qa?tab=ncrs">
+            <KpiCard
+              label="Open NCRs"
+              value={String(openNcrs ?? 0)}
+              accent={(openNcrs ?? 0) > 0 ? "negative" : "positive"}
+            />
+          </Link>
+          <Link href="/procurement">
+            <KpiCard
+              label="Overdue Deliveries"
+              value={String(overdueDeliveries)}
+              accent={overdueDeliveries > 0 ? "amber" : "positive"}
+            />
+          </Link>
+          <Link href="/documents">
+            <KpiCard label="Documents" value={String(docCount ?? 0)} accent="steel" />
+          </Link>
         </div>
 
         {/* Status breakdown */}

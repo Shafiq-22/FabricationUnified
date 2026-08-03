@@ -975,6 +975,7 @@ export type Database = {
           margin: number | null
           pl_percentage: number | null
           profit_loss: number | null
+          project_id: string | null
           qty: number | null
           quotation_ref: string | null
           quote_before_margin: number | null
