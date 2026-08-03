@@ -18,11 +18,22 @@ Vercel. Industrial‑utilitarian dark UI.
 3. **Jobs Register** — filter by status/site/month + search, colour‑coded status badges, auto‑generated job codes.
 4. **Job Worksheet** — tabs **Quotation / Actual / Tentative / Analytics**. Material, Workforce (costed by Settings rates) and Consumables sections each apply a global Settings margin; computed Quotation Summary; Tentative estimator priced from historic procurement; Analytics with predicted‑vs‑actual P/L and a cost‑deviation chart; PDF quotation.
 5. **Rough Sheet / Cut‑List** — cut‑list entry with auto‑aggregated order list (bars) + plate nesting, "Copy to Job Material Request".
-6. **Procurement** — three sub‑tabs: **Job Material** (request/order/delivery, avg days‑to‑deliver KPI, CSV), **Consumables** (monthly register, CSV), **Historic Prices** (recorded prices by item & supplier).
+6. **Procurement** — four sub‑tabs: **Job Material** (request/order/delivery, avg days‑to‑deliver KPI, CSV), **Consumables** (monthly register, CSV), **Suppliers** (master list with usage counts), **Historic Prices** (recorded prices by item & supplier).
 7. **Handover & Forecast** — active vs forecasted items with per‑item drawings tracker.
 8. **Sites** (admin) — manage the 116 site codes.
 9. **Users** (admin) — invite, assign roles, deactivate, reset password.
-10. **Settings** (admin) — rename role tiers, set section margins (Material/Workforce/Consumables), edit labour rates, company/department for PDF, change own password.
+10. **Settings** (admin) — rename role tiers, set section margins (Material/Workforce/Consumables), edit labour rates, timesheet rates, company/department for PDF, change own password.
+11. **Personnel & Equipment Record** — daily timesheets (with monthly colour‑coded view and PDF), monthly equipment usage costed by status code, **Maintenance** log, and the personnel/equipment master lists.
+
+### Knowledge‑layer modules (non‑AI subset of the Knowledge OS spec)
+
+12. **Projects & Clients** — Client → Project → RFQ hierarchy sitting *above* jobs (`jobs.project_id` is optional, so existing jobs are unaffected). Auto `PRJ‑YYYY‑NNN` codes; RFQ due‑date tracking.
+13. **Documents** — uploads to a private Supabase Storage bucket, indexed by job/project/type/revision, downloaded via short‑lived signed URLs. Also surfaced as a panel on each Job Worksheet.
+14. **Inventory & Remnants** — stock items with a movement ledger as the source of truth (on‑hand is derived by trigger), low‑stock flags, remnant tracking, and an **In Stock** hint on the Rough Sheet order list.
+15. **Quality** — inspection reports and NCRs with pass‑rate/open‑NCR KPIs; welder qualifications with expiry flagging (ISO 3834‑2).
+16. **Import** — Excel/CSV and DSTV (NC1) import into the cut list and worksheet MTO, with column auto‑mapping and a preview before anything is written.
+17. **Search** — global full‑text search across jobs, projects, clients, documents, stock, suppliers, NCRs and comments, grouped by kind.
+18. **Graph** — read‑only relationship explorer generated from live relational queries.
 
 ## Role tiers
 
@@ -172,13 +183,27 @@ temporary password each user changes after first sign‑in).
   removed by Engineers as part of normal editing, while top‑level *records*
   (jobs, consumables, procurement, handover) are admin‑only soft‑delete.
 
+### Not built (deliberately)
+
+The *Steel Fabrication Knowledge OS* spec's AI features are **out of scope**:
+there is no LLM, embedding or OCR code anywhere in this repo. Specifically not
+built — document field extraction, the extraction review queue, semantic/vector
+search, and the RAG assistant. Everything here is deterministic. Adding them
+later needs a data‑residency decision first, since drawings and POs would be
+sent to a third‑party API.
+
+DXF parsing is also not built: it would require the spec's separate Python
+(`ezdxf`) microservice. DSTV (NC1) is supported instead, parsed in TypeScript
+inside the app.
+
 ### Project layout
 
 ```
 app/                 (app)/ protected route group + /login
 components/ui        shadcn/ui primitives
-components/{jobs,dashboard,procurement,handover,sites,users,settings,records,pdf,layout}
-lib/{supabase,types,utils,auth,date,config,hooks}
-supabase/migrations  ordered SQL
+components/{jobs,dashboard,procurement,handover,sites,users,settings,records,
+            documents,inventory,projects,qa,graph,search,pdf,layout}
+lib/{supabase,types,utils,auth,date,config,hooks,parsers,graph,storage,equipment}
+supabase/migrations  ordered SQL (0001–0025)
 supabase/seed        roles, labour rates, 116 sites
 ```
