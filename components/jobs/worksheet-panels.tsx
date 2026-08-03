@@ -5,6 +5,7 @@ import { WorkforceEditor } from "@/components/jobs/workforce-editor";
 import { AnalyticsPanel } from "@/components/jobs/analytics-panel";
 import { TentativePanel, type HistoricLookup } from "@/components/jobs/tentative-panel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ImportDialog } from "@/components/jobs/import-dialog";
 import { replaceJobLines, type Row } from "@/app/(app)/jobs/[id]/worksheet/actions";
 import { formatAED } from "@/lib/utils";
 import type { JobView } from "@/lib/types";
@@ -105,6 +106,17 @@ export function WorksheetPanels({
 
         {/* QUOTATION */}
         <TabsContent value="quotation" className="space-y-4">
+          {editable && (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs text-muted-foreground">Import from a spreadsheet:</span>
+              <ImportDialog jobId={jobId} target="job_quote_materials" label="Import Materials" />
+              <ImportDialog
+                jobId={jobId}
+                target="job_quote_consumables"
+                label="Import Consumables"
+              />
+            </div>
+          )}
           <EditableTable
             title="Material MTO"
             columns={matCols}

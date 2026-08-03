@@ -10,6 +10,7 @@ import {
   RoughPlatesEditor,
 } from "@/components/jobs/rough-sheet-editors";
 import { CopyToProcurementButton } from "@/components/jobs/copy-to-procurement-button";
+import { ImportDialog } from "@/components/jobs/import-dialog";
 import {
   Table,
   TableBody,
@@ -83,6 +84,14 @@ export default async function RoughSheetPage({
             <ArrowLeft className="h-4 w-4" /> Worksheet
           </Link>
         </Button>
+        {editable && (
+          <ImportDialog
+            jobId={params.id}
+            target="rough_sheet_items"
+            label="Import Cut List"
+            allowDstv
+          />
+        )}
         {editable && <CopyToProcurementButton jobId={params.id} />}
       </PageHeader>
 
