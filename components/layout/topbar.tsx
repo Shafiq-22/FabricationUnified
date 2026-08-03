@@ -5,6 +5,7 @@ import { signOut } from "@/app/login/actions";
 import { useProfile } from "@/components/providers";
 import { Button } from "@/components/ui/button";
 import { InactivityLogout } from "./inactivity-logout";
+import { SearchBox } from "@/components/search/search-box";
 
 export function Topbar() {
   const profile = useProfile();
@@ -12,7 +13,8 @@ export function Topbar() {
   return (
     <header className="flex h-12 shrink-0 items-center justify-between border-b border-border bg-card px-4">
       <InactivityLogout />
-      <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+      <SearchBox compact />
+      <div className="hidden font-mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground lg:block">
         Workshop&nbsp;·&nbsp;Steel&nbsp;Fabrication
       </div>
       <div className="flex items-center gap-3">

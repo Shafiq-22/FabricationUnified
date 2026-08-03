@@ -1016,6 +1016,17 @@ export type Database = {
         Args: { p_password: string; p_user_id: string }
         Returns: undefined
       }
+      global_search: {
+        Args: { p_q: string; p_limit?: number }
+        Returns: {
+          kind: string
+          id: string
+          title: string | null
+          subtitle: string | null
+          meta: string | null
+          href: string | null
+        }[]
+      }
       auth_is_admin: { Args: Record<string, never>; Returns: boolean }
       auth_user_tier: { Args: Record<string, never>; Returns: number }
       dashboard_financial_kpis: { Args: { p_month: string }; Returns: Json }
