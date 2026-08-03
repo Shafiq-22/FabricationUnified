@@ -37,6 +37,36 @@ export type Client = T["clients"]["Row"];
 export type Project = T["projects"]["Row"];
 export type ProjectView = V["projects_view"]["Row"];
 export type Rfq = T["rfqs"]["Row"];
+export type InspectionReport = T["inspection_reports"]["Row"];
+export type Ncr = T["ncrs"]["Row"];
+export type MaintenanceRecord = T["maintenance_records"]["Row"];
+
+export const INSPECTION_RESULTS = [
+  { value: "pass", label: "Pass", badge: "com" },
+  { value: "fail", label: "Fail", badge: "hal" },
+  { value: "conditional", label: "Conditional", badge: "inp" },
+] as const;
+
+export const NCR_STATUSES = [
+  { value: "open", label: "Open", badge: "hal" },
+  { value: "in_progress", label: "In Progress", badge: "inp" },
+  { value: "closed", label: "Closed", badge: "com" },
+] as const;
+
+export const NCR_SEVERITIES = ["minor", "major", "critical"] as const;
+
+export const MAINTENANCE_TYPES = [
+  { value: "scheduled", label: "Scheduled" },
+  { value: "breakdown", label: "Breakdown" },
+  { value: "inspection", label: "Inspection" },
+  { value: "repair", label: "Repair" },
+] as const;
+
+export const EQUIPMENT_STATES = [
+  { value: "operational", label: "Operational", badge: "com" },
+  { value: "maintenance", label: "Maintenance", badge: "inp" },
+  { value: "down", label: "Down", badge: "hal" },
+] as const;
 
 export const PROJECT_STATUSES = [
   { value: "rfq", label: "RFQ", badge: "qtn" },

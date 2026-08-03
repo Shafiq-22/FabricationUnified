@@ -21,6 +21,8 @@ const personFields: FieldDef[] = [
   { key: "ho_no", label: "HO No" },
   { key: "name", label: "Name", required: true },
   { key: "trade", label: "Trade", colSpan: 2, placeholder: "Welder / Weld-FM / Weld-GL…" },
+  { key: "welder_qualification", label: "Welder Qualification", placeholder: "e.g. ISO 9606-1 141" },
+  { key: "qualification_expiry", label: "Qualification Expiry", type: "date" },
 ];
 const equipFields: FieldDef[] = [
   { key: "sixco_no", label: "Sixco No" },
@@ -57,15 +59,35 @@ export function PersonnelManager({ rows, canDelete }: { rows: Personnel[]; canDe
       <Table>
         <TableHeader><TableRow>
           <TableHead className="w-28">HO No</TableHead><TableHead>Name</TableHead>
-          <TableHead>Trade</TableHead><TableHead className="w-24">Status</TableHead><TableHead className="w-28" />
+          <TableHead>Trade</TableHead><TableHead>Qualification</TableHead>
+          <TableHead className="w-24">Status</TableHead><TableHead className="w-28" />
         </TableRow></TableHeader>
         <TableBody>
-          {rows.length === 0 && <TableRow><TableCell colSpan={5} className="py-8 text-center text-sm text-muted-foreground">No personnel yet — add some.</TableCell></TableRow>}
-          {rows.map((p) => (
+          {rows.length === 0 && <TableRow><TableCell colSpan={6} className="py-8 text-center text-sm text-muted-foreground">No personnel yet — add some.</TableCell></TableRow>}
+          {rows.map((p) => {
+            const expired =
+              p.qualification_expiry != null &&
+              p.qualification_expiry < new Date().toISOString().slice(0, 10);
+            return (
             <TableRow key={p.id}>
               <TableCell className="code-chip">{p.ho_no}</TableCell>
               <TableCell className="text-sm">{p.name}</TableCell>
               <TableCell className="text-xs">{p.trade}</TableCell>
+              <TableCell className="text-xs">
+                {p.welder_qualification ? (
+                  <span className={expired ? "font-semibold text-destructive" : ""}>
+                    {p.welder_qualification}
+                    {p.qualification_expiry && (
+                      <span className="ml-1 text-[10px] text-muted-foreground">
+                        {expired ? "(expired " : "(exp "}
+                        {p.qualification_expiry})
+                      </span>
+                    )}
+                  </span>
+                ) : (
+                  <span className="text-muted-foreground">—</span>
+                )}
+              </TableCell>
               <TableCell>{p.active ? <Badge variant="com">Active</Badge> : <Badge variant="secondary">Inactive</Badge>}</TableCell>
               <TableCell>
                 <div className="flex items-center gap-1">
@@ -85,7 +107,8 @@ export function PersonnelManager({ rows, canDelete }: { rows: Personnel[]; canDe
                 </div>
               </TableCell>
             </TableRow>
-          ))}
+            );
+          })}
         </TableBody>
       </Table>
     </section>

@@ -12,13 +12,20 @@ import { TimesheetGrid, type JobOption, type SiteOption } from "@/components/rec
 import { TimesheetMonthly } from "@/components/records/timesheet-monthly";
 import { EquipmentUsageGrid } from "@/components/records/equipment-usage-grid";
 import { PersonnelManager, EquipmentManager } from "@/components/records/master-lists";
+import { MaintenanceManager } from "@/components/records/maintenance-manager";
 import { TimesheetPdfButton } from "@/components/pdf/timesheet-pdf-button";
 import { EquipmentPdfButton } from "@/components/pdf/equipment-pdf-button";
-import type { Personnel, Equipment, TimesheetEntry, EquipmentUsage } from "@/lib/types";
+import type {
+  Personnel,
+  Equipment,
+  TimesheetEntry,
+  EquipmentUsage,
+  MaintenanceRecord,
+} from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-type Tab = "timesheet" | "equipment" | "manage";
+type Tab = "timesheet" | "equipment" | "maintenance" | "manage";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 export default async function RecordsPage({
@@ -46,9 +53,11 @@ export default async function RecordsPage({
   const body =
     tab === "equipment"
       ? await EquipmentTab(supabase, searchParams, company, department)
-      : tab === "manage"
-        ? await ManageTab(supabase, isAdmin)
-        : await TimesheetTab(supabase, searchParams, rates, company, department);
+      : tab === "maintenance"
+        ? await MaintenanceTab(supabase, profile.role_tier)
+        : tab === "manage"
+          ? await ManageTab(supabase, isAdmin)
+          : await TimesheetTab(supabase, searchParams, rates, company, department);
 
   return (
     <div>
@@ -59,6 +68,7 @@ export default async function RecordsPage({
       <div className="flex gap-1 border-b border-border bg-card px-6">
         <TabLink current={tab} value="timesheet" label="Timesheet" params={searchParams} />
         <TabLink current={tab} value="equipment" label="Equipment Usage" params={searchParams} />
+        <TabLink current={tab} value="maintenance" label="Maintenance" params={searchParams} />
         <TabLink current={tab} value="manage" label="Manage Lists" params={searchParams} />
       </div>
       {body}
@@ -225,6 +235,34 @@ async function EquipmentTab(supabase: any, sp: any, company: string, department:
         />
       </div>
       <EquipmentUsageGrid month={month} equipment={equip} usage={use} editable />
+    </div>
+  );
+}
+
+async function MaintenanceTab(supabase: any, tier: number) {
+  const [{ data: records }, { data: equipment }, { data: personnel }] = await Promise.all([
+    supabase.from("maintenance_records").select("*").order("performed_on", { ascending: false }).limit(1000),
+    supabase.from("equipment").select("*").order("created_at"),
+    supabase.from("personnel").select("id, name").eq("active", true).order("name"),
+  ]);
+  const personnelOptions = (personnel ?? []).map((p: any) => ({
+    value: p.id as string,
+    label: p.name as string,
+  }));
+  const personnelNames: Record<string, string> = Object.fromEntries(
+    (personnel ?? []).map((p: any) => [p.id as string, p.name as string]),
+  );
+  return (
+    <div className="p-6">
+      <MaintenanceManager
+        rows={(records ?? []) as MaintenanceRecord[]}
+        equipment={(equipment ?? []) as Equipment[]}
+        personnelOptions={personnelOptions}
+        personnelNames={personnelNames}
+        showMoney={tier >= 2}
+        canEdit={tier >= 2}
+        canDelete={tier >= 3}
+      />
     </div>
   );
 }

@@ -52,15 +52,15 @@ export type Database = {
         Relationships: []
       }
       personnel: {
-        Row: { active: boolean; created_at: string; created_by: string | null; ho_no: string | null; id: string; name: string; trade: string | null }
-        Insert: { active?: boolean; created_at?: string; created_by?: string | null; ho_no?: string | null; id?: string; name: string; trade?: string | null }
-        Update: { active?: boolean; created_at?: string; created_by?: string | null; ho_no?: string | null; id?: string; name?: string; trade?: string | null }
+        Row: { active: boolean; created_at: string; created_by: string | null; ho_no: string | null; id: string; name: string; qualification_expiry: string | null; trade: string | null; welder_qualification: string | null }
+        Insert: { active?: boolean; created_at?: string; created_by?: string | null; ho_no?: string | null; id?: string; name: string; qualification_expiry?: string | null; trade?: string | null; welder_qualification?: string | null }
+        Update: { active?: boolean; created_at?: string; created_by?: string | null; ho_no?: string | null; id?: string; name?: string; qualification_expiry?: string | null; trade?: string | null; welder_qualification?: string | null }
         Relationships: []
       }
       equipment: {
-        Row: { active: boolean; bare_rate: number | null; created_at: string; created_by: string | null; device_group: string | null; driver_rate: number | null; id: string; machine: string; make: string | null; sixco_no: string | null; type: string | null }
-        Insert: { active?: boolean; bare_rate?: number | null; created_at?: string; created_by?: string | null; device_group?: string | null; driver_rate?: number | null; id?: string; machine: string; make?: string | null; sixco_no?: string | null; type?: string | null }
-        Update: { active?: boolean; bare_rate?: number | null; created_at?: string; created_by?: string | null; device_group?: string | null; driver_rate?: number | null; id?: string; machine?: string; make?: string | null; sixco_no?: string | null; type?: string | null }
+        Row: { active: boolean; bare_rate: number | null; created_at: string; created_by: string | null; device_group: string | null; driver_rate: number | null; id: string; last_service_date: string | null; machine: string; make: string | null; sixco_no: string | null; status: string; type: string | null }
+        Insert: { active?: boolean; bare_rate?: number | null; created_at?: string; created_by?: string | null; device_group?: string | null; driver_rate?: number | null; id?: string; last_service_date?: string | null; machine: string; make?: string | null; sixco_no?: string | null; status?: string; type?: string | null }
+        Update: { active?: boolean; bare_rate?: number | null; created_at?: string; created_by?: string | null; device_group?: string | null; driver_rate?: number | null; id?: string; last_service_date?: string | null; machine?: string; make?: string | null; sixco_no?: string | null; status?: string; type?: string | null }
         Relationships: []
       }
       timesheet_entries: {
@@ -73,6 +73,24 @@ export type Database = {
         Row: { created_at: string; created_by: string | null; equipment_id: string; id: string; status_code: string; usage_date: string }
         Insert: { created_at?: string; created_by?: string | null; equipment_id: string; id?: string; status_code: string; usage_date: string }
         Update: { created_at?: string; created_by?: string | null; equipment_id?: string; id?: string; status_code?: string; usage_date?: string }
+        Relationships: []
+      }
+      inspection_reports: {
+        Row: { created_at: string; created_by: string | null; deleted_at: string | null; id: string; inspected_at: string; inspector_id: string | null; item_ref: string | null; job_id: string | null; notes: string | null; result: string }
+        Insert: { created_at?: string; created_by?: string | null; deleted_at?: string | null; id?: string; inspected_at?: string; inspector_id?: string | null; item_ref?: string | null; job_id?: string | null; notes?: string | null; result?: string }
+        Update: { created_at?: string; created_by?: string | null; deleted_at?: string | null; id?: string; inspected_at?: string; inspector_id?: string | null; item_ref?: string | null; job_id?: string | null; notes?: string | null; result?: string }
+        Relationships: []
+      }
+      ncrs: {
+        Row: { closed_at: string | null; corrective_action: string | null; created_at: string; created_by: string | null; deleted_at: string | null; description: string | null; id: string; item_ref: string | null; job_id: string | null; project_id: string | null; raised_at: string; raised_by: string | null; root_cause: string | null; severity: string | null; status: string; title: string; updated_at: string }
+        Insert: { closed_at?: string | null; corrective_action?: string | null; created_at?: string; created_by?: string | null; deleted_at?: string | null; description?: string | null; id?: string; item_ref?: string | null; job_id?: string | null; project_id?: string | null; raised_at?: string; raised_by?: string | null; root_cause?: string | null; severity?: string | null; status?: string; title: string; updated_at?: string }
+        Update: { closed_at?: string | null; corrective_action?: string | null; created_at?: string; created_by?: string | null; deleted_at?: string | null; description?: string | null; id?: string; item_ref?: string | null; job_id?: string | null; project_id?: string | null; raised_at?: string; raised_by?: string | null; root_cause?: string | null; severity?: string | null; status?: string; title?: string; updated_at?: string }
+        Relationships: []
+      }
+      maintenance_records: {
+        Row: { cost: number | null; created_at: string; created_by: string | null; description: string | null; downtime_hours: number | null; equipment_id: string; id: string; maintenance_type: string; performed_by: string | null; performed_on: string }
+        Insert: { cost?: number | null; created_at?: string; created_by?: string | null; description?: string | null; downtime_hours?: number | null; equipment_id: string; id?: string; maintenance_type?: string; performed_by?: string | null; performed_on?: string }
+        Update: { cost?: number | null; created_at?: string; created_by?: string | null; description?: string | null; downtime_hours?: number | null; equipment_id?: string; id?: string; maintenance_type?: string; performed_by?: string | null; performed_on?: string }
         Relationships: []
       }
       clients: {
