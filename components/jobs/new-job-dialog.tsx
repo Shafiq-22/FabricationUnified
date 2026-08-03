@@ -37,8 +37,10 @@ function Submit() {
 
 export function NewJobDialog({
   sites,
+  projects = [],
 }: {
   sites: { id: string; code: string; name: string }[];
+  projects?: { value: string; label: string }[];
 }) {
   const [open, setOpen] = useState(false);
   const [state, formAction] = useFormState(createJob, initial);
@@ -111,6 +113,24 @@ export function NewJobDialog({
               <Label htmlFor="quotation_ref">Quotation Ref</Label>
               <Input id="quotation_ref" name="quotation_ref" />
             </div>
+            {projects.length > 0 && (
+              <div className="col-span-2 space-y-1.5">
+                <Label htmlFor="project_id">Project (optional)</Label>
+                <Select name="project_id" defaultValue="none">
+                  <SelectTrigger id="project_id">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">— Not part of a project —</SelectItem>
+                    {projects.map((p) => (
+                      <SelectItem key={p.value} value={p.value}>
+                        {p.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
 
           {state.error && (

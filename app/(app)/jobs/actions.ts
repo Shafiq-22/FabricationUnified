@@ -18,6 +18,7 @@ const createSchema = z.object({
   start_date: z.string().optional(),
   company_job_code: z.string().trim().optional(),
   quotation_ref: z.string().trim().optional(),
+  project_id: z.string().trim().optional(),
 });
 
 // NOTE: jobs base-table SELECT is revoked from `authenticated`; we generate the
@@ -47,6 +48,7 @@ export async function createJob(
     start_date: v.start_date || null,
     company_job_code: v.company_job_code || null,
     quotation_ref: v.quotation_ref || null,
+    project_id: v.project_id && v.project_id !== "none" ? v.project_id : null,
     created_by: profile.id,
   });
 

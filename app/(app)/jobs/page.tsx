@@ -47,16 +47,21 @@ export default async function JobsPage({
   let jobs = (data ?? []) as JobView[];
   if (searchParams.month) jobs = jobs.filter((j) => monthOf(j) === searchParams.month);
 
-  const { data: sites } = await supabase
-    .from("sites")
-    .select("id, code, name")
-    .eq("active", true)
-    .order("code");
+  const [{ data: sites }, { data: projects }] = await Promise.all([
+    supabase.from("sites").select("id, code, name").eq("active", true).order("code"),
+    supabase.from("projects_view").select("id, project_code, name").order("project_code"),
+  ]);
+  const projectOptions = (projects ?? []).map((p) => ({
+    value: p.id as string,
+    label: `${p.project_code} — ${p.name}`,
+  }));
 
   return (
     <div>
       <PageHeader title="Jobs Register" description={`${jobs.length} job(s)`}>
-        {profile.role_tier >= 2 && <NewJobDialog sites={sites ?? []} />}
+        {profile.role_tier >= 2 && (
+          <NewJobDialog sites={sites ?? []} projects={projectOptions} />
+        )}
       </PageHeader>
 
       <JobsFilterBar sites={sites ?? []} />

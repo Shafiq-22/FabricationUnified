@@ -33,6 +33,30 @@ export type Drawing = T["drawings"]["Row"];
 export type AuditEntry = T["audit_log"]["Row"];
 export type Supplier = T["suppliers"]["Row"];
 export type DocumentRow = T["documents"]["Row"];
+export type Client = T["clients"]["Row"];
+export type Project = T["projects"]["Row"];
+export type ProjectView = V["projects_view"]["Row"];
+export type Rfq = T["rfqs"]["Row"];
+
+export const PROJECT_STATUSES = [
+  { value: "rfq", label: "RFQ", badge: "qtn" },
+  { value: "quoted", label: "Quoted", badge: "qtn" },
+  { value: "won", label: "Won", badge: "com" },
+  { value: "in_fabrication", label: "In Fabrication", badge: "inp" },
+  { value: "qa", label: "QA", badge: "inp" },
+  { value: "dispatch", label: "Dispatch", badge: "del" },
+  { value: "installed", label: "Installed", badge: "com" },
+  { value: "closed", label: "Closed", badge: "secondary" },
+  { value: "lost", label: "Lost", badge: "hal" },
+] as const;
+
+export const RFQ_STATUSES = [
+  { value: "open", label: "Open", badge: "inp" },
+  { value: "quoted", label: "Quoted", badge: "qtn" },
+  { value: "won", label: "Won", badge: "com" },
+  { value: "lost", label: "Lost", badge: "hal" },
+  { value: "cancelled", label: "Cancelled", badge: "secondary" },
+] as const;
 
 export const DOC_TYPES = [
   { value: "drawing", label: "Drawing" },

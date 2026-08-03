@@ -75,6 +75,24 @@ export type Database = {
         Update: { created_at?: string; created_by?: string | null; equipment_id?: string; id?: string; status_code?: string; usage_date?: string }
         Relationships: []
       }
+      clients: {
+        Row: { active: boolean; address: string | null; contact_email: string | null; contact_name: string | null; contact_phone: string | null; created_at: string; created_by: string | null; id: string; name: string }
+        Insert: { active?: boolean; address?: string | null; contact_email?: string | null; contact_name?: string | null; contact_phone?: string | null; created_at?: string; created_by?: string | null; id?: string; name: string }
+        Update: { active?: boolean; address?: string | null; contact_email?: string | null; contact_name?: string | null; contact_phone?: string | null; created_at?: string; created_by?: string | null; id?: string; name?: string }
+        Relationships: []
+      }
+      projects: {
+        Row: { actual_completion: string | null; client_id: string | null; contract_value: number | null; created_at: string; created_by: string | null; deleted_at: string | null; id: string; name: string; notes: string | null; project_code: string | null; site_id: string | null; start_date: string | null; status: string; target_completion: string | null; updated_at: string }
+        Insert: { actual_completion?: string | null; client_id?: string | null; contract_value?: number | null; created_at?: string; created_by?: string | null; deleted_at?: string | null; id?: string; name: string; notes?: string | null; project_code?: string | null; site_id?: string | null; start_date?: string | null; status?: string; target_completion?: string | null; updated_at?: string }
+        Update: { actual_completion?: string | null; client_id?: string | null; contract_value?: number | null; created_at?: string; created_by?: string | null; deleted_at?: string | null; id?: string; name?: string; notes?: string | null; project_code?: string | null; site_id?: string | null; start_date?: string | null; status?: string; target_completion?: string | null; updated_at?: string }
+        Relationships: []
+      }
+      rfqs: {
+        Row: { client_id: string | null; created_at: string; created_by: string | null; deleted_at: string | null; due_date: string | null; id: string; job_id: string | null; notes: string | null; project_id: string | null; received_date: string | null; status: string; title: string; updated_at: string }
+        Insert: { client_id?: string | null; created_at?: string; created_by?: string | null; deleted_at?: string | null; due_date?: string | null; id?: string; job_id?: string | null; notes?: string | null; project_id?: string | null; received_date?: string | null; status?: string; title: string; updated_at?: string }
+        Update: { client_id?: string | null; created_at?: string; created_by?: string | null; deleted_at?: string | null; due_date?: string | null; id?: string; job_id?: string | null; notes?: string | null; project_id?: string | null; received_date?: string | null; status?: string; title?: string; updated_at?: string }
+        Relationships: []
+      }
       documents: {
         Row: { deleted_at: string | null; doc_type: string; file_path: string; id: string; job_id: string | null; mime_type: string | null; notes: string | null; original_filename: string | null; project_id: string | null; revision: string | null; size_bytes: number | null; title: string | null; uploaded_at: string; uploaded_by: string | null }
         Insert: { deleted_at?: string | null; doc_type?: string; file_path: string; id?: string; job_id?: string | null; mime_type?: string | null; notes?: string | null; original_filename?: string | null; project_id?: string | null; revision?: string | null; size_bytes?: number | null; title?: string | null; uploaded_at?: string; uploaded_by?: string | null }
@@ -667,6 +685,7 @@ export type Database = {
           margin: number
           pl_percentage: number | null
           profit_loss: number | null
+          project_id: string | null
           qty: number | null
           quotation_ref: string | null
           quote_before_margin: number
@@ -694,6 +713,7 @@ export type Database = {
           job_code?: string | null
           lpo_ref?: string | null
           margin?: number
+          project_id?: string | null
           qty?: number | null
           quotation_ref?: string | null
           quote_before_margin?: number
@@ -721,6 +741,7 @@ export type Database = {
           job_code?: string | null
           lpo_ref?: string | null
           margin?: number
+          project_id?: string | null
           qty?: number | null
           quotation_ref?: string | null
           quote_before_margin?: number
@@ -880,6 +901,10 @@ export type Database = {
       }
     }
     Views: {
+      projects_view: {
+        Row: { actual_completion: string | null; client_id: string | null; client_name: string | null; contract_value: number | null; created_at: string | null; created_by: string | null; id: string | null; job_count: number | null; name: string | null; notes: string | null; project_code: string | null; site_code: string | null; site_id: string | null; site_name: string | null; start_date: string | null; status: string | null; target_completion: string | null; updated_at: string | null }
+        Relationships: []
+      }
       inventory_items_view: {
         Row: { active: boolean | null; created_at: string | null; description: string | null; dimensions: string | null; id: string | null; item_code: string | null; item_type: string | null; low_stock: boolean | null; material_grade: string | null; parent_item_id: string | null; quantity_on_hand: number | null; reorder_threshold: number | null; source_job_code: string | null; source_job_id: string | null; stock_value: number | null; unit: string | null; unit_cost: number | null; updated_at: string | null; warehouse_location: string | null }
         Relationships: []
