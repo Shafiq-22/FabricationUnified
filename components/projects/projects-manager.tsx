@@ -1,9 +1,10 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Plus, Pencil, Trash2, Search } from "lucide-react";
-import { createProject, updateProject, deleteProject } from "@/app/(app)/projects/actions";
+import { updateProject, deleteProject } from "@/app/(app)/projects/actions";
 import { RecordFormDialog, type FieldDef } from "@/components/records/record-form-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -106,16 +107,11 @@ export function ProjectsManager({
           />
         </div>
         {canEdit && (
-          <RecordFormDialog
-            title="New Project"
-            fields={fields}
-            onSubmit={createProject}
-            trigger={
-              <Button size="sm">
-                <Plus className="h-4 w-4" /> New Project
-              </Button>
-            }
-          />
+          <Button size="sm" asChild>
+            <Link href="/projects/new">
+              <Plus className="h-4 w-4" /> New Project
+            </Link>
+          </Button>
         )}
       </div>
       <Table>
@@ -125,10 +121,12 @@ export function ProjectsManager({
             <TableHead>Project</TableHead>
             <TableHead>Client</TableHead>
             <TableHead>Site</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="text-right">Jobs</TableHead>
-            {showMoney && <TableHead className="text-right">Contract Value</TableHead>}
-            <TableHead>Target</TableHead>
+            <TableHead className="text-center">Status</TableHead>
+            <TableHead className="text-center">Jobs</TableHead>
+            {showMoney && <TableHead className="text-center">Quoted</TableHead>}
+            {showMoney && <TableHead className="text-center">Actual</TableHead>}
+            {showMoney && <TableHead className="text-center">Contract Value</TableHead>}
+            <TableHead className="text-center">Target</TableHead>
             {canEdit && <TableHead className="w-20" />}
           </TableRow>
         </TableHeader>
@@ -136,7 +134,7 @@ export function ProjectsManager({
           {filtered.length === 0 && (
             <TableRow>
               <TableCell
-                colSpan={showMoney ? (canEdit ? 9 : 8) : canEdit ? 8 : 7}
+                colSpan={(showMoney ? 11 : 8) - (canEdit ? 0 : 1)}
                 className="py-10 text-center text-sm text-muted-foreground"
               >
                 {rows.length === 0 ? "No projects yet." : "No projects match that search."}
@@ -145,20 +143,46 @@ export function ProjectsManager({
           )}
           {filtered.map((p) => (
             <TableRow key={p.id ?? ""}>
-              <TableCell className="code-chip text-steel">{p.project_code}</TableCell>
-              <TableCell className="max-w-[18rem] truncate text-sm">{p.name}</TableCell>
+              <TableCell>
+                <Link
+                  href={`/projects/${p.id}`}
+                  className="code-chip text-steel hover:underline"
+                >
+                  {p.project_code}
+                </Link>
+              </TableCell>
+              <TableCell className="max-w-[18rem] truncate text-sm">
+                <Link href={`/projects/${p.id}`} className="hover:underline">
+                  {p.name}
+                </Link>
+              </TableCell>
               <TableCell className="text-xs">{p.client_name ?? "—"}</TableCell>
               <TableCell className="font-mono text-xs" title={p.site_name ?? ""}>
                 {p.site_code ?? "—"}
               </TableCell>
-              <TableCell>
+              <TableCell className="text-center">
                 <Badge variant={badgeFor(p.status)}>
                   {PROJECT_STATUSES.find((s) => s.value === p.status)?.label ?? p.status}
                 </Badge>
               </TableCell>
-              <TableCell className="text-right tabular text-xs">{p.job_count ?? 0}</TableCell>
+              <TableCell className="text-center tabular text-xs">
+                {p.job_count ?? 0}
+                {(p.completed_job_count ?? 0) > 0 && (
+                  <span className="text-muted-foreground"> ({p.completed_job_count} done)</span>
+                )}
+              </TableCell>
               {showMoney && (
                 <TableCell className="text-right tabular text-xs">
+                  {formatAED(p.quoted_value)}
+                </TableCell>
+              )}
+              {showMoney && (
+                <TableCell className="text-right tabular text-xs">
+                  {formatAED(p.actual_value)}
+                </TableCell>
+              )}
+              {showMoney && (
+                <TableCell className="text-right tabular text-xs text-muted-foreground">
                   {formatAED(p.contract_value)}
                 </TableCell>
               )}

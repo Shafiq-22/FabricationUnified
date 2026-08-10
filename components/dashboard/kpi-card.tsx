@@ -4,11 +4,14 @@ export function KpiCard({
   label,
   value,
   unit,
+  hint,
   accent = "steel",
 }: {
   label: string;
   value: string;
   unit?: string;
+  /** Small caption under the figure, e.g. where the number comes from. */
+  hint?: string;
   accent?: "steel" | "amber" | "neutral" | "positive" | "negative";
 }) {
   const accentClass = {
@@ -35,6 +38,7 @@ export function KpiCard({
           <span className="text-xs text-muted-foreground">{unit}</span>
         )}
       </div>
+      {hint && <div className="mt-1 text-[11px] text-muted-foreground">{hint}</div>}
     </div>
   );
 }

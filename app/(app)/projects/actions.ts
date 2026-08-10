@@ -1,5 +1,6 @@
 "use server";
 
+import { randomUUID } from "crypto";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
@@ -133,6 +134,84 @@ export async function createProject(values: Record<string, string>) {
   return { error: null };
 }
 
+/**
+ * Create a project and attach jobs to it in one go, from the full-page form.
+ * The id is minted here rather than read back, because select on the projects
+ * base table is revoked (only projects_view is readable).
+ */
+export async function createProjectWithJobs(
+  values: Record<string, string>,
+  jobIds: string[],
+) {
+  let profile;
+  try { profile = await requireEngineer(); } catch (e) { return { error: (e as Error).message, id: null }; }
+  const parsed = projectSchema.safeParse(values);
+  if (!parsed.success) return { error: parsed.error.errors[0]?.message ?? "Invalid input.", id: null };
+
+  const supabase = createClient();
+  const id = randomUUID();
+  const { error } = await supabase
+    .from("projects")
+    .insert({ id, ...projectPayload(parsed.data), created_by: profile.id });
+  if (error) return { error: error.message, id: null };
+
+  if (jobIds.length > 0) {
+    // `is null` guards the race where someone claimed a job while this form
+    // was open — an already-claimed job is left where it is.
+    const { error: linkError } = await supabase
+      .from("jobs")
+      .update({ project_id: id })
+      .in("id", jobIds)
+      .is("project_id", null);
+    if (linkError) return { error: `Project created, but jobs could not be attached: ${linkError.message}`, id };
+  }
+
+  revalidatePath("/projects");
+  revalidatePath("/jobs");
+  return { error: null, id };
+}
+
+/** Replace the set of jobs attached to a project, from the project page. */
+export async function setProjectJobs(projectId: string, jobIds: string[]) {
+  try { await requireEngineer(); } catch (e) { return { error: (e as Error).message }; }
+  const supabase = createClient();
+  const wanted = new Set(jobIds);
+
+  const { data: attached, error: readError } = await supabase
+    .from("jobs_view")
+    .select("id")
+    .eq("project_id", projectId);
+  if (readError) return { error: readError.message };
+
+  const toDetach = (attached ?? [])
+    .map((j) => j.id as string | null)
+    .filter((id): id is string => !!id && !wanted.has(id));
+
+  if (toDetach.length > 0) {
+    const { error } = await supabase
+      .from("jobs")
+      .update({ project_id: null })
+      .in("id", toDetach);
+    if (error) return { error: error.message };
+  }
+
+  // Claim the newly selected jobs that nobody else holds. `is null` leaves a
+  // job alone if someone else attached it while this dialog was open.
+  if (jobIds.length > 0) {
+    const { error } = await supabase
+      .from("jobs")
+      .update({ project_id: projectId })
+      .in("id", jobIds)
+      .is("project_id", null);
+    if (error) return { error: error.message };
+  }
+
+  revalidatePath("/projects");
+  revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/jobs");
+  return { error: null };
+}
+
 export async function updateProject(id: string, values: Record<string, string>) {
   try { await requireEngineer(); } catch (e) { return { error: (e as Error).message }; }
   const parsed = projectSchema.safeParse(values);
@@ -168,68 +247,5 @@ export async function setJobProject(jobId: string, projectId: string | null) {
   if (error) return { error: error.message };
   revalidatePath("/projects");
   revalidatePath("/jobs");
-  return { error: null };
-}
-
-/* ---------------- RFQs ---------------- */
-const rfqSchema = z.object({
-  title: z.string().trim().min(1, "Title is required"),
-  client_id: optStr,
-  project_id: optStr,
-  job_id: optStr,
-  received_date: optStr,
-  due_date: optStr,
-  status: z.enum(["open", "quoted", "won", "lost", "cancelled"]),
-  notes: optStr,
-});
-
-function rfqPayload(v: z.infer<typeof rfqSchema>) {
-  return {
-    title: v.title.trim(),
-    client_id: pick(v.client_id),
-    project_id: pick(v.project_id),
-    job_id: pick(v.job_id),
-    received_date: v.received_date ?? null,
-    due_date: v.due_date ?? null,
-    status: v.status,
-    notes: v.notes ?? null,
-  };
-}
-
-export async function createRfq(values: Record<string, string>) {
-  let profile;
-  try { profile = await requireEngineer(); } catch (e) { return { error: (e as Error).message }; }
-  const parsed = rfqSchema.safeParse(values);
-  if (!parsed.success) return { error: parsed.error.errors[0]?.message ?? "Invalid input." };
-  const supabase = createClient();
-  const { error } = await supabase
-    .from("rfqs")
-    .insert({ ...rfqPayload(parsed.data), created_by: profile.id });
-  if (error) return { error: error.message };
-  revalidatePath("/projects");
-  return { error: null };
-}
-
-export async function updateRfq(id: string, values: Record<string, string>) {
-  try { await requireEngineer(); } catch (e) { return { error: (e as Error).message }; }
-  const parsed = rfqSchema.safeParse(values);
-  if (!parsed.success) return { error: parsed.error.errors[0]?.message ?? "Invalid input." };
-  const supabase = createClient();
-  const { error } = await supabase.from("rfqs").update(rfqPayload(parsed.data)).eq("id", id);
-  if (error) return { error: error.message };
-  revalidatePath("/projects");
-  return { error: null };
-}
-
-export async function deleteRfq(id: string) {
-  const profile = await getProfile();
-  if (profile.role_tier < 3) return { error: "Only administrators may delete RFQs." };
-  const supabase = createClient();
-  const { error } = await supabase
-    .from("rfqs")
-    .update({ deleted_at: new Date().toISOString() })
-    .eq("id", id);
-  if (error) return { error: error.message };
-  revalidatePath("/projects");
   return { error: null };
 }
