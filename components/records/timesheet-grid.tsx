@@ -39,7 +39,7 @@ const cellCss =
   "h-7 w-full border border-transparent bg-transparent px-1 outline-none focus:border-input focus:bg-background";
 
 export function TimesheetGrid({
-  date, personnel, entries, editable, normalRate, otRate, jobs, sites,
+  date, personnel, entries, editable, normalRate, otRate, rateByTrade, jobs, sites,
 }: {
   date: string;
   personnel: Personnel[];
@@ -47,6 +47,8 @@ export function TimesheetGrid({
   editable: boolean;
   normalRate: number;
   otRate: number;
+  /** Per-designation rates from Settings > Labour Rates, keyed lowercase. */
+  rateByTrade?: Record<string, { normal: number; ot: number }>;
   jobs: JobOption[];
   sites: SiteOption[];
 }) {
@@ -90,10 +92,20 @@ export function TimesheetGrid({
     setDirty(true);
   };
 
-  const cost = (c: Cell) => Number(c.normal_hours || 0) * normalRate + Number(c.ot_hours || 0) * otRate;
+  // A person is costed at their trade's rate; the Settings figures are the
+  // fallback for a trade with no rate of its own.
+  const ratesFor = (personnelId: string) => {
+    const trade = personnel.find((p) => p.id === personnelId)?.trade ?? "";
+    const r = rateByTrade?.[trade.trim().toLowerCase()];
+    return { normal: r?.normal ?? normalRate, ot: r?.ot ?? otRate };
+  };
+  const cost = (personnelId: string, c: Cell) => {
+    const r = ratesFor(personnelId);
+    return Number(c.normal_hours || 0) * r.normal + Number(c.ot_hours || 0) * r.ot;
+  };
   const totalNor = personnel.reduce((s, p) => s + Number(data[p.id]?.normal_hours || 0), 0);
   const totalOt = personnel.reduce((s, p) => s + Number(data[p.id]?.ot_hours || 0), 0);
-  const totalCost = personnel.reduce((s, p) => s + cost(data[p.id] ?? blank()), 0);
+  const totalCost = personnel.reduce((s, p) => s + cost(p.id, data[p.id] ?? blank()), 0);
 
   const save = () =>
     start(async () => {
@@ -123,7 +135,8 @@ export function TimesheetGrid({
     <div className="border border-border bg-card">
       <div className="flex items-center justify-between border-b border-border p-2">
         <p className="px-2 text-xs text-muted-foreground">
-          Normal {formatAED(normalRate)} / OT {formatAED(otRate)} per hour (Settings)
+          Costed at each trade&apos;s rate from Settings › Labour Rates; trades with no
+          rate of their own fall back to {formatAED(normalRate)} / {formatAED(otRate)} per hour
         </p>
         {editable && (
           <Button size="sm" onClick={save} disabled={!dirty || pending}>
@@ -181,7 +194,7 @@ export function TimesheetGrid({
                   <td className="px-0.5 py-0.5">
                     <input disabled={!editable} value={c.job_ref} onChange={(e) => set(p.id, "job_ref", e.target.value)} className={`${cellCss} w-32`} />
                   </td>
-                  <td className="px-2 py-0.5 text-right font-medium">{formatAED(cost(c))}</td>
+                  <td className="px-2 py-0.5 text-right font-medium">{formatAED(cost(p.id, c))}</td>
                 </tr>
               );
             })}

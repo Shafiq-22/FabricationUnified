@@ -1918,6 +1918,7 @@ export type Database = {
           designation: string
           effective_from: string
           id: string
+          ot_rate_aed_per_hr: number | null
           rate_aed_per_hr: number
         }
         Insert: {
@@ -1926,6 +1927,7 @@ export type Database = {
           designation: string
           effective_from?: string
           id?: string
+          ot_rate_aed_per_hr?: number | null
           rate_aed_per_hr: number
         }
         Update: {
@@ -1934,6 +1936,7 @@ export type Database = {
           designation?: string
           effective_from?: string
           id?: string
+          ot_rate_aed_per_hr?: number | null
           rate_aed_per_hr?: number
         }
         Relationships: []

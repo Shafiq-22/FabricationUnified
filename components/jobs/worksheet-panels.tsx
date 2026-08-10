@@ -72,6 +72,7 @@ export function WorksheetPanels({
   quoteServices,
   actualServices,
   equipmentOptions,
+  inflationPct,
 }: {
   job: JobView;
   editable: boolean;
@@ -96,6 +97,7 @@ export function WorksheetPanels({
   actualServices: Row[];
   /** Machines from the Personnel & Equipment register, with their rates. */
   equipmentOptions: { id: string; label: string; bare: number; driver: number }[];
+  inflationPct: number;
 }) {
   const jobId = job.id as string;
   const save = (table: Parameters<typeof replaceJobLines>[1]) => (rows: Row[]) =>
@@ -276,7 +278,7 @@ export function WorksheetPanels({
 
         {/* TENTATIVE */}
         <TabsContent value="tentative">
-          <TentativePanel items={tentativeItems} historic={historic} />
+          <TentativePanel items={tentativeItems} historic={historic} inflationPct={inflationPct} />
         </TabsContent>
 
         {/* ANALYTICS */}

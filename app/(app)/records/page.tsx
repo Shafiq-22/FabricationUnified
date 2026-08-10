@@ -47,6 +47,22 @@ export default async function RecordsPage({
     normal: Number(cfg.timesheet_normal_rate ?? 30),
     ot: Number(cfg.timesheet_ot_rate ?? 45),
   };
+
+  // Timesheets cost at each trade's own rate; the figures above are only the
+  // fallback for a trade that has none.
+  const { data: labourRates } = await supabase
+    .from("labour_rates")
+    .select("designation, rate_aed_per_hr, ot_rate_aed_per_hr")
+    .eq("active", true);
+  const rateByTrade: Record<string, { normal: number; ot: number }> = Object.fromEntries(
+    (labourRates ?? []).map((r) => [
+      r.designation.trim().toLowerCase(),
+      {
+        normal: Number(r.rate_aed_per_hr ?? rates.normal),
+        ot: Number(r.ot_rate_aed_per_hr ?? rates.ot),
+      },
+    ]),
+  );
   const company = cfg.company_name ?? "Six Construct";
   const department = cfg.department_name ?? "BAF — Steel Fabrication";
 
@@ -57,7 +73,7 @@ export default async function RecordsPage({
         ? await MaintenanceTab(supabase, profile.role_tier)
         : tab === "manage"
           ? await ManageTab(supabase, isAdmin)
-          : await TimesheetTab(supabase, searchParams, rates, company, department);
+          : await TimesheetTab(supabase, searchParams, rates, rateByTrade, company, department);
 
   return (
     <div>
@@ -111,7 +127,14 @@ function ViewToggle({ view, params }: { view: string; params: any }) {
   return <div className="flex items-center gap-1">{link("daily", "Daily")}{link("monthly", "Monthly")}</div>;
 }
 
-async function TimesheetTab(supabase: any, sp: any, rates: { normal: number; ot: number }, company: string, department: string) {
+async function TimesheetTab(
+  supabase: any,
+  sp: any,
+  rates: { normal: number; ot: number },
+  rateByTrade: Record<string, { normal: number; ot: number }>,
+  company: string,
+  department: string,
+) {
   const view = sp.view === "monthly" ? "monthly" : "daily";
 
   const [{ data: jobsRaw }, { data: sitesRaw }] = await Promise.all([
@@ -190,6 +213,7 @@ async function TimesheetTab(supabase: any, sp: any, rates: { normal: number; ot:
         editable
         normalRate={rates.normal}
         otRate={rates.ot}
+        rateByTrade={rateByTrade}
         jobs={jobs}
         sites={sites}
       />

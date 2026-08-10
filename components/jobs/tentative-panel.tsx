@@ -9,7 +9,26 @@ export interface TentativeItem {
   kind: "Material" | "Consumable";
 }
 export interface HistoricLookup {
-  [itemKey: string]: { avg: number | null; last: number | null };
+  [itemKey: string]: { avg: number | null; last: number | null; date?: string | null };
+}
+
+/**
+ * Age a historic price forward to today at the yearly rate, compounded
+ * pro-rata by the number of days since the purchase. A price under a month
+ * old is left alone — the shop treats that as current.
+ */
+export function inflate(
+  price: number,
+  priceDate: string | null | undefined,
+  yearlyPct: number,
+): { adjusted: number; ageDays: number | null; applied: boolean } {
+  if (!priceDate || yearlyPct === 0) return { adjusted: price, ageDays: null, applied: false };
+  const then = new Date(priceDate);
+  if (Number.isNaN(then.getTime())) return { adjusted: price, ageDays: null, applied: false };
+  const ageDays = Math.floor((Date.now() - then.getTime()) / 86_400_000);
+  if (ageDays < 30) return { adjusted: price, ageDays, applied: false };
+  const adjusted = price * Math.pow(1 + yearlyPct / 100, ageDays / 365);
+  return { adjusted, ageDays, applied: true };
 }
 
 // Read-only estimator: re-prices the job's MTO items from historic procurement
@@ -17,15 +36,20 @@ export interface HistoricLookup {
 export function TentativePanel({
   items,
   historic,
+  inflationPct = 0,
 }: {
   items: TentativeItem[];
   historic: HistoricLookup;
+  /** Yearly inflation from Settings, applied to the age of each price. */
+  inflationPct?: number;
 }) {
   const rows = items.map((it) => {
     const h = historic[it.name.trim().toLowerCase()];
     const price = h?.avg ?? h?.last ?? null;
-    const total = price != null && it.qty != null ? price * it.qty : null;
-    return { ...it, price, total, matched: !!h };
+    const inf = price != null ? inflate(price, h?.date, inflationPct) : null;
+    const adjusted = inf?.adjusted ?? null;
+    const total = adjusted != null && it.qty != null ? adjusted * it.qty : null;
+    return { ...it, price, adjusted, ageDays: inf?.ageDays ?? null, applied: inf?.applied ?? false, total, matched: !!h };
   });
   const indicative = rows.reduce((s, r) => s + (r.total ?? 0), 0);
 
@@ -36,7 +60,8 @@ export function TentativePanel({
           Tentative Quotation (historic prices)
         </h3>
         <p className="text-[11px] text-panel-foreground/60">
-          Indicative unit costs sourced from past procurement for the items in this job&apos;s MTO.
+          Indicative unit costs from past procurement, aged forward to today at{" "}
+          {inflationPct}% a year. Prices under a month old are used as they stand.
         </p>
       </div>
       <div className="overflow-x-auto">
@@ -48,13 +73,15 @@ export function TentativePanel({
               <th className="px-2 py-1.5 text-left font-semibold uppercase tracking-wide">Unit</th>
               <th className="px-2 py-1.5 text-right font-semibold uppercase tracking-wide">Qty</th>
               <th className="px-2 py-1.5 text-right font-semibold uppercase tracking-wide">Historic Unit</th>
+              <th className="px-2 py-1.5 text-right font-semibold uppercase tracking-wide">Age</th>
+              <th className="px-2 py-1.5 text-right font-semibold uppercase tracking-wide">Today&apos;s Unit</th>
               <th className="px-2 py-1.5 text-right font-semibold uppercase tracking-wide">Indicative Total</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-2 py-4 text-center text-panel-foreground/50">
+                <td colSpan={8} className="px-2 py-4 text-center text-panel-foreground/50">
                   Add Material/Consumable lines in the Quotation tab first.
                 </td>
               </tr>
@@ -68,6 +95,21 @@ export function TentativePanel({
                 <td className="px-2 py-1 text-right">
                   {r.price != null ? formatAED(r.price) : <span className="text-panel-foreground/40">no history</span>}
                 </td>
+                <td className="px-2 py-1 text-right text-panel-foreground/60">
+                  {r.ageDays == null ? "—" : r.ageDays < 30 ? "current" : `${Math.round(r.ageDays / 30)} mo`}
+                </td>
+                <td className="px-2 py-1 text-right">
+                  {r.adjusted == null ? (
+                    "—"
+                  ) : (
+                    <span
+                      className={r.applied ? "text-amber" : undefined}
+                      title={r.applied ? `Aged forward ${r.ageDays} days at ${inflationPct}%/yr` : undefined}
+                    >
+                      {formatAED(r.adjusted)}
+                    </span>
+                  )}
+                </td>
                 <td className="px-2 py-1 text-right font-medium">
                   {r.total != null ? formatAED(r.total) : "—"}
                 </td>
@@ -76,7 +118,7 @@ export function TentativePanel({
           </tbody>
           <tfoot>
             <tr className="border-t border-panel-border font-semibold">
-              <td colSpan={5} className="px-2 py-1.5 text-right uppercase">
+              <td colSpan={7} className="px-2 py-1.5 text-right uppercase">
                 Indicative quote (before margin)
               </td>
               <td className="px-2 py-1.5 text-right">{formatAED(indicative)}</td>

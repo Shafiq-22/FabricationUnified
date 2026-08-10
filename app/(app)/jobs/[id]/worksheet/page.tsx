@@ -70,7 +70,7 @@ export default async function WorksheetPage({
       supabase.from("job_actual_workforce").select("*").eq("job_id", params.id).order("seq_no"),
       supabase.from("job_actual_consumables").select("*").eq("job_id", params.id).order("seq_no"),
       supabase.from("labour_rates").select("designation, rate_aed_per_hr").eq("active", true).order("designation"),
-      supabase.from("historic_prices").select("item_key, avg_price, last_price"),
+      supabase.from("historic_prices").select("item_key, avg_price, last_price, last_date"),
       supabase.from("job_quote_equipment").select("*").eq("job_id", params.id).order("seq_no"),
       supabase.from("job_actual_equipment").select("*").eq("job_id", params.id).order("seq_no"),
       supabase.from("job_quote_services").select("*").eq("job_id", params.id).order("seq_no"),
@@ -85,7 +85,8 @@ export default async function WorksheetPage({
     am = amR.data ?? []; aw = awR.data ?? []; ac = acR.data ?? [];
     rates = (rateR.data ?? []).map((r) => ({ designation: r.designation, rate: Number(r.rate_aed_per_hr) }));
     (histR.data ?? []).forEach((h) => {
-      if (h.item_key) historic[h.item_key] = { avg: h.avg_price, last: h.last_price };
+      if (h.item_key)
+        historic[h.item_key] = { avg: h.avg_price, last: h.last_price, date: h.last_date };
     });
     qe = qeR.data ?? []; ae = aeR.data ?? []; qs = qsR.data ?? []; as_ = asR.data ?? [];
     equipmentOptions = (eqR.data ?? []).map((e: any) => ({
@@ -191,6 +192,7 @@ export default async function WorksheetPage({
           quoteServices={qs}
           actualServices={as_}
           equipmentOptions={equipmentOptions}
+          inflationPct={Number(cfg.inflation_rate_pct ?? 0)}
         />
       ) : (
         <div className="m-6 border border-dashed border-border bg-card p-6 text-sm text-muted-foreground">

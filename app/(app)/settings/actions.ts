@@ -83,6 +83,7 @@ export async function updateMargins(values: Record<string, string>) {
 const tsRatesSchema = z.object({
   timesheet_normal_rate: z.coerce.number().min(0),
   timesheet_ot_rate: z.coerce.number().min(0),
+  inflation_rate_pct: z.coerce.number().min(0).max(100),
 });
 
 export async function updateTimesheetRates(values: Record<string, string>) {
@@ -98,6 +99,7 @@ export async function updateTimesheetRates(values: Record<string, string>) {
     [
       { key: "timesheet_normal_rate", value: String(parsed.data.timesheet_normal_rate) },
       { key: "timesheet_ot_rate", value: String(parsed.data.timesheet_ot_rate) },
+      { key: "inflation_rate_pct", value: String(parsed.data.inflation_rate_pct) },
     ],
     { onConflict: "key" },
   );
@@ -124,6 +126,10 @@ export async function changeMyPassword(newPassword: string) {
 const rateSchema = z.object({
   designation: z.string().trim().min(1, "Designation is required"),
   rate_aed_per_hr: z.coerce.number().nonnegative("Rate must be ≥ 0"),
+  ot_rate_aed_per_hr: z.preprocess(
+    (v) => (v === "" || v == null ? undefined : Number(v)),
+    z.number().nonnegative("Overtime rate must be ≥ 0").optional(),
+  ),
 });
 
 export async function addLabourRate(values: Record<string, string>) {
@@ -138,6 +144,7 @@ export async function addLabourRate(values: Record<string, string>) {
   const { error } = await supabase.from("labour_rates").insert({
     designation: parsed.data.designation,
     rate_aed_per_hr: parsed.data.rate_aed_per_hr,
+    ot_rate_aed_per_hr: parsed.data.ot_rate_aed_per_hr ?? null,
   });
   if (error) return { error: error.message };
   revalidatePath("/settings");
@@ -158,6 +165,7 @@ export async function updateLabourRate(id: string, values: Record<string, string
     .update({
       designation: parsed.data.designation,
       rate_aed_per_hr: parsed.data.rate_aed_per_hr,
+      ot_rate_aed_per_hr: parsed.data.ot_rate_aed_per_hr ?? null,
     })
     .eq("id", id);
   if (error) return { error: error.message };

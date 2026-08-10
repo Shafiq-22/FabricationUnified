@@ -65,6 +65,7 @@ export default async function SettingsPage({
               normal: Number(cfg.timesheet_normal_rate ?? 30),
               ot: Number(cfg.timesheet_ot_rate ?? 45),
             }}
+            inflationPct={Number(cfg.inflation_rate_pct ?? 10)}
           />
         )}
       </div>

@@ -32,7 +32,8 @@ import type { RoleConfig, LabourRate } from "@/lib/types";
 
 const rateFields: FieldDef[] = [
   { key: "designation", label: "Designation", required: true, colSpan: 2 },
-  { key: "rate_aed_per_hr", label: "Rate (AED / hr)", type: "number", step: "0.01", required: true },
+  { key: "rate_aed_per_hr", label: "Normal Rate (AED / hr)", type: "number", step: "0.01", required: true },
+  { key: "ot_rate_aed_per_hr", label: "Overtime Rate (AED / hr)", type: "number", step: "0.01" },
 ];
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
@@ -53,6 +54,7 @@ export function SettingsClient({
   rates,
   margins,
   timesheetRates,
+  inflationPct,
 }: {
   roles: RoleConfig[];
   company: string;
@@ -60,6 +62,7 @@ export function SettingsClient({
   rates: LabourRate[];
   margins: { material: number; workforce: number; consumables: number };
   timesheetRates: { normal: number; ot: number };
+  inflationPct: number;
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -107,6 +110,7 @@ export function SettingsClient({
       <Card title="Timesheet Rates (AED/hr)">
         <TimesheetRatesForm
           rates={timesheetRates}
+          inflationPct={inflationPct}
           pending={pending}
           onSave={(v) => run(() => updateTimesheetRates(v), "Timesheet rates saved")}
         />
@@ -134,7 +138,8 @@ export function SettingsClient({
             <TableHeader>
               <TableRow>
                 <TableHead>Designation</TableHead>
-                <TableHead>Rate (AED/hr)</TableHead>
+                <TableHead>Normal (AED/hr)</TableHead>
+                <TableHead>Overtime (AED/hr)</TableHead>
                 <TableHead className="w-24">Status</TableHead>
                 <TableHead className="w-28" />
               </TableRow>
@@ -144,6 +149,13 @@ export function SettingsClient({
                 <TableRow key={rt.id}>
                   <TableCell className="text-sm">{rt.designation}</TableCell>
                   <TableCell className="text-right tabular">{formatAED(rt.rate_aed_per_hr)}</TableCell>
+                  <TableCell className="text-right tabular">
+                    {rt.ot_rate_aed_per_hr == null ? (
+                      <span className="text-muted-foreground">—</span>
+                    ) : (
+                      formatAED(rt.ot_rate_aed_per_hr)
+                    )}
+                  </TableCell>
                   <TableCell>
                     {rt.active ? (
                       <Badge variant="com">Active</Badge>
@@ -292,36 +304,66 @@ function MarginsForm({
 
 function TimesheetRatesForm({
   rates,
+  inflationPct,
   onSave,
   pending,
 }: {
   rates: { normal: number; ot: number };
+  inflationPct: number;
   onSave: (v: Record<string, string>) => void;
   pending: boolean;
 }) {
   const [n, setN] = useState(String(rates.normal));
   const [o, setO] = useState(String(rates.ot));
+  const [inf, setInf] = useState(String(inflationPct));
   return (
-    <div className="space-y-3">
-      <p className="text-xs text-muted-foreground">
-        Used to cost personnel timesheets (normal & overtime hours).
-      </p>
-      <div className="grid grid-cols-2 gap-2">
-        <div className="space-y-1">
-          <Label className="text-[10px] uppercase text-muted-foreground">Normal</Label>
-          <Input type="number" step="0.01" value={n} onChange={(e) => setN(e.target.value)} className="h-8 text-sm" />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-[10px] uppercase text-muted-foreground">Overtime</Label>
-          <Input type="number" step="0.01" value={o} onChange={(e) => setO(e.target.value)} className="h-8 text-sm" />
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <Label className="text-[10px] uppercase text-muted-foreground">
+          Yearly inflation (%)
+        </Label>
+        <Input
+          type="number"
+          step="0.1"
+          value={inf}
+          onChange={(e) => setInf(e.target.value)}
+          className="h-8 w-28 text-sm"
+        />
+        <p className="text-xs text-muted-foreground">
+          Ages historic purchase prices forward in tentative quoting, compounded by
+          how old each price is. Prices under a month old are used as they stand.
+        </p>
+      </div>
+
+      <div className="space-y-2 border-t border-border pt-3">
+        <p className="text-xs text-muted-foreground">
+          Fallback timesheet rates, used only for a designation that has no rate of
+          its own in Labour Rates above.
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-1">
+            <Label className="text-[10px] uppercase text-muted-foreground">Normal</Label>
+            <Input type="number" step="0.01" value={n} onChange={(e) => setN(e.target.value)} className="h-8 text-sm" />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-[10px] uppercase text-muted-foreground">Overtime</Label>
+            <Input type="number" step="0.01" value={o} onChange={(e) => setO(e.target.value)} className="h-8 text-sm" />
+          </div>
         </div>
       </div>
+
       <Button
         size="sm"
         disabled={pending}
-        onClick={() => onSave({ timesheet_normal_rate: n, timesheet_ot_rate: o })}
+        onClick={() =>
+          onSave({
+            timesheet_normal_rate: n,
+            timesheet_ot_rate: o,
+            inflation_rate_pct: inf,
+          })
+        }
       >
-        <Save className="h-3.5 w-3.5" /> Save Rates
+        <Save className="h-3.5 w-3.5" /> Save
       </Button>
     </div>
   );
