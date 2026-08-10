@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { Fragment, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Trash2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -36,6 +36,7 @@ export function EditableTable({
   totalKind = "money",
   emptyHint = "No rows yet.",
   marginPct = null,
+  groupBy,
 }: {
   title: string;
   columns: EditCol[];
@@ -46,6 +47,8 @@ export function EditableTable({
   totalKind?: "money" | "number";
   emptyHint?: string;
   marginPct?: number | null;
+  /** Column to band the rows by, e.g. part_ref for Job -> Part -> items. */
+  groupBy?: string;
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -88,6 +91,31 @@ export function EditableTable({
     ? rows.reduce((s, r) => s + (computeTotal(r) || 0), 0)
     : null;
   const colSpan = columns.length + (computeTotal ? 1 : 0) + (editable ? 1 : 0);
+
+  // Rows in display order, with a banner row wherever the group changes.
+  // Grouping is presentational only — the saved order is still `rows`.
+  const ordered = (() => {
+    if (!groupBy) return rows.map((r) => ({ row: r, banner: null as string | null }));
+    const groups = new Map<string, LocalRow[]>();
+    for (const r of rows) {
+      const key = String(r[groupBy] ?? "").trim();
+      const bucket = groups.get(key);
+      if (bucket) bucket.push(r);
+      else groups.set(key, [r]);
+    }
+    const out: { row: LocalRow; banner: string | null }[] = [];
+    for (const [key, list] of Array.from(groups.entries())) {
+      list.forEach((r, i) => out.push({ row: r, banner: i === 0 ? key : null }));
+    }
+    return out;
+  })();
+
+  const groupTotal = (key: string) =>
+    computeTotal
+      ? rows
+          .filter((r) => String(r[groupBy!] ?? "").trim() === key)
+          .reduce((s, r) => s + (computeTotal(r) || 0), 0)
+      : null;
 
   return (
     <div className="panel-surface">
@@ -138,8 +166,24 @@ export function EditableTable({
                 </td>
               </tr>
             )}
-            {rows.map((r) => (
-              <tr key={r._key} className="border-b border-panel-border/60">
+            {ordered.map(({ row: r, banner }) => (
+              <Fragment key={r._key}>
+              {banner !== null && (
+                <tr className="bg-secondary/60">
+                  <td
+                    colSpan={colSpan}
+                    className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide"
+                  >
+                    {banner || "Unassigned part"}
+                    {computeTotal && (
+                      <span className="ml-2 font-normal text-panel-foreground/60">
+                        {fmt(groupTotal(banner) || 0)}
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              )}
+              <tr className="border-b border-panel-border/60">
                 {columns.map((c) => (
                   <td key={c.key} className="px-1 py-0.5">
                     {editable ? (
@@ -178,6 +222,7 @@ export function EditableTable({
                   </td>
                 )}
               </tr>
+              </Fragment>
             ))}
           </tbody>
           {total != null && (

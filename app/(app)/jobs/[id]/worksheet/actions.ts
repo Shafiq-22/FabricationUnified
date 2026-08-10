@@ -6,14 +6,18 @@ import { getProfile } from "@/lib/auth";
 
 // Editable columns per worksheet child table (computed cols are excluded).
 const CHILD_TABLES = {
-  job_quote_materials: ["material_name", "dimension", "unit", "qty", "unit_cost"],
-  job_actual_materials: ["material_name", "dimension", "unit", "qty", "unit_cost"],
-  job_quote_workforce: ["designation", "qty", "hrs_per_person", "date", "rate_aed_per_hr"],
-  job_actual_workforce: ["designation", "qty", "hrs_per_person", "date", "rate_aed_per_hr"],
+  job_quote_materials: ["part_ref", "material_name", "dimension", "unit", "qty", "unit_cost"],
+  job_actual_materials: ["part_ref", "material_name", "dimension", "unit", "qty", "unit_cost"],
+  job_quote_workforce: ["part_ref", "designation", "qty", "hrs_per_person", "date", "rate_aed_per_hr"],
+  job_actual_workforce: ["part_ref", "designation", "qty", "hrs_per_person", "date", "rate_aed_per_hr"],
   job_quotation_summary: ["item_name", "unit", "qty", "unit_cost"],
   job_actual_summary: ["item_name", "unit", "qty", "unit_cost"],
-  job_quote_consumables: ["item_name", "unit", "qty", "unit_cost"],
-  job_actual_consumables: ["item_name", "unit", "qty", "unit_cost"],
+  job_quote_consumables: ["part_ref", "item_name", "unit", "qty", "unit_cost"],
+  job_actual_consumables: ["part_ref", "item_name", "unit", "qty", "unit_cost"],
+  job_quote_equipment: ["part_ref", "equipment_id", "description", "with_driver", "hours", "rate_aed_per_hr"],
+  job_actual_equipment: ["part_ref", "equipment_id", "description", "with_driver", "hours", "rate_aed_per_hr"],
+  job_quote_services: ["part_ref", "service_name", "provider", "unit", "qty", "unit_cost"],
+  job_actual_services: ["part_ref", "service_name", "provider", "unit", "qty", "unit_cost"],
   rough_sheet_items: ["profile_type", "dimension", "grade", "length_m", "qty"],
   cut_list_plates: ["thickness_mm", "plate_size", "grade", "length_mm", "width_mm", "qty"],
 } as const;
@@ -22,6 +26,7 @@ export type ChildTable = keyof typeof CHILD_TABLES;
 
 const NUMERIC = new Set([
   "qty",
+  "hours",
   "unit_cost",
   "hrs_per_person",
   "rate_aed_per_hr",
@@ -31,6 +36,9 @@ const NUMERIC = new Set([
   "thickness_mm",
 ]);
 const DATE = new Set(["date"]);
+// Selects submit "" for "no machine"; booleans arrive as "true"/"false" strings.
+const UUID = new Set(["equipment_id"]);
+const BOOL = new Set(["with_driver"]);
 
 function sanitize(key: string, value: unknown): unknown {
   if (value === "" || value === undefined) return null;
@@ -39,6 +47,8 @@ function sanitize(key: string, value: unknown): unknown {
     return Number.isFinite(n) ? n : null;
   }
   if (DATE.has(key)) return value || null;
+  if (UUID.has(key)) return value && value !== "none" ? value : null;
+  if (BOOL.has(key)) return value === true || value === "true";
   return typeof value === "string" ? value : value ?? null;
 }
 

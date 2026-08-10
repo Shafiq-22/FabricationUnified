@@ -42,9 +42,11 @@ export default async function WorksheetPage({
   // Worksheet detail tables are Tier 2+; skip for Viewers.
   let qm: any[] = [], qw: any[] = [], qc: any[] = [];
   let am: any[] = [], aw: any[] = [], ac: any[] = [];
+  let qe: any[] = [], ae: any[] = [], qs: any[] = [], as_: any[] = [];
+  let equipmentOptions: { id: string; label: string; bare: number; driver: number }[] = [];
   let rates: { designation: string; rate: number }[] = [];
   const historic: HistoricLookup = {};
-  const margins = { material: 15, workforce: 15, consumables: 15 };
+  const margins = { material: 15, workforce: 15, consumables: 15, equipment: 15, services: 15 };
   let companyName = "SIXCO";
   let departmentName = "BAF — Workshop Steel Fabrication";
 
@@ -53,11 +55,14 @@ export default async function WorksheetPage({
   margins.material = Number(cfg.material_margin ?? 15);
   margins.workforce = Number(cfg.workforce_margin ?? 15);
   margins.consumables = Number(cfg.consumables_margin ?? 15);
+  margins.equipment = Number(cfg.equipment_margin ?? margins.material);
+  margins.services = Number(cfg.services_margin ?? margins.material);
   companyName = cfg.company_name ?? companyName;
   departmentName = cfg.department_name ?? departmentName;
 
   if (showMoney) {
-    const [qmR, qwR, qcR, amR, awR, acR, rateR, histR] = await Promise.all([
+    const [qmR, qwR, qcR, amR, awR, acR, rateR, histR, qeR, aeR, qsR, asR, eqR] =
+      await Promise.all([
       supabase.from("job_quote_materials").select("*").eq("job_id", params.id).order("seq_no"),
       supabase.from("job_quote_workforce").select("*").eq("job_id", params.id).order("seq_no"),
       supabase.from("job_quote_consumables").select("*").eq("job_id", params.id).order("seq_no"),
@@ -66,6 +71,15 @@ export default async function WorksheetPage({
       supabase.from("job_actual_consumables").select("*").eq("job_id", params.id).order("seq_no"),
       supabase.from("labour_rates").select("designation, rate_aed_per_hr").eq("active", true).order("designation"),
       supabase.from("historic_prices").select("item_key, avg_price, last_price"),
+      supabase.from("job_quote_equipment").select("*").eq("job_id", params.id).order("seq_no"),
+      supabase.from("job_actual_equipment").select("*").eq("job_id", params.id).order("seq_no"),
+      supabase.from("job_quote_services").select("*").eq("job_id", params.id).order("seq_no"),
+      supabase.from("job_actual_services").select("*").eq("job_id", params.id).order("seq_no"),
+      supabase
+        .from("equipment")
+        .select("id, sixco_no, machine, bare_rate, driver_rate")
+        .eq("active", true)
+        .order("machine"),
     ]);
     qm = qmR.data ?? []; qw = qwR.data ?? []; qc = qcR.data ?? [];
     am = amR.data ?? []; aw = awR.data ?? []; ac = acR.data ?? [];
@@ -73,6 +87,13 @@ export default async function WorksheetPage({
     (histR.data ?? []).forEach((h) => {
       if (h.item_key) historic[h.item_key] = { avg: h.avg_price, last: h.last_price };
     });
+    qe = qeR.data ?? []; ae = aeR.data ?? []; qs = qsR.data ?? []; as_ = asR.data ?? [];
+    equipmentOptions = (eqR.data ?? []).map((e: any) => ({
+      id: e.id as string,
+      label: e.sixco_no ? `${e.sixco_no} — ${e.machine ?? ""}` : (e.machine ?? ""),
+      bare: Number(e.bare_rate ?? 0),
+      driver: Number(e.driver_rate ?? 0),
+    }));
   }
 
   const [{ data: comments }, { data: docs }] = await Promise.all([
@@ -165,6 +186,11 @@ export default async function WorksheetPage({
           actualMaterials={am}
           actualWorkforce={aw}
           actualConsumables={ac}
+          quoteEquipment={qe}
+          actualEquipment={ae}
+          quoteServices={qs}
+          actualServices={as_}
+          equipmentOptions={equipmentOptions}
         />
       ) : (
         <div className="m-6 border border-dashed border-border bg-card p-6 text-sm text-muted-foreground">

@@ -949,6 +949,7 @@ export type Database = {
           id: string
           item_name: string | null
           job_id: string
+          part_ref: string | null
           qty: number | null
           seq_no: number | null
           total_cost: number | null
@@ -959,6 +960,7 @@ export type Database = {
           id?: string
           item_name?: string | null
           job_id: string
+          part_ref?: string | null
           qty?: number | null
           seq_no?: number | null
           total_cost?: number | null
@@ -969,6 +971,7 @@ export type Database = {
           id?: string
           item_name?: string | null
           job_id?: string
+          part_ref?: string | null
           qty?: number | null
           seq_no?: number | null
           total_cost?: number | null
@@ -992,12 +995,74 @@ export type Database = {
           },
         ]
       }
+      job_actual_equipment: {
+        Row: {
+          description: string | null
+          equipment_id: string | null
+          hours: number | null
+          id: string
+          job_id: string
+          part_ref: string | null
+          rate_aed_per_hr: number | null
+          seq_no: number | null
+          total_cost: number | null
+          with_driver: boolean
+        }
+        Insert: {
+          description?: string | null
+          equipment_id?: string | null
+          hours?: number | null
+          id?: string
+          job_id: string
+          part_ref?: string | null
+          rate_aed_per_hr?: number | null
+          seq_no?: number | null
+          total_cost?: number | null
+          with_driver?: boolean
+        }
+        Update: {
+          description?: string | null
+          equipment_id?: string | null
+          hours?: number | null
+          id?: string
+          job_id?: string
+          part_ref?: string | null
+          rate_aed_per_hr?: number | null
+          seq_no?: number | null
+          total_cost?: number | null
+          with_driver?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jae_equipment_fk"
+            columns: ["equipment_id"]
+            isOneToOne: false
+            referencedRelation: "equipment"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jae_job_fk"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jae_job_fk"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       job_actual_materials: {
         Row: {
           dimension: string | null
           id: string
           job_id: string
           material_name: string | null
+          part_ref: string | null
           qty: number | null
           seq_no: number | null
           total_cost: number | null
@@ -1009,6 +1074,7 @@ export type Database = {
           id?: string
           job_id: string
           material_name?: string | null
+          part_ref?: string | null
           qty?: number | null
           seq_no?: number | null
           total_cost?: number | null
@@ -1020,6 +1086,7 @@ export type Database = {
           id?: string
           job_id?: string
           material_name?: string | null
+          part_ref?: string | null
           qty?: number | null
           seq_no?: number | null
           total_cost?: number | null
@@ -1036,6 +1103,60 @@ export type Database = {
           },
           {
             foreignKeyName: "job_actual_materials_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_actual_services: {
+        Row: {
+          id: string
+          job_id: string
+          part_ref: string | null
+          provider: string | null
+          qty: number | null
+          seq_no: number | null
+          service_name: string | null
+          total_cost: number | null
+          unit: string | null
+          unit_cost: number | null
+        }
+        Insert: {
+          id?: string
+          job_id: string
+          part_ref?: string | null
+          provider?: string | null
+          qty?: number | null
+          seq_no?: number | null
+          service_name?: string | null
+          total_cost?: number | null
+          unit?: string | null
+          unit_cost?: number | null
+        }
+        Update: {
+          id?: string
+          job_id?: string
+          part_ref?: string | null
+          provider?: string | null
+          qty?: number | null
+          seq_no?: number | null
+          service_name?: string | null
+          total_cost?: number | null
+          unit?: string | null
+          unit_cost?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jasvc_job_fk"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jasvc_job_fk"
             columns: ["job_id"]
             isOneToOne: false
             referencedRelation: "jobs_view"
@@ -1098,6 +1219,7 @@ export type Database = {
           hrs_per_person: number | null
           id: string
           job_id: string
+          part_ref: string | null
           qty: number | null
           rate_aed_per_hr: number | null
           seq_no: number | null
@@ -1109,6 +1231,7 @@ export type Database = {
           hrs_per_person?: number | null
           id?: string
           job_id: string
+          part_ref?: string | null
           qty?: number | null
           rate_aed_per_hr?: number | null
           seq_no?: number | null
@@ -1120,6 +1243,7 @@ export type Database = {
           hrs_per_person?: number | null
           id?: string
           job_id?: string
+          part_ref?: string | null
           qty?: number | null
           rate_aed_per_hr?: number | null
           seq_no?: number | null
@@ -1351,6 +1475,7 @@ export type Database = {
           id: string
           item_name: string | null
           job_id: string
+          part_ref: string | null
           qty: number | null
           seq_no: number | null
           total_cost: number | null
@@ -1361,6 +1486,7 @@ export type Database = {
           id?: string
           item_name?: string | null
           job_id: string
+          part_ref?: string | null
           qty?: number | null
           seq_no?: number | null
           total_cost?: number | null
@@ -1371,6 +1497,7 @@ export type Database = {
           id?: string
           item_name?: string | null
           job_id?: string
+          part_ref?: string | null
           qty?: number | null
           seq_no?: number | null
           total_cost?: number | null
@@ -1394,12 +1521,74 @@ export type Database = {
           },
         ]
       }
+      job_quote_equipment: {
+        Row: {
+          description: string | null
+          equipment_id: string | null
+          hours: number | null
+          id: string
+          job_id: string
+          part_ref: string | null
+          rate_aed_per_hr: number | null
+          seq_no: number | null
+          total_cost: number | null
+          with_driver: boolean
+        }
+        Insert: {
+          description?: string | null
+          equipment_id?: string | null
+          hours?: number | null
+          id?: string
+          job_id: string
+          part_ref?: string | null
+          rate_aed_per_hr?: number | null
+          seq_no?: number | null
+          total_cost?: number | null
+          with_driver?: boolean
+        }
+        Update: {
+          description?: string | null
+          equipment_id?: string | null
+          hours?: number | null
+          id?: string
+          job_id?: string
+          part_ref?: string | null
+          rate_aed_per_hr?: number | null
+          seq_no?: number | null
+          total_cost?: number | null
+          with_driver?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_quote_equipment_equipment_id_fkey"
+            columns: ["equipment_id"]
+            isOneToOne: false
+            referencedRelation: "equipment"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_quote_equipment_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_quote_equipment_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       job_quote_materials: {
         Row: {
           dimension: string | null
           id: string
           job_id: string
           material_name: string | null
+          part_ref: string | null
           qty: number | null
           seq_no: number | null
           total_cost: number | null
@@ -1411,6 +1600,7 @@ export type Database = {
           id?: string
           job_id: string
           material_name?: string | null
+          part_ref?: string | null
           qty?: number | null
           seq_no?: number | null
           total_cost?: number | null
@@ -1422,6 +1612,7 @@ export type Database = {
           id?: string
           job_id?: string
           material_name?: string | null
+          part_ref?: string | null
           qty?: number | null
           seq_no?: number | null
           total_cost?: number | null
@@ -1438,6 +1629,60 @@ export type Database = {
           },
           {
             foreignKeyName: "job_quote_materials_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_quote_services: {
+        Row: {
+          id: string
+          job_id: string
+          part_ref: string | null
+          provider: string | null
+          qty: number | null
+          seq_no: number | null
+          service_name: string | null
+          total_cost: number | null
+          unit: string | null
+          unit_cost: number | null
+        }
+        Insert: {
+          id?: string
+          job_id: string
+          part_ref?: string | null
+          provider?: string | null
+          qty?: number | null
+          seq_no?: number | null
+          service_name?: string | null
+          total_cost?: number | null
+          unit?: string | null
+          unit_cost?: number | null
+        }
+        Update: {
+          id?: string
+          job_id?: string
+          part_ref?: string | null
+          provider?: string | null
+          qty?: number | null
+          seq_no?: number | null
+          service_name?: string | null
+          total_cost?: number | null
+          unit?: string | null
+          unit_cost?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_quote_services_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_quote_services_job_id_fkey"
             columns: ["job_id"]
             isOneToOne: false
             referencedRelation: "jobs_view"
@@ -1452,6 +1697,7 @@ export type Database = {
           hrs_per_person: number | null
           id: string
           job_id: string
+          part_ref: string | null
           qty: number | null
           rate_aed_per_hr: number | null
           seq_no: number | null
@@ -1463,6 +1709,7 @@ export type Database = {
           hrs_per_person?: number | null
           id?: string
           job_id: string
+          part_ref?: string | null
           qty?: number | null
           rate_aed_per_hr?: number | null
           seq_no?: number | null
@@ -1474,6 +1721,7 @@ export type Database = {
           hrs_per_person?: number | null
           id?: string
           job_id?: string
+          part_ref?: string | null
           qty?: number | null
           rate_aed_per_hr?: number | null
           seq_no?: number | null
@@ -2722,6 +2970,10 @@ export type Database = {
       }
       next_job_seq: { Args: { p_year_month: string }; Returns: number }
       next_project_seq: { Args: { p_year: string }; Returns: number }
+      plate_pieces_per_sheet: {
+        Args: { p_len_mm: number; p_size: string; p_wid_mm: number }
+        Returns: number
+      }
       plate_sheet_area: { Args: { p_size: string }; Returns: number }
       recompute_all_jobs: { Args: never; Returns: undefined }
       recompute_inventory_on_hand: {
