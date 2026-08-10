@@ -2362,6 +2362,7 @@ export type Database = {
           area_used: number | null
           grade: string | null
           job_id: string | null
+          pieces_per_sheet: number | null
           plate_size: string | null
           sheet_area: number | null
           sheets_required: number | null

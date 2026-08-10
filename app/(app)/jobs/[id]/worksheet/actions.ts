@@ -113,3 +113,28 @@ export async function addComment(jobId: string, body: string) {
   revalidatePath(`/jobs/${jobId}/worksheet`);
   return { error: null };
 }
+
+/**
+ * Remove a comment. RLS allows the author or an administrator; the check is
+ * repeated here so the UI gets a clear message instead of a silent no-op.
+ */
+export async function deleteComment(jobId: string, commentId: string) {
+  const profile = await getProfile();
+  const supabase = createClient();
+
+  const { data: existing, error: readError } = await supabase
+    .from("job_comments")
+    .select("user_id")
+    .eq("id", commentId)
+    .maybeSingle();
+  if (readError) return { error: readError.message };
+  if (!existing) return { error: "That comment no longer exists." };
+  if (existing.user_id !== profile.id && profile.role_tier < 3)
+    return { error: "You can only delete your own comments." };
+
+  const { error } = await supabase.from("job_comments").delete().eq("id", commentId);
+  if (error) return { error: error.message };
+
+  revalidatePath(`/jobs/${jobId}/worksheet`);
+  return { error: null };
+}

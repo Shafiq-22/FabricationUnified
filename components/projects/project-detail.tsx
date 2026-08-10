@@ -3,8 +3,12 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FileText, Link2, Search, Users } from "lucide-react";
-import { setProjectJobs } from "@/app/(app)/projects/actions";
+import { FileText, Link2, Search, Trash2, Unlink, Users } from "lucide-react";
+import {
+  setProjectJobs,
+  detachJobFromProject,
+  deleteJobFromProject,
+} from "@/app/(app)/projects/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -69,6 +73,7 @@ export function ProjectDetail({
   meta,
   showMoney,
   canEdit,
+  canDelete,
 }: {
   projectId: string;
   jobs: ProjectJob[];
@@ -88,6 +93,7 @@ export function ProjectDetail({
   };
   showMoney: boolean;
   canEdit: boolean;
+  canDelete: boolean;
 }) {
   const [tab, setTab] = useState<Tab>("jobs");
 
@@ -149,7 +155,15 @@ export function ProjectDetail({
       </div>
 
       <div className="mt-3">
-        {tab === "jobs" && <JobsTable jobs={jobs} showMoney={showMoney} />}
+        {tab === "jobs" && (
+          <JobsTable
+            jobs={jobs}
+            showMoney={showMoney}
+            projectId={projectId}
+            canEdit={canEdit}
+            canDelete={canDelete}
+          />
+        )}
         {tab === "materials" && (
           <RollupTable rows={materials} showMoney={showMoney} unitLabel="Qty" />
         )}
@@ -187,7 +201,19 @@ function Empty({ children }: { children: React.ReactNode }) {
   );
 }
 
-function JobsTable({ jobs, showMoney }: { jobs: ProjectJob[]; showMoney: boolean }) {
+function JobsTable({
+  jobs,
+  showMoney,
+  projectId,
+  canEdit,
+  canDelete,
+}: {
+  jobs: ProjectJob[];
+  showMoney: boolean;
+  projectId: string;
+  canEdit: boolean;
+  canDelete: boolean;
+}) {
   if (jobs.length === 0)
     return <Empty>No jobs attached yet. Use “Attach jobs” to add them.</Empty>;
 
@@ -208,6 +234,7 @@ function JobsTable({ jobs, showMoney }: { jobs: ProjectJob[]; showMoney: boolean
             {showMoney && <TableHead className="text-center">Actual</TableHead>}
             {showMoney && <TableHead className="text-center">P/L</TableHead>}
             <TableHead className="text-center">Completed</TableHead>
+            {canEdit && <TableHead className="w-20" />}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -258,6 +285,15 @@ function JobsTable({ jobs, showMoney }: { jobs: ProjectJob[]; showMoney: boolean
               <TableCell className="text-center text-xs text-muted-foreground">
                 {fmtDate(j.completion_date)}
               </TableCell>
+              {canEdit && (
+                <TableCell>
+                  <JobRowActions
+                    projectId={projectId}
+                    job={j}
+                    canDelete={canDelete}
+                  />
+                </TableCell>
+              )}
             </TableRow>
           ))}
           {showMoney && (
@@ -275,6 +311,7 @@ function JobsTable({ jobs, showMoney }: { jobs: ProjectJob[]; showMoney: boolean
                 {formatAED(total((j) => j.profit_loss))}
               </TableCell>
               <TableCell />
+              {canEdit && <TableCell />}
             </TableRow>
           )}
         </TableBody>
@@ -578,5 +615,62 @@ function AttachJobsDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** Remove a job from this project, or delete the job outright (admins). */
+function JobRowActions({
+  projectId,
+  job,
+  canDelete,
+}: {
+  projectId: string;
+  job: ProjectJob;
+  canDelete: boolean;
+}) {
+  const router = useRouter();
+  const { toast } = useToast();
+  const [pending, start] = useTransition();
+
+  const run = (fn: () => Promise<{ error: string | null }>, ok: string) =>
+    start(async () => {
+      const res = await fn();
+      if (res.error) toast({ variant: "destructive", title: "Failed", description: res.error });
+      else {
+        toast({ title: ok });
+        router.refresh();
+      }
+    });
+
+  return (
+    <div className="flex items-center gap-1">
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-7 w-7"
+        title="Remove from this project (the job itself is kept)"
+        disabled={pending}
+        onClick={() =>
+          run(() => detachJobFromProject(projectId, job.id), "Removed from project")
+        }
+      >
+        <Unlink className="h-3.5 w-3.5" />
+      </Button>
+      {canDelete && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 text-muted-foreground hover:text-destructive"
+          title="Delete this job"
+          disabled={pending}
+          onClick={() => {
+            if (confirm(`Delete job ${job.job_code}? This removes it from the Jobs tab too.`))
+              run(() => deleteJobFromProject(projectId, job.id), "Job deleted");
+          }}
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      )}
+    </div>
   );
 }

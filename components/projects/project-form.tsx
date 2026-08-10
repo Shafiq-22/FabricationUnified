@@ -30,11 +30,9 @@ export interface SelectableJob {
 }
 
 export function ProjectForm({
-  clientOptions,
   siteOptions,
   availableJobs,
 }: {
-  clientOptions: { value: string; label: string }[];
   siteOptions: { value: string; label: string }[];
   availableJobs: SelectableJob[];
 }) {
@@ -45,7 +43,6 @@ export function ProjectForm({
 
   const [values, setValues] = useState<Record<string, string>>({
     name: "",
-    client_id: "none",
     site_id: "none",
     status: "rfq",
     contract_value: "",
@@ -109,13 +106,6 @@ export function ProjectForm({
             />
           </Field>
 
-          <Field label="Client">
-            <Picker
-              value={values.client_id}
-              onChange={(v) => set("client_id", v)}
-              options={clientOptions}
-            />
-          </Field>
           <Field label="Site">
             <Picker
               value={values.site_id}

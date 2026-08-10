@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { MessageSquare, Send } from "lucide-react";
+import { MessageSquare, Send, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { addComment } from "@/app/(app)/jobs/[id]/worksheet/actions";
+import { addComment, deleteComment } from "@/app/(app)/jobs/[id]/worksheet/actions";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/lib/hooks/use-toast";
@@ -14,10 +14,15 @@ export function CommentsThread({
   jobId,
   initial,
   authorNames,
+  currentUserId,
+  isAdmin,
 }: {
   jobId: string;
   initial: JobComment[];
   authorNames: Record<string, string>;
+  currentUserId: string;
+  /** Administrators may remove anyone's comment. */
+  isAdmin: boolean;
 }) {
   const { toast } = useToast();
   const [comments, setComments] = useState<JobComment[]>(initial);
@@ -44,11 +49,34 @@ export function CommentsThread({
           );
         },
       )
+      .on(
+        "postgres_changes",
+        {
+          event: "DELETE",
+          schema: "public",
+          table: "job_comments",
+          filter: `job_id=eq.${jobId}`,
+        },
+        (payload) => {
+          const gone = payload.old as { id?: string };
+          if (gone?.id) setComments((prev) => prev.filter((c) => c.id !== gone.id));
+        },
+      )
       .subscribe();
     return () => {
       supabase.removeChannel(channel);
     };
   }, [jobId]);
+
+  const remove = (id: string) =>
+    start(async () => {
+      const res = await deleteComment(jobId, id);
+      if (res.error) {
+        toast({ variant: "destructive", title: "Failed", description: res.error });
+        return;
+      }
+      setComments((prev) => prev.filter((c) => c.id !== id));
+    });
 
   const submit = () => {
     const text = body.trim();
@@ -79,9 +107,25 @@ export function CommentsThread({
               <span className="text-xs font-medium text-steel">
                 {(c.user_id && authorNames[c.user_id]) || "User"}
               </span>
-              <span className="font-mono text-[10px] text-muted-foreground">
-                {fmtDate(c.created_at)}
-              </span>
+              <div className="flex items-center gap-1">
+                <span className="font-mono text-[10px] text-muted-foreground">
+                  {fmtDate(c.created_at)}
+                </span>
+                {(c.user_id === currentUserId || isAdmin) && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-5 w-5 text-muted-foreground hover:text-destructive"
+                    title="Delete comment"
+                    disabled={pending}
+                    onClick={() => {
+                      if (confirm("Delete this comment?")) remove(c.id);
+                    }}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                )}
+              </div>
             </div>
             <p className="mt-0.5 whitespace-pre-wrap text-sm">{c.body}</p>
           </div>

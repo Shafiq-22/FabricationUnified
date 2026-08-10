@@ -249,3 +249,35 @@ export async function setJobProject(jobId: string, projectId: string | null) {
   revalidatePath("/jobs");
   return { error: null };
 }
+
+/** Remove a single job from its project, leaving the job itself intact. */
+export async function detachJobFromProject(projectId: string, jobId: string) {
+  try { await requireEngineer(); } catch (e) { return { error: (e as Error).message }; }
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("jobs")
+    .update({ project_id: null })
+    .eq("id", jobId)
+    .eq("project_id", projectId);
+  if (error) return { error: error.message };
+  revalidatePath("/projects");
+  revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/jobs");
+  return { error: null };
+}
+
+/** Soft-delete the job itself. Administrators only, as on the Jobs tab. */
+export async function deleteJobFromProject(projectId: string, jobId: string) {
+  const profile = await getProfile();
+  if (profile.role_tier < 3) return { error: "Only administrators may delete jobs." };
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("jobs")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", jobId);
+  if (error) return { error: error.message };
+  revalidatePath("/projects");
+  revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/jobs");
+  return { error: null };
+}

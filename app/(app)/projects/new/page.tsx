@@ -10,8 +10,7 @@ export default async function NewProjectPage() {
   await requireTier(2);
   const supabase = createClient();
 
-  const [{ data: clients }, { data: sites }, { data: jobs }] = await Promise.all([
-    supabase.from("clients").select("id, name, active").order("name"),
+  const [{ data: sites }, { data: jobs }] = await Promise.all([
     supabase.from("sites").select("id, code, name").eq("active", true).order("code"),
     // A job belongs to at most one project, so only unclaimed jobs are offered.
     supabase
@@ -29,9 +28,6 @@ export default async function NewProjectPage() {
         description="Group existing jobs under one project — its quoted and actual values are summed from them."
       />
       <ProjectForm
-        clientOptions={(clients ?? [])
-          .filter((c: any) => c.active)
-          .map((c: any) => ({ value: c.id as string, label: c.name as string }))}
         siteOptions={(sites ?? []).map((s: any) => ({
           value: s.id as string,
           label: `${s.code} — ${s.name}`,

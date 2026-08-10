@@ -76,6 +76,33 @@ export default async function RoughSheetPage({
     };
   };
 
+  // Plates match on thickness and grade rather than a profile dimension:
+  // a 10 mm S355 sheet is interchangeable whatever it is cut into.
+  const plateStockFor = (
+    thickness: number | null,
+    plateSize: string | null,
+    grade: string | null,
+  ) => {
+    if (thickness == null) return null;
+    const thk = String(Number(thickness));
+    const g = (grade ?? "").toLowerCase().trim();
+    const hits = stockRows.filter((s) => {
+      if (s.item_type !== "plate" && s.item_type !== "remnant") return false;
+      const hay = `${s.description ?? ""} ${s.dimensions ?? ""}`.toLowerCase();
+      // "10mm", "10 mm" or a bare 10 bounded by non-digits.
+      if (!new RegExp(`(^|[^0-9.])${thk}\\s*(mm)?([^0-9.]|$)`).test(hay)) return false;
+      if (g && s.material_grade && s.material_grade.toLowerCase().trim() !== g) return false;
+      if (plateSize && s.dimensions && norm(s.dimensions) !== norm(plateSize)) return false;
+      return true;
+    });
+    if (hits.length === 0) return null;
+    return {
+      qty: hits.reduce((sum, h) => sum + Number(h.quantity_on_hand ?? 0), 0),
+      unit: hits[0].unit ?? "",
+      isRemnant: hits.some((h) => h.item_type === "remnant"),
+    };
+  };
+
   return (
     <div className="pb-10">
       <PageHeader title={`Rough Sheet — ${job.job_code}`} description={job.description ?? undefined}>
@@ -166,13 +193,15 @@ export default async function RoughSheetPage({
                 <TableHead className="text-center">Sheet</TableHead>
                 <TableHead className="text-center">Grade</TableHead>
                 <TableHead className="text-center">Area Used (m²)</TableHead>
+                <TableHead className="text-center">Per Sheet</TableHead>
                 <TableHead className="text-center">Sheets Req.</TableHead>
+                <TableHead className="text-center">In Stock</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {(plateAgg ?? []).length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={5} className="py-6 text-center text-xs text-panel-foreground/50">
+                  <TableCell colSpan={7} className="py-6 text-center text-xs text-panel-foreground/50">
                     Save plate rows to compute sheets required.
                   </TableCell>
                 </TableRow>
@@ -187,6 +216,12 @@ export default async function RoughSheetPage({
                   <TableCell className="text-right text-xs">
                     {p.area_used != null ? Number(p.area_used).toFixed(3) : "—"}
                   </TableCell>
+                  <TableCell
+                    className="text-right text-xs text-panel-foreground/70"
+                    title="Pieces of this size that fit on one sheet, best of both orientations"
+                  >
+                    {p.pieces_per_sheet ? p.pieces_per_sheet : "—"}
+                  </TableCell>
                   <TableCell className="text-right text-xs font-bold text-amber">
                     {p.sheets_required ?? (
                       <span
@@ -196,6 +231,29 @@ export default async function RoughSheetPage({
                         size?
                       </span>
                     )}
+                  </TableCell>
+                  <TableCell className="text-right text-xs">
+                    {(() => {
+                      const st = plateStockFor(
+                        p.thickness_mm as number | null,
+                        p.plate_size,
+                        p.grade,
+                      );
+                      if (!st || st.qty <= 0)
+                        return <span className="text-panel-foreground/40">—</span>;
+                      const enough = st.qty >= (p.sheets_required ?? 0);
+                      return (
+                        <span
+                          className={enough ? "font-semibold text-status-com" : "font-semibold text-steel"}
+                          title={
+                            (st.isRemnant ? "Includes remnant stock. " : "") +
+                            (enough ? "Enough on the shelf — no order needed." : "Partly covered by stock.")
+                          }
+                        >
+                          {st.qty} {st.unit}
+                        </span>
+                      );
+                    })()}
                   </TableCell>
                 </TableRow>
               ))}

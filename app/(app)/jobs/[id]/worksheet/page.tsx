@@ -206,7 +206,13 @@ export default async function WorksheetPage({
           />
         </section>
         <JobMetaForm job={job} editable={editable} />
-        <CommentsThread jobId={params.id} initial={comments ?? []} authorNames={authorNames} />
+        <CommentsThread
+          jobId={params.id}
+          initial={comments ?? []}
+          authorNames={authorNames}
+          currentUserId={profile.id}
+          isAdmin={profile.role_tier >= 3}
+        />
       </div>
     </div>
   );

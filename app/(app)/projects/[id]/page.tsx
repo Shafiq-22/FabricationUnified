@@ -162,6 +162,7 @@ export default async function ProjectPage({ params }: { params: { id: string } }
         }}
         showMoney={showMoney}
         canEdit={canEdit}
+        canDelete={profile.role_tier >= 3}
       />
     </div>
   );
