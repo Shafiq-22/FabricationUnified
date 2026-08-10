@@ -2,7 +2,7 @@
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Pencil, Trash2, FileText } from "lucide-react";
+import { Plus, Pencil, Trash2, FileText, Send } from "lucide-react";
 import {
   createHandover,
   updateHandover,
@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/lib/hooks/use-toast";
 import { fmtDate } from "@/lib/date";
+import { transferNoticeDraft } from "@/lib/email-draft";
 import type { HandoverItem, Drawing } from "@/lib/types";
 
 const drawingFields: FieldDef[] = [
@@ -29,6 +30,10 @@ export function HandoverManager({
   forecasted,
   drawingsByHandover,
   siteOptions,
+  siteContactEmails,
+  senderName,
+  companyName,
+  departmentName,
   editable,
   canDelete,
 }: {
@@ -36,6 +41,11 @@ export function HandoverManager({
   forecasted: HandoverItem[];
   drawingsByHandover: Record<string, Drawing[]>;
   siteOptions: { value: string; label: string }[];
+  /** Site id -> the site's point of contact, used to address the notice. */
+  siteContactEmails: Record<string, string>;
+  senderName: string;
+  companyName: string;
+  departmentName: string;
   editable: boolean;
   canDelete: boolean;
 }) {
@@ -117,8 +127,27 @@ export function HandoverManager({
                   {it.expected_completion && <span>ECD {fmtDate(it.expected_completion)}</span>}
                 </div>
               </div>
-              {(editable || canDelete) && (
-                <div className="flex shrink-0 items-center gap-1">
+              <div className="flex shrink-0 items-center gap-1">
+                <Button variant="ghost" size="icon" className="h-7 w-7" asChild title="Draft transfer notice">
+                  <a
+                    href={transferNoticeDraft({
+                      to: it.site_id ? siteContactEmails[it.site_id] ?? null : null,
+                      companyName,
+                      departmentName,
+                      senderName,
+                      jobDescription: it.job_description ?? "Fabricated item",
+                      qty: it.qty,
+                      poRef: it.po_ref,
+                      supplier: it.supplier,
+                      siteLabel:
+                        siteOptions.find((s) => s.value === it.site_id)?.label ?? null,
+                      expectedCompletion: it.expected_completion,
+                      remark: it.remark,
+                    })}
+                  >
+                    <Send className="h-3.5 w-3.5" />
+                  </a>
+                </Button>
                   {editable && (
                     <RecordFormDialog
                       title="Edit Handover Item"
@@ -146,8 +175,7 @@ export function HandoverManager({
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   )}
-                </div>
-              )}
+              </div>
             </div>
             {it.remark && (
               <p className="border-b border-border bg-secondary/40 p-2 text-xs text-muted-foreground">

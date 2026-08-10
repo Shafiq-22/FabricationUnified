@@ -8,6 +8,14 @@ import { PageHeader } from "@/components/layout/page-header";
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { MonthSelector } from "@/components/dashboard/month-selector";
 import { JobStatusBadge } from "@/components/jobs/job-status-badge";
+import {
+  FinanceChart,
+  JobVolumeChart,
+  StatusMixChart,
+  SiteLoadChart,
+  type MonthPoint,
+  type SlicePoint,
+} from "@/components/dashboard/dashboard-charts";
 
 export const dynamic = "force-dynamic";
 
@@ -30,9 +38,11 @@ export default async function DashboardPage({
   const month = searchParams.month ?? currentMonthKey();
   const supabase = createClient();
 
+  // final_quote / actual_cost come back NULL for Tier 1 straight from the
+  // masking view, so the finance series simply has nothing to plot for them.
   const { data: allJobs } = await supabase
     .from("jobs_view")
-    .select("id, status, start_date, created_at")
+    .select("id, status, start_date, created_at, site_code, final_quote, actual_cost, profit_loss")
     .order("created_at", { ascending: false })
     .limit(5000);
 
@@ -42,6 +52,37 @@ export default async function DashboardPage({
   const counts = Object.fromEntries(
     JOB_STATUSES.map((s) => [s.value, monthJobs.filter((j) => j.status === s.value).length]),
   ) as Record<string, number>;
+
+  // Trailing 12 months ending with the selected one.
+  const series: MonthPoint[] = lastMonths(month, 12).map((m) => {
+    const inMonth = jobs.filter((j) => monthOf(j) === m);
+    return {
+      month: m,
+      label: shortMonth(m),
+      jobs: inMonth.length,
+      quoted: sum(inMonth, (j) => j.final_quote),
+      actual: sum(inMonth, (j) => j.actual_cost),
+      pl: sum(inMonth, (j) => j.profit_loss),
+    };
+  });
+
+  const statusMix: SlicePoint[] = JOB_STATUSES.map((s) => ({
+    name: s.label,
+    value: counts[s.value],
+    colour: STATUS_COLOURS[s.value],
+  })).filter((s) => s.value > 0);
+
+  const windowStart = series[0]?.month ?? "";
+  const siteCounts = new Map<string, number>();
+  for (const j of jobs) {
+    if (monthOf(j) < windowStart) continue;
+    const key = j.site_code ?? "—";
+    siteCounts.set(key, (siteCounts.get(key) ?? 0) + 1);
+  }
+  const siteLoad = Array.from(siteCounts.entries())
+    .map(([site, n]) => ({ site, jobs: n }))
+    .sort((a, b) => b.jobs - a.jobs)
+    .slice(0, 8);
 
   const showMoney = canSeeFinancials(profile.role_tier);
   let kpis: Kpis = { authorized: false };
@@ -140,6 +181,14 @@ export default async function DashboardPage({
           </Link>
         </div>
 
+        {/* Graphs */}
+        <div className="grid gap-3 xl:grid-cols-2">
+          {showMoney && <FinanceChart data={series} />}
+          <JobVolumeChart data={series} />
+          <StatusMixChart data={statusMix} />
+          <SiteLoadChart data={siteLoad} />
+        </div>
+
         {/* Status breakdown */}
         <section className="border border-border bg-card">
           <h2 className="border-b border-border px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -162,4 +211,36 @@ export default async function DashboardPage({
       </div>
     </div>
   );
+}
+
+const STATUS_COLOURS: Record<string, string> = {
+  quotation: "#FFC000",
+  in_progress: "#156082",
+  completed: "#00B050",
+  delivered: "#0E2841",
+  halt: "#E97132",
+};
+
+function sum(rows: JobView[], pick: (j: JobView) => number | null) {
+  return rows.reduce((s, r) => s + Number(pick(r) ?? 0), 0);
+}
+
+/** The `count` months ending at `end` (YYYY-MM), oldest first. */
+function lastMonths(end: string, count: number): string[] {
+  const [y, m] = end.split("-").map(Number);
+  const out: string[] = [];
+  for (let i = count - 1; i >= 0; i--) {
+    const d = new Date(Date.UTC(y, m - 1 - i, 1));
+    out.push(`${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`);
+  }
+  return out;
+}
+
+function shortMonth(ym: string): string {
+  const [y, m] = ym.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString("en-GB", {
+    month: "short",
+    year: "2-digit",
+    timeZone: "UTC",
+  });
 }

@@ -28,15 +28,31 @@ export default async function HandoverPage() {
     (drawingsByHandover[d.handover_id] ??= []).push(d as Drawing);
   });
 
-  const { data: sites } = await supabase
-    .from("sites")
-    .select("id, code, name")
-    .eq("active", true)
-    .order("code");
+  const [{ data: sites }, { data: contacts }, { data: cfgRows }] = await Promise.all([
+    supabase.from("sites").select("id, code, name").eq("active", true).order("code"),
+    // The site's point of contact addresses the transfer notice.
+    supabase
+      .from("contacts")
+      .select("site_id, email, role")
+      .eq("active", true)
+      .not("email", "is", null)
+      .not("site_id", "is", null),
+    supabase.from("app_config").select("key, value"),
+  ]);
   const siteOptions = (sites ?? []).map((s) => ({
     value: s.id,
     label: `${s.code} — ${s.name}`,
   }));
+  const cfg = Object.fromEntries((cfgRows ?? []).map((r) => [r.key, r.value]));
+
+  // A site in-charge wins over any other contact at that site.
+  const siteContactEmails: Record<string, string> = {};
+  for (const c of contacts ?? []) {
+    if (!c.site_id || !c.email) continue;
+    if (!siteContactEmails[c.site_id] || c.role === "project_incharge") {
+      siteContactEmails[c.site_id] = c.email;
+    }
+  }
 
   return (
     <div>
@@ -50,6 +66,10 @@ export default async function HandoverPage() {
           forecasted={forecasted}
           drawingsByHandover={drawingsByHandover}
           siteOptions={siteOptions}
+          siteContactEmails={siteContactEmails}
+          senderName={profile.full_name}
+          companyName={cfg.company_name ?? "Six Construct"}
+          departmentName={cfg.department_name ?? "Steel Fabrication"}
           editable={profile.role_tier >= 2}
           canDelete={profile.role_tier >= 3}
         />

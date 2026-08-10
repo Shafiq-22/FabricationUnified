@@ -82,3 +82,60 @@ export function materialRequestDraft(d: MaterialDraft): string {
   const qs = params.toString().replace(/\+/g, "%20");
   return `mailto:${encodeURIComponent(d.to ?? "").replace(/%40/g, "@")}?${qs}`;
 }
+
+export interface TransferNotice {
+  to?: string | null;
+  companyName: string;
+  departmentName: string;
+  senderName: string;
+  jobDescription: string;
+  qty?: number | null;
+  poRef?: string | null;
+  supplier?: string | null;
+  siteLabel?: string | null;
+  expectedCompletion?: string | null;
+  remark?: string | null;
+}
+
+/**
+ * Notice that a handover item is being transferred to site. Same principle as
+ * the material request: it opens in the user's mail client, it is not sent.
+ */
+export function transferNoticeDraft(d: TransferNotice): string {
+  const subject = `Transfer Notice — ${d.jobDescription}`;
+
+  const detail = [
+    `Item:      ${d.jobDescription}`,
+    d.qty != null ? `Quantity:  ${d.qty}` : null,
+    d.siteLabel ? `Site:      ${d.siteLabel}` : null,
+    d.poRef ? `PO Ref:    ${d.poRef}` : null,
+    d.supplier ? `Supplier:  ${d.supplier}` : null,
+    d.expectedCompletion ? `Expected:  ${d.expectedCompletion}` : null,
+  ].filter(Boolean) as string[];
+
+  const body = [
+    "Dear Sir/Madam,",
+    "",
+    "Please be informed that the following item is ready for transfer from the",
+    "fabrication workshop to site.",
+    "",
+    ...detail,
+    // Blank lines above and below are deliberate paragraph breaks; only the
+    // remarks block is conditional.
+    ...(d.remark ? ["", `Remarks:   ${d.remark}`] : []),
+    "",
+    "Kindly arrange to receive and acknowledge on delivery.",
+    "",
+    "Thank you.",
+    "",
+    d.senderName,
+    d.departmentName,
+    d.companyName,
+  ].join("\n");
+
+  const params = new URLSearchParams();
+  params.set("subject", subject);
+  params.set("body", body);
+  const qs = params.toString().replace(/\+/g, "%20");
+  return `mailto:${encodeURIComponent(d.to ?? "").replace(/%40/g, "@")}?${qs}`;
+}
