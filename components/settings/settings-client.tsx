@@ -134,7 +134,7 @@ export function SettingsClient({
             <TableHeader>
               <TableRow>
                 <TableHead>Designation</TableHead>
-                <TableHead className="text-right">Rate (AED/hr)</TableHead>
+                <TableHead>Rate (AED/hr)</TableHead>
                 <TableHead className="w-24">Status</TableHead>
                 <TableHead className="w-28" />
               </TableRow>

@@ -6,6 +6,7 @@ import { replaceJobLines, type Row } from "@/app/(app)/jobs/[id]/worksheet/actio
 const itemCols = [
   { key: "profile_type", label: "Profile", type: "text" as const, placeholder: "SHS / CHS / UPN…" },
   { key: "dimension", label: "Dimension", type: "text" as const, placeholder: "e.g. 100x100x5" },
+  { key: "grade", label: "Grade", type: "text" as const, placeholder: "S275 / S355…" },
   { key: "length_m", label: "Length (m)", type: "number" as const, align: "right" as const, step: "0.001" },
   { key: "qty", label: "Qty", type: "number" as const, align: "right" as const, step: "1" },
 ];
@@ -13,6 +14,7 @@ const itemCols = [
 const plateCols = [
   { key: "thickness_mm", label: "Thk (mm)", type: "number" as const, align: "right" as const, step: "0.1" },
   { key: "plate_size", label: "Sheet", type: "text" as const, placeholder: "2x6 / 1.5x6 / custom" },
+  { key: "grade", label: "Grade", type: "text" as const, placeholder: "S275 / S355…" },
   { key: "length_mm", label: "L (mm)", type: "number" as const, align: "right" as const, step: "1" },
   { key: "width_mm", label: "W (mm)", type: "number" as const, align: "right" as const, step: "1" },
   { key: "qty", label: "Qty", type: "number" as const, align: "right" as const, step: "1" },

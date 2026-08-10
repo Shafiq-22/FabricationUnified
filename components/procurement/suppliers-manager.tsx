@@ -98,7 +98,7 @@ export function SuppliersManager({
             <TableHead>Contact</TableHead>
             <TableHead>Email</TableHead>
             <TableHead>Phone</TableHead>
-            <TableHead className="text-right">Records</TableHead>
+            <TableHead>Records</TableHead>
             <TableHead className="w-24">Status</TableHead>
             <TableHead className="w-28" />
           </TableRow>

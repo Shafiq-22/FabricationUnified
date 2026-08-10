@@ -12,6 +12,7 @@ import type { JobView } from "@/lib/types";
 
 const matCols = [
   { key: "material_name", label: "Material", type: "text" as const },
+  { key: "dimension", label: "Dimension", type: "text" as const, placeholder: "e.g. 200x100x8" },
   { key: "unit", label: "Unit", type: "text" as const },
   { key: "qty", label: "Qty", type: "number" as const, align: "right" as const, step: "0.01" },
   { key: "unit_cost", label: "Unit Cost", type: "number" as const, align: "right" as const, step: "0.01" },

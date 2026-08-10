@@ -61,7 +61,7 @@ export function MovementsTable({
             <TableHead>Date</TableHead>
             <TableHead>Item</TableHead>
             <TableHead>Type</TableHead>
-            <TableHead className="text-right">Qty</TableHead>
+            <TableHead>Qty</TableHead>
             <TableHead>Job</TableHead>
             <TableHead>Note</TableHead>
             {canDelete && <TableHead className="w-10" />}

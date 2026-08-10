@@ -103,12 +103,12 @@ export function ProcurementManager({
             <TableHead>Order Date</TableHead>
             <TableHead>Job</TableHead>
             <TableHead>Item</TableHead>
-            <TableHead className="text-right">Qty</TableHead>
-            <TableHead className="text-right">Unit Price</TableHead>
-            <TableHead className="text-right">Total</TableHead>
+            <TableHead>Qty</TableHead>
+            <TableHead>Unit Price</TableHead>
+            <TableHead>Total</TableHead>
             <TableHead>Supplier</TableHead>
             <TableHead>Delivery</TableHead>
-            <TableHead className="text-right">Lead (d)</TableHead>
+            <TableHead>Lead (d)</TableHead>
             <TableHead>Status</TableHead>
             {(editable || canDelete) && <TableHead />}
           </TableRow>

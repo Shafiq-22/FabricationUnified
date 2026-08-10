@@ -126,19 +126,7 @@ export default async function WorksheetPage({
                 qty: job.qty,
                 unit: job.unit,
               },
-              materials: qm.map((m) => ({
-                material_name: m.material_name, unit: m.unit, qty: m.qty,
-                unit_cost: m.unit_cost, total_cost: m.total_cost,
-              })),
-              workforce: qw.map((w) => ({
-                designation: w.designation, qty: w.qty, hrs_per_person: w.hrs_per_person,
-                rate_aed_per_hr: w.rate_aed_per_hr,
-                total_cost: Number(w.qty || 0) * Number(w.hrs_per_person || 0) * Number(w.rate_aed_per_hr || 0),
-              })),
-              consumables: qc.map((c) => ({
-                item_name: c.item_name, unit: c.unit, qty: c.qty,
-                unit_cost: c.unit_cost, total_cost: c.total_cost,
-              })),
+              quotationRef: job.quotation_ref,
               summary: {
                 description: job.description,
                 unit: job.unit,
@@ -146,7 +134,6 @@ export default async function WorksheetPage({
                 unit_cost: job.qty && job.final_quote != null ? job.final_quote / job.qty : null,
                 total: job.final_quote ?? 0,
               },
-              marginPct: (job.margin ?? 0) * 100,
               finalQuote: job.final_quote ?? 0,
             }}
           />

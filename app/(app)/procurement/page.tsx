@@ -234,10 +234,10 @@ async function HistoricSection(supabase: any, sp: any) {
             <TableRow>
               <TableHead>Item</TableHead>
               <TableHead>Supplier</TableHead>
-              <TableHead className="text-right">Avg Price</TableHead>
-              <TableHead className="text-right">Last Price</TableHead>
+              <TableHead>Avg Price</TableHead>
+              <TableHead>Last Price</TableHead>
               <TableHead>Last Order</TableHead>
-              <TableHead className="text-right">Orders</TableHead>
+              <TableHead>Orders</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

@@ -318,6 +318,13 @@ export type Database = {
             foreignKeyName: "contacts_personnel_id_fkey"
             columns: ["personnel_id"]
             isOneToOne: false
+            referencedRelation: "job_workforce_contacts"
+            referencedColumns: ["personnel_id"]
+          },
+          {
+            foreignKeyName: "contacts_personnel_id_fkey"
+            columns: ["personnel_id"]
+            isOneToOne: false
             referencedRelation: "personnel"
             referencedColumns: ["id"]
           },
@@ -714,6 +721,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inspection_reports_inspector_id_fkey"
+            columns: ["inspector_id"]
+            isOneToOne: false
+            referencedRelation: "job_workforce_contacts"
+            referencedColumns: ["personnel_id"]
           },
           {
             foreignKeyName: "inspection_reports_inspector_id_fkey"
@@ -1732,6 +1746,13 @@ export type Database = {
             foreignKeyName: "maintenance_records_performed_by_fkey"
             columns: ["performed_by"]
             isOneToOne: false
+            referencedRelation: "job_workforce_contacts"
+            referencedColumns: ["personnel_id"]
+          },
+          {
+            foreignKeyName: "maintenance_records_performed_by_fkey"
+            columns: ["performed_by"]
+            isOneToOne: false
             referencedRelation: "personnel"
             referencedColumns: ["id"]
           },
@@ -2287,6 +2308,13 @@ export type Database = {
             foreignKeyName: "timesheet_entries_personnel_id_fkey"
             columns: ["personnel_id"]
             isOneToOne: false
+            referencedRelation: "job_workforce_contacts"
+            referencedColumns: ["personnel_id"]
+          },
+          {
+            foreignKeyName: "timesheet_entries_personnel_id_fkey"
+            columns: ["personnel_id"]
+            isOneToOne: false
             referencedRelation: "personnel"
             referencedColumns: ["id"]
           },
@@ -2332,8 +2360,10 @@ export type Database = {
       cut_list_plates_aggregated: {
         Row: {
           area_used: number | null
+          grade: string | null
           job_id: string | null
           plate_size: string | null
+          sheet_area: number | null
           sheets_required: number | null
           thickness_mm: number | null
         }
@@ -2427,23 +2457,6 @@ export type Database = {
           },
         ]
       }
-      job_workforce_contacts: {
-        Row: {
-          days_worked: number | null
-          first_worked: string | null
-          ho_no: string | null
-          job_id: string | null
-          last_worked: string | null
-          name: string | null
-          normal_hours: number | null
-          ot_hours: number | null
-          personnel_id: string | null
-          qualification_expiry: string | null
-          trade: string | null
-          welder_qualification: string | null
-        }
-        Relationships: []
-      }
       inventory_low_stock: {
         Row: {
           active: boolean | null
@@ -2498,6 +2511,38 @@ export type Database = {
           {
             foreignKeyName: "inventory_items_source_job_id_fkey"
             columns: ["source_job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_workforce_contacts: {
+        Row: {
+          days_worked: number | null
+          first_worked: string | null
+          ho_no: string | null
+          job_id: string | null
+          last_worked: string | null
+          name: string | null
+          normal_hours: number | null
+          ot_hours: number | null
+          personnel_id: string | null
+          qualification_expiry: string | null
+          trade: string | null
+          welder_qualification: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "timesheet_entries_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timesheet_entries_job_id_fkey"
+            columns: ["job_id"]
             isOneToOne: false
             referencedRelation: "jobs_view"
             referencedColumns: ["id"]
@@ -2620,6 +2665,7 @@ export type Database = {
       rough_sheet_aggregated: {
         Row: {
           dimension: string | null
+          grade: string | null
           job_id: string | null
           line_count: number | null
           order_qty: number | null
@@ -2675,6 +2721,7 @@ export type Database = {
       }
       next_job_seq: { Args: { p_year_month: string }; Returns: number }
       next_project_seq: { Args: { p_year: string }; Returns: number }
+      plate_sheet_area: { Args: { p_size: string }; Returns: number }
       recompute_all_jobs: { Args: never; Returns: undefined }
       recompute_inventory_on_hand: {
         Args: { p_item_id: string }

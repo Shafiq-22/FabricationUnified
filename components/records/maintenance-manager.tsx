@@ -199,8 +199,8 @@ export function MaintenanceManager({
               <TableHead>Type</TableHead>
               <TableHead>Description</TableHead>
               <TableHead>By</TableHead>
-              <TableHead className="text-right">Downtime</TableHead>
-              {showMoney && <TableHead className="text-right">Cost</TableHead>}
+              <TableHead>Downtime</TableHead>
+              {showMoney && <TableHead>Cost</TableHead>}
               {canDelete && <TableHead className="w-10" />}
             </TableRow>
           </TableHeader>

@@ -96,9 +96,9 @@ export function ConsumablesManager({
             <TableHead>Order Date</TableHead>
             <TableHead>Item</TableHead>
             <TableHead>Unit</TableHead>
-            <TableHead className="text-right">Qty</TableHead>
-            <TableHead className="text-right">Unit Price</TableHead>
-            <TableHead className="text-right">Total</TableHead>
+            <TableHead>Qty</TableHead>
+            <TableHead>Unit Price</TableHead>
+            <TableHead>Total</TableHead>
             <TableHead>PR No</TableHead>
             <TableHead>LPO</TableHead>
             <TableHead>Invoice/DN</TableHead>

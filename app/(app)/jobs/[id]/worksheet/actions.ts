@@ -6,16 +6,16 @@ import { getProfile } from "@/lib/auth";
 
 // Editable columns per worksheet child table (computed cols are excluded).
 const CHILD_TABLES = {
-  job_quote_materials: ["material_name", "unit", "qty", "unit_cost"],
-  job_actual_materials: ["material_name", "unit", "qty", "unit_cost"],
+  job_quote_materials: ["material_name", "dimension", "unit", "qty", "unit_cost"],
+  job_actual_materials: ["material_name", "dimension", "unit", "qty", "unit_cost"],
   job_quote_workforce: ["designation", "qty", "hrs_per_person", "date", "rate_aed_per_hr"],
   job_actual_workforce: ["designation", "qty", "hrs_per_person", "date", "rate_aed_per_hr"],
   job_quotation_summary: ["item_name", "unit", "qty", "unit_cost"],
   job_actual_summary: ["item_name", "unit", "qty", "unit_cost"],
   job_quote_consumables: ["item_name", "unit", "qty", "unit_cost"],
   job_actual_consumables: ["item_name", "unit", "qty", "unit_cost"],
-  rough_sheet_items: ["profile_type", "dimension", "length_m", "qty"],
-  cut_list_plates: ["thickness_mm", "plate_size", "length_mm", "width_mm", "qty"],
+  rough_sheet_items: ["profile_type", "dimension", "grade", "length_m", "qty"],
+  cut_list_plates: ["thickness_mm", "plate_size", "grade", "length_mm", "width_mm", "qty"],
 } as const;
 
 export type ChildTable = keyof typeof CHILD_TABLES;

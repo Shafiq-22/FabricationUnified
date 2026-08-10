@@ -149,11 +149,11 @@ export function InventoryManager({
             <TableHead>Description</TableHead>
             <TableHead>Grade</TableHead>
             <TableHead>Dimensions</TableHead>
-            <TableHead className="text-right">On Hand</TableHead>
+            <TableHead>On Hand</TableHead>
             <TableHead>Unit</TableHead>
             <TableHead>Location</TableHead>
-            {showMoney && <TableHead className="text-right">Unit Cost</TableHead>}
-            {showMoney && <TableHead className="text-right">Value</TableHead>}
+            {showMoney && <TableHead>Unit Cost</TableHead>}
+            {showMoney && <TableHead>Value</TableHead>}
             <TableHead className="w-32" />
           </TableRow>
         </TableHeader>

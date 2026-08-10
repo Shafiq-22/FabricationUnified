@@ -117,15 +117,13 @@ export function EditableTable({
               {columns.map((c) => (
                 <th
                   key={c.key}
-                  className={`px-2 py-1.5 text-left font-semibold uppercase tracking-wide ${
-                    c.align === "right" ? "text-right" : ""
-                  }`}
+                  className="px-2 py-1.5 text-center font-semibold uppercase tracking-wide"
                 >
                   {c.label}
                 </th>
               ))}
               {computeTotal && (
-                <th className="px-2 py-1.5 text-right font-semibold uppercase tracking-wide">
+                <th className="px-2 py-1.5 text-center font-semibold uppercase tracking-wide">
                   Total
                 </th>
               )}

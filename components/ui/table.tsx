@@ -73,7 +73,9 @@ const TableHead = React.forwardRef<
   <th
     ref={ref}
     className={cn(
-      "h-9 bg-secondary px-3 text-left align-middle text-xs font-semibold uppercase tracking-wide text-secondary-foreground [&:has([role=checkbox])]:pr-0",
+      // Headers are centred throughout the app; data cells keep their own
+      // alignment (numbers right, text left).
+      "h-9 bg-secondary px-3 text-center align-middle text-xs font-semibold uppercase tracking-wide text-secondary-foreground [&:has([role=checkbox])]:pr-0",
       className,
     )}
     {...props}

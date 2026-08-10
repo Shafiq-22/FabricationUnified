@@ -105,18 +105,19 @@ export default async function RoughSheetPage({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Profile</TableHead>
-                <TableHead>Dimension</TableHead>
-                <TableHead className="text-right">Total Len (m)</TableHead>
-                <TableHead className="text-right">Theoretical</TableHead>
-                <TableHead className="text-right">Order Qty</TableHead>
-                <TableHead className="text-right">In Stock</TableHead>
+                <TableHead className="text-center">Profile</TableHead>
+                <TableHead className="text-center">Dimension</TableHead>
+                <TableHead className="text-center">Grade</TableHead>
+                <TableHead className="text-center">Total Len (m)</TableHead>
+                <TableHead className="text-center">Theoretical</TableHead>
+                <TableHead className="text-center">Order Qty</TableHead>
+                <TableHead className="text-center">In Stock</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {(agg ?? []).length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="py-6 text-center text-xs text-panel-foreground/50">
+                  <TableCell colSpan={7} className="py-6 text-center text-xs text-panel-foreground/50">
                     Save cut-list rows to compute the order list.
                   </TableCell>
                 </TableRow>
@@ -125,6 +126,7 @@ export default async function RoughSheetPage({
                 <TableRow key={i}>
                   <TableCell className="font-mono text-xs">{a.profile_type}</TableCell>
                   <TableCell className="text-xs">{a.dimension}</TableCell>
+                  <TableCell className="text-center font-mono text-xs">{a.grade ?? "—"}</TableCell>
                   <TableCell className="text-right text-xs">{a.total_length}</TableCell>
                   <TableCell className="text-right text-xs">{a.theoretical_qty}</TableCell>
                   <TableCell className="text-right text-xs font-bold text-amber">
@@ -160,16 +162,17 @@ export default async function RoughSheetPage({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Thickness</TableHead>
-                <TableHead>Sheet</TableHead>
-                <TableHead className="text-right">Area Used (m²)</TableHead>
-                <TableHead className="text-right">Sheets Req.</TableHead>
+                <TableHead className="text-center">Thickness</TableHead>
+                <TableHead className="text-center">Sheet</TableHead>
+                <TableHead className="text-center">Grade</TableHead>
+                <TableHead className="text-center">Area Used (m²)</TableHead>
+                <TableHead className="text-center">Sheets Req.</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {(plateAgg ?? []).length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={4} className="py-6 text-center text-xs text-panel-foreground/50">
+                  <TableCell colSpan={5} className="py-6 text-center text-xs text-panel-foreground/50">
                     Save plate rows to compute sheets required.
                   </TableCell>
                 </TableRow>
@@ -177,12 +180,22 @@ export default async function RoughSheetPage({
               {(plateAgg ?? []).map((p, i) => (
                 <TableRow key={i}>
                   <TableCell className="text-xs">{p.thickness_mm} mm</TableCell>
-                  <TableCell className="font-mono text-xs">{p.plate_size}</TableCell>
+                  <TableCell className="font-mono text-xs" title={p.sheet_area ? `${p.sheet_area} m² per sheet` : "Sheet size not recognised"}>
+                    {p.plate_size}
+                  </TableCell>
+                  <TableCell className="text-center font-mono text-xs">{p.grade ?? "—"}</TableCell>
                   <TableCell className="text-right text-xs">
                     {p.area_used != null ? Number(p.area_used).toFixed(3) : "—"}
                   </TableCell>
                   <TableCell className="text-right text-xs font-bold text-amber">
-                    {p.sheets_required ?? "—"}
+                    {p.sheets_required ?? (
+                      <span
+                        className="font-normal text-panel-foreground/50"
+                        title="Enter the sheet size as width x length in metres, e.g. 2x6"
+                      >
+                        size?
+                      </span>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}

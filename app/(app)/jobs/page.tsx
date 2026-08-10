@@ -77,9 +77,9 @@ export default async function JobsPage({
                 <TableHead>Status</TableHead>
                 <TableHead>Start</TableHead>
                 <TableHead>Completion</TableHead>
-                {showMoney && <TableHead className="text-right">Final Quote</TableHead>}
-                {showMoney && <TableHead className="text-right">Actual Cost</TableHead>}
-                {showMoney && <TableHead className="text-right">P/L %</TableHead>}
+                {showMoney && <TableHead>Final Quote</TableHead>}
+                {showMoney && <TableHead>Actual Cost</TableHead>}
+                {showMoney && <TableHead>P/L %</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>

@@ -100,7 +100,7 @@ export function ClientsManager({
             <TableHead>Contact</TableHead>
             <TableHead>Email</TableHead>
             <TableHead>Phone</TableHead>
-            <TableHead className="text-right">Projects</TableHead>
+            <TableHead>Projects</TableHead>
             <TableHead className="w-24">Status</TableHead>
             {canEdit && <TableHead className="w-28" />}
           </TableRow>

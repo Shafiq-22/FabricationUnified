@@ -128,7 +128,7 @@ export function EquipmentManager({ rows, canDelete }: { rows: Equipment[]; canDe
         <TableHeader><TableRow>
           <TableHead className="w-24">Sixco No</TableHead><TableHead className="w-20">Group</TableHead>
           <TableHead>Machine</TableHead><TableHead>Make</TableHead><TableHead>Type</TableHead>
-          <TableHead className="text-right">Bare</TableHead><TableHead className="text-right">Driver</TableHead>
+          <TableHead>Bare</TableHead><TableHead>Driver</TableHead>
           <TableHead className="w-24">Status</TableHead><TableHead className="w-28" />
         </TableRow></TableHeader>
         <TableBody>
