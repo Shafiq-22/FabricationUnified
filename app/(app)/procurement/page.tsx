@@ -9,6 +9,10 @@ import { MonthSelector } from "@/components/dashboard/month-selector";
 import { CsvExportButton } from "@/components/records/csv-export-button";
 import { ProcurementFilters } from "@/components/procurement/procurement-filters";
 import { ProcurementManager } from "@/components/procurement/procurement-manager";
+import {
+  ProcurementGrouped,
+  type ProjectBucket,
+} from "@/components/procurement/procurement-grouped";
 import { ConsumablesManager } from "@/components/consumables/consumables-manager";
 import { SuppliersManager } from "@/components/procurement/suppliers-manager";
 import {
@@ -61,7 +65,9 @@ async function loadSuppliers(supabase: any) {
 export default async function ProcurementPage({
   searchParams,
 }: {
-  searchParams: { tab?: Tab; job?: string; supplier?: string; month?: string; q?: string };
+  searchParams: {
+    tab?: Tab; job?: string; supplier?: string; month?: string; q?: string; group?: string;
+  };
 }) {
   const profile = await requireTier(2);
   const tab: Tab = searchParams.tab ?? "procurement";
@@ -77,7 +83,7 @@ export default async function ProcurementPage({
         ? SuppliersSection(suppliers, canDelete)
         : tab === "historic"
           ? await HistoricSection(supabase, searchParams)
-          : await ProcurementSection(supabase, searchParams, true, canDelete, suppliers.options);
+          : await ProcurementSection(supabase, searchParams, true, canDelete, suppliers.options, suppliers.rows, profile.full_name);
 
   return (
     <div>
@@ -149,7 +155,12 @@ async function ProcurementSection(
   editable: boolean,
   canDelete: boolean,
   supplierOptions: { value: string; label: string }[],
+  supplierRows: Supplier[],
+  senderName: string,
 ) {
+  // Grouped by default: procurement is chased per job, and a job belongs to a
+  // project. Flat is still there for editing and bulk work.
+  const grouped = (sp.group ?? "project") !== "flat";
   let query = supabase
     .from("job_materials")
     .select("*")
@@ -161,10 +172,23 @@ async function ProcurementSection(
   let rows = (data ?? []) as JobMaterial[];
   if (sp.month) rows = rows.filter((r) => monthOf(r.order_date) === sp.month);
 
-  const { data: jobs } = await supabase
-    .from("jobs_view").select("id, job_code").order("created_at", { ascending: false }).limit(2000);
+  const [{ data: jobs }, { data: projects }, { data: cfgRows }] = await Promise.all([
+    supabase
+      .from("jobs_view")
+      .select("id, job_code, description, site_code, project_id")
+      .order("created_at", { ascending: false })
+      .limit(2000),
+    supabase.from("projects_view").select("id, project_code, name").order("project_code"),
+    supabase.from("app_config").select("key, value"),
+  ]);
   const jobOptions = (jobs ?? []).map((j: any) => ({ value: j.id as string, label: j.job_code ?? "" }));
   const jobCodes = Object.fromEntries((jobs ?? []).map((j: any) => [j.id as string, j.job_code ?? ""]));
+  const cfg = Object.fromEntries((cfgRows ?? []).map((r: any) => [r.key, r.value]));
+
+  const buckets = grouped ? buildBuckets(rows, jobs ?? [], projects ?? []) : [];
+  const supplierEmails: Record<string, string> = Object.fromEntries(
+    supplierRows.filter((s) => s.contact_email).map((s) => [s.id, s.contact_email as string]),
+  );
 
   const delivered = rows.filter((r) => r.time_to_deliver_days != null);
   const avgLead = delivered.length
@@ -180,12 +204,25 @@ async function ProcurementSection(
         <KpiCard label="Pending" value={String(rows.length - delivered.length)} accent="amber" />
         <KpiCard label="Avg Days to Deliver" value={avgLead} unit="days" accent="steel" />
       </div>
-      <div className="flex items-center justify-between gap-2 px-6 pt-6">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-6 pt-6">
         <ProcurementFilters jobs={jobOptions} />
-        <CsvExportButton filename="procurement.csv" columns={PROC_CSV} rows={csvRows as any} />
+        <div className="flex items-center gap-2">
+          <GroupToggle grouped={grouped} params={sp} />
+          <CsvExportButton filename="procurement.csv" columns={PROC_CSV} rows={csvRows as any} />
+        </div>
       </div>
       <div className="p-6 pt-4">
-        <ProcurementManager rows={rows} jobOptions={jobOptions} jobCodes={jobCodes} editable={editable} canDelete={canDelete} supplierOptions={supplierOptions} />
+        {grouped ? (
+          <ProcurementGrouped
+            buckets={buckets}
+            supplierEmails={supplierEmails}
+            senderName={senderName}
+            companyName={cfg.company_name ?? "Six Construct"}
+            departmentName={cfg.department_name ?? "Steel Fabrication"}
+          />
+        ) : (
+          <ProcurementManager rows={rows} jobOptions={jobOptions} jobCodes={jobCodes} editable={editable} canDelete={canDelete} supplierOptions={supplierOptions} />
+        )}
       </div>
     </div>
   );
@@ -261,6 +298,104 @@ async function HistoricSection(supabase: any, sp: any) {
           </TableBody>
         </Table>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Project -> Job -> material lines. Jobs that are not in a project, and lines
+ * with no job at all, get their own buckets rather than being dropped.
+ */
+function buildBuckets(
+  rows: JobMaterial[],
+  jobs: any[],
+  projects: any[],
+): ProjectBucket[] {
+  const jobById = new Map(jobs.map((j) => [j.id as string, j]));
+  const projectById = new Map(projects.map((p) => [p.id as string, p]));
+
+  // job id (or "" for unassigned lines) -> its lines, order preserved.
+  const byJob = new Map<string, JobMaterial[]>();
+  for (const r of rows) {
+    const key = r.job_id ?? "";
+    const bucket = byJob.get(key);
+    if (bucket) bucket.push(r);
+    else byJob.set(key, [r]);
+  }
+
+  const byProject = new Map<string, ProjectBucket>();
+  const bucketFor = (projectId: string | null): ProjectBucket => {
+    const key = projectId ?? "__none__";
+    let b = byProject.get(key);
+    if (!b) {
+      const p = projectId ? projectById.get(projectId) : null;
+      b = {
+        projectId: p ? (p.id as string) : null,
+        projectCode: p ? (p.project_code as string) : "Not in a project",
+        projectName: p ? (p.name as string) : null,
+        jobs: [],
+      };
+      byProject.set(key, b);
+    }
+    return b;
+  };
+
+  for (const [jobId, lines] of Array.from(byJob.entries())) {
+    const job = jobId ? jobById.get(jobId) : null;
+    bucketFor(job?.project_id ?? null).jobs.push({
+      jobId: jobId || null,
+      jobCode: job?.job_code ?? "No job",
+      jobDescription: job?.description ?? null,
+      siteCode: job?.site_code ?? null,
+      rows: lines,
+    });
+  }
+
+  // Real projects first, the catch-all last.
+  return Array.from(byProject.values()).sort((a, b) =>
+    a.projectId === b.projectId ? 0 : a.projectId ? -1 : 1,
+  );
+}
+
+function GroupToggle({
+  grouped,
+  params,
+}: {
+  grouped: boolean;
+  params: Record<string, string | undefined>;
+}) {
+  const href = (group: string) => {
+    const sp = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+      if (v && k !== "group") sp.set(k, v);
+    });
+    sp.set("group", group);
+    return `/procurement?${sp.toString()}`;
+  };
+  return (
+    <div className="flex items-center gap-1">
+      <Link
+        href={href("project")}
+        className={cn(
+          "border px-2 py-1 text-xs transition-colors",
+          grouped
+            ? "border-primary bg-primary/10 text-foreground"
+            : "border-border text-muted-foreground hover:text-foreground",
+        )}
+      >
+        By Project
+      </Link>
+      <Link
+        href={href("flat")}
+        className={cn(
+          "border px-2 py-1 text-xs transition-colors",
+          !grouped
+            ? "border-primary bg-primary/10 text-foreground"
+            : "border-border text-muted-foreground hover:text-foreground",
+        )}
+      >
+        All Lines
+      </Link>
     </div>
   );
 }
