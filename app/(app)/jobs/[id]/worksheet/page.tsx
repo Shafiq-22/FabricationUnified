@@ -179,6 +179,13 @@ export default async function WorksheetPage({
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Documents <span className="text-muted-foreground/60">({(docs ?? []).length})</span>
             </h3>
+            <div className="flex items-center gap-2">
+              <Link
+                href={`/documents?job=${params.id}`}
+                className="text-xs text-primary hover:underline"
+              >
+                Open in Documents
+              </Link>
             {editable && (
               <DocumentUpload
                 jobOptions={[{ value: params.id, label: job.job_code ?? "This job" }]}
@@ -186,6 +193,7 @@ export default async function WorksheetPage({
                 label="Upload"
               />
             )}
+            </div>
           </div>
           <DocumentsTable
             rows={(docs ?? []) as DocumentRow[]}

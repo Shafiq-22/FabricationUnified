@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Search, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -39,6 +40,7 @@ export function DocumentsFilters({ jobs }: { jobs: { value: string; label: strin
   }, [q, params, setParam]);
 
   const hasFilters = params.get("type") || params.get("job") || params.get("q");
+  const view = params.get("view") ?? "project";
 
   return (
     <div className="flex flex-wrap items-center gap-2 border-b border-border bg-card px-6 py-3">
@@ -86,12 +88,44 @@ export function DocumentsFilters({ jobs }: { jobs: { value: string; label: strin
           size="sm"
           onClick={() => {
             setQ("");
-            router.push("/documents");
+            const sp = new URLSearchParams();
+            const v = params.get("view");
+            if (v) sp.set("view", v);
+            router.push(`/documents${sp.toString() ? `?${sp}` : ""}`);
           }}
         >
           <X className="h-3.5 w-3.5" /> Clear
         </Button>
       )}
+
+      {/* How the list is grouped. Filters above stay applied either way. */}
+      <div className="ml-auto flex items-center gap-1">
+        <span className="mr-1 text-[11px] uppercase tracking-wide text-muted-foreground">
+          Group by
+        </span>
+        {(
+          [
+            ["project", "Project"],
+            ["job", "Job"],
+            ["date", "Date"],
+            ["uploader", "Uploader"],
+          ] as [string, string][]
+        ).map(([value, label]) => (
+          <button
+            key={value}
+            type="button"
+            onClick={() => setParam("view", value)}
+            className={cn(
+              "border px-2 py-1 text-xs transition-colors",
+              view === value
+                ? "border-primary bg-primary/10 text-foreground"
+                : "border-border text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

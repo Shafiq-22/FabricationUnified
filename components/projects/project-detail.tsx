@@ -411,7 +411,7 @@ function DocumentsList({ documents, jobs }: { documents: any[]; jobs: ProjectJob
     return (
       <Empty>
         No documents on this project.{" "}
-        <Link href="/documents" className="text-primary hover:underline">
+        <Link href="/documents?view=project" className="text-primary hover:underline">
           Upload one
         </Link>{" "}
         against any of its jobs and it appears here automatically.
@@ -432,7 +432,10 @@ function DocumentsList({ documents, jobs }: { documents: any[]; jobs: ProjectJob
           {documents.map((d) => (
             <TableRow key={d.id}>
               <TableCell className="text-xs">
-                <Link href="/documents" className="flex items-center gap-1.5 hover:underline">
+                <Link
+                  href={d.job_id ? `/documents?job=${d.job_id}` : "/documents?view=project"}
+                  className="flex items-center gap-1.5 hover:underline"
+                >
                   <FileText className="h-3.5 w-3.5 text-muted-foreground" />
                   {d.title}
                 </Link>

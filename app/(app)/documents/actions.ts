@@ -96,6 +96,22 @@ export async function getDownloadUrl(filePath: string) {
   return { error: null, url: data.signedUrl };
 }
 
+/**
+ * Signed URL the browser renders rather than downloads, so drawings and PDFs
+ * open in a tab. Longer-lived than the download URL because the viewer holds
+ * the tab open; still short and still signed against the private bucket.
+ */
+export async function getViewUrl(filePath: string) {
+  const profile = await getProfile();
+  if (profile.role_tier < 1) return { error: "Not authorized.", url: null };
+  const supabase = createClient();
+  const { data, error } = await supabase.storage
+    .from(DOCUMENTS_BUCKET)
+    .createSignedUrl(filePath, 600);
+  if (error) return { error: error.message, url: null };
+  return { error: null, url: data.signedUrl };
+}
+
 /** Soft delete (admin only, enforced again by the guard_soft_delete trigger). */
 export async function deleteDocument(id: string) {
   const profile = await getProfile();

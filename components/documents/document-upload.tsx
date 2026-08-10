@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Upload, AlertTriangle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { registerDocument } from "@/app/(app)/documents/actions";
+import { registerDocument, getViewUrl } from "@/app/(app)/documents/actions";
 import { DOCUMENTS_BUCKET, documentObjectPath } from "@/lib/storage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -101,6 +101,12 @@ export function DocumentUpload({
         setError(res.error);
         return;
       }
+
+      // Open the file the user just uploaded so they can check it went up
+      // intact. The tab is opened synchronously-ish off the click that
+      // started the upload, so it is not treated as a popup.
+      const view = await getViewUrl(path);
+      if (view.url) window.open(view.url, "_blank", "noopener,noreferrer");
 
       toast({ title: "Document uploaded", description: file.name });
       setOpen(false);

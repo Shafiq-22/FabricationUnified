@@ -2,9 +2,10 @@
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Download, Pencil, Trash2, FileText } from "lucide-react";
+import { Download, ExternalLink, Pencil, Trash2, FileText } from "lucide-react";
 import {
   getDownloadUrl,
+  getViewUrl,
   updateDocument,
   deleteDocument,
 } from "@/app/(app)/documents/actions";
@@ -68,6 +69,16 @@ export function DocumentsTable({
       a.remove();
     });
 
+  const openInBrowser = (path: string) =>
+    start(async () => {
+      const res = await getViewUrl(path);
+      if (res.error || !res.url) {
+        toast({ variant: "destructive", title: "Could not open", description: res.error ?? "No URL" });
+        return;
+      }
+      window.open(res.url, "_blank", "noopener,noreferrer");
+    });
+
   const remove = (id: string) =>
     start(async () => {
       const res = await deleteDocument(id);
@@ -110,7 +121,7 @@ export function DocumentsTable({
             <TableHead>Size</TableHead>
             <TableHead>Uploaded</TableHead>
             {!compact && <TableHead>By</TableHead>}
-            <TableHead className="w-28" />
+            <TableHead className="w-32" />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -156,6 +167,16 @@ export function DocumentsTable({
               )}
               <TableCell>
                 <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    title="Open in browser"
+                    disabled={pending}
+                    onClick={() => openInBrowser(d.file_path)}
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </Button>
                   <Button
                     variant="ghost"
                     size="icon"
