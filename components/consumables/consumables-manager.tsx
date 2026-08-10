@@ -26,6 +26,7 @@ import type { Consumable } from "@/lib/types";
 
 const buildFields = (
   supplierOptions: { value: string; label: string }[],
+  jobOptions: { value: string; label: string }[],
 ): FieldDef[] => [
   { key: "order_date", label: "Order Date", type: "date" },
   {
@@ -34,7 +35,15 @@ const buildFields = (
     type: "select",
     options: [{ value: "none", label: "— None —" }, ...supplierOptions],
   },
+  {
+    key: "job_id",
+    label: "Job",
+    type: "select",
+    options: [{ value: "none", label: "— Not job-specific —" }, ...jobOptions],
+    colSpan: 2,
+  },
   { key: "item_name", label: "Item", required: true, colSpan: 2 },
+  { key: "dimension", label: "Dimension" },
   { key: "unit", label: "Unit" },
   { key: "qty", label: "Qty", type: "number", step: "0.01" },
   { key: "unit_price", label: "Unit Price (AED)", type: "number", step: "0.01" },
@@ -49,16 +58,18 @@ export function ConsumablesManager({
   editable,
   canDelete,
   supplierOptions,
+  jobOptions,
 }: {
   rows: Consumable[];
   editable: boolean;
   canDelete: boolean;
   supplierOptions: { value: string; label: string }[];
+  jobOptions: { value: string; label: string }[];
 }) {
   const router = useRouter();
   const { toast } = useToast();
   const [pending, start] = useTransition();
-  const fields = buildFields(supplierOptions);
+  const fields = buildFields(supplierOptions, jobOptions);
 
   const total = rows.reduce((s, r) => s + (r.total_price ?? 0), 0);
 

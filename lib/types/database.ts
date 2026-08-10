@@ -115,9 +115,11 @@ export type Database = {
           created_by: string | null
           deleted_at: string | null
           delivery_date: string | null
+          dimension: string | null
           id: string
           invoice_dn_no: string | null
           item_name: string | null
+          job_id: string | null
           lpo_no: string | null
           month_year: string | null
           order_date: string | null
@@ -134,9 +136,11 @@ export type Database = {
           created_by?: string | null
           deleted_at?: string | null
           delivery_date?: string | null
+          dimension?: string | null
           id?: string
           invoice_dn_no?: string | null
           item_name?: string | null
+          job_id?: string | null
           lpo_no?: string | null
           month_year?: string | null
           order_date?: string | null
@@ -153,9 +157,11 @@ export type Database = {
           created_by?: string | null
           deleted_at?: string | null
           delivery_date?: string | null
+          dimension?: string | null
           id?: string
           invoice_dn_no?: string | null
           item_name?: string | null
+          job_id?: string | null
           lpo_no?: string | null
           month_year?: string | null
           order_date?: string | null
@@ -173,6 +179,20 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consumables_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consumables_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs_view"
             referencedColumns: ["id"]
           },
           {
@@ -622,6 +642,7 @@ export type Database = {
           expected_completion: string | null
           id: string
           job_description: string | null
+          job_id: string | null
           po_ref: string | null
           qty: number | null
           remark: string | null
@@ -637,6 +658,7 @@ export type Database = {
           expected_completion?: string | null
           id?: string
           job_description?: string | null
+          job_id?: string | null
           po_ref?: string | null
           qty?: number | null
           remark?: string | null
@@ -652,6 +674,7 @@ export type Database = {
           expected_completion?: string | null
           id?: string
           job_description?: string | null
+          job_id?: string | null
           po_ref?: string | null
           qty?: number | null
           remark?: string | null
@@ -666,6 +689,20 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "handover_items_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "handover_items_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs_view"
             referencedColumns: ["id"]
           },
           {
@@ -1333,6 +1370,8 @@ export type Database = {
           created_by: string | null
           deleted_at: string | null
           delivery_date: string | null
+          dimension: string | null
+          grade: string | null
           id: string
           invoice_dn_no: string | null
           item_name: string | null
@@ -1354,6 +1393,8 @@ export type Database = {
           created_by?: string | null
           deleted_at?: string | null
           delivery_date?: string | null
+          dimension?: string | null
+          grade?: string | null
           id?: string
           invoice_dn_no?: string | null
           item_name?: string | null
@@ -1375,6 +1416,8 @@ export type Database = {
           created_by?: string | null
           deleted_at?: string | null
           delivery_date?: string | null
+          dimension?: string | null
+          grade?: string | null
           id?: string
           invoice_dn_no?: string | null
           item_name?: string | null

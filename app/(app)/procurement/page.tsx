@@ -78,7 +78,7 @@ export default async function ProcurementPage({
 
   const body =
     tab === "consumables"
-      ? await ConsumablesSection(supabase, searchParams, true, canDelete, suppliers.options)
+      ? await ConsumablesSection(supabase, searchParams, true, canDelete, suppliers.options, suppliers.rows, profile.full_name)
       : tab === "suppliers"
         ? SuppliersSection(suppliers, canDelete)
         : tab === "historic"
@@ -234,22 +234,59 @@ async function ConsumablesSection(
   editable: boolean,
   canDelete: boolean,
   supplierOptions: { value: string; label: string }[],
+  supplierRows: Supplier[],
+  senderName: string,
 ) {
   const month = sp.month ?? currentMonthKey();
-  const { data } = await supabase
-    .from("consumables").select("*").eq("month_year", month).order("order_date", { ascending: false });
+  const grouped = (sp.group ?? "project") !== "flat";
+
+  const [{ data }, { data: jobs }, { data: projects }, { data: cfgRows }] = await Promise.all([
+    supabase.from("consumables").select("*").eq("month_year", month).order("order_date", { ascending: false }),
+    supabase
+      .from("jobs_view")
+      .select("id, job_code, description, site_code, project_id")
+      .order("created_at", { ascending: false })
+      .limit(2000),
+    supabase.from("projects_view").select("id, project_code, name").order("project_code"),
+    supabase.from("app_config").select("key, value"),
+  ]);
   const rows = (data ?? []) as Consumable[];
+  const cfg = Object.fromEntries((cfgRows ?? []).map((r: any) => [r.key, r.value]));
+  const jobOptions = (jobs ?? []).map((j: any) => ({ value: j.id as string, label: j.job_code ?? "" }));
+  const buckets = grouped ? buildBuckets(rows as any, jobs ?? [], projects ?? []) : [];
+  const supplierEmails: Record<string, string> = Object.fromEntries(
+    supplierRows.filter((s) => s.contact_email).map((s) => [s.id, s.contact_email as string]),
+  );
+
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-2 px-6 pt-6">
         <p className="text-xs text-muted-foreground">Consumables — {monthLabel(month)}</p>
         <div className="flex items-center gap-2">
           <MonthSelector value={month} />
+          <GroupToggle grouped={grouped} params={sp} tab="consumables" />
           <CsvExportButton filename={`consumables-${month}.csv`} columns={CONS_CSV} rows={rows as any} />
         </div>
       </div>
       <div className="p-6 pt-4">
-        <ConsumablesManager rows={rows} editable={editable} canDelete={canDelete} supplierOptions={supplierOptions} />
+        {grouped ? (
+          <ProcurementGrouped
+            buckets={buckets}
+            supplierEmails={supplierEmails}
+            senderName={senderName}
+            companyName={cfg.company_name ?? "Six Construct"}
+            departmentName={cfg.department_name ?? "Steel Fabrication"}
+            emptyLabel="No consumables recorded this month."
+          />
+        ) : (
+          <ConsumablesManager
+            rows={rows}
+            editable={editable}
+            canDelete={canDelete}
+            supplierOptions={supplierOptions}
+            jobOptions={jobOptions}
+          />
+        )}
       </div>
     </div>
   );
@@ -360,15 +397,18 @@ function buildBuckets(
 function GroupToggle({
   grouped,
   params,
+  tab = "procurement",
 }: {
   grouped: boolean;
   params: Record<string, string | undefined>;
+  tab?: string;
 }) {
   const href = (group: string) => {
     const sp = new URLSearchParams();
     Object.entries(params).forEach(([k, v]) => {
       if (v && k !== "group") sp.set(k, v);
     });
+    sp.set("tab", tab);
     sp.set("group", group);
     return `/procurement?${sp.toString()}`;
   };

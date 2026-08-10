@@ -18,6 +18,8 @@ const optStr = z.preprocess(
 const schema = z.object({
   order_date: optStr,
   item_name: z.string().trim().min(1, "Item is required"),
+  dimension: optStr,
+  job_id: optStr,
   unit: optStr,
   qty: optNum,
   unit_price: optNum,
@@ -41,6 +43,8 @@ function payload(v: z.infer<typeof schema>, supplierName: string | null) {
     supplier: supplierName ?? v.supplier ?? null,
     order_date: v.order_date ?? null,
     item_name: v.item_name,
+    dimension: v.dimension ?? null,
+    job_id: v.job_id && v.job_id !== "none" ? v.job_id : null,
     unit: v.unit ?? null,
     qty: v.qty ?? null,
     unit_price: v.unit_price ?? null,

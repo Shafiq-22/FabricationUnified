@@ -54,7 +54,9 @@ export function ProcurementManager({
       colSpan: 2,
     },
     { key: "item_name", label: "Item", required: true, colSpan: 2 },
-    { key: "unit", label: "Unit" },
+    { key: "dimension", label: "Dimension", placeholder: "e.g. 100x100x5" },
+    { key: "grade", label: "Grade", placeholder: "S275 / S355…" },
+    { key: "unit", label: "Unit", placeholder: "bars (6m) / sheets / kg" },
     { key: "qty", label: "Qty", type: "number", step: "0.01" },
     { key: "unit_price", label: "Unit Price (AED)", type: "number", step: "0.01" },
     {
@@ -129,8 +131,17 @@ export function ProcurementManager({
               <TableCell className="font-mono text-xs text-steel">
                 {r.job_id ? jobCodes[r.job_id] ?? "—" : "—"}
               </TableCell>
-              <TableCell className="max-w-[16rem] truncate text-xs">{r.item_name}</TableCell>
-              <TableCell className="text-right tabular text-xs">{r.qty}</TableCell>
+              <TableCell className="max-w-[16rem] truncate text-xs">
+                {r.item_name}
+                {(r.dimension || r.grade) && (
+                  <span className="ml-1 text-muted-foreground">
+                    {[r.dimension, r.grade].filter(Boolean).join(" · ")}
+                  </span>
+                )}
+              </TableCell>
+              <TableCell className="text-right tabular text-xs">
+                {r.qty} {r.unit ?? ""}
+              </TableCell>
               <TableCell className="text-right tabular text-xs">{formatAED(r.unit_price)}</TableCell>
               <TableCell className="text-right tabular text-xs font-medium">
                 {formatAED(r.total_price)}

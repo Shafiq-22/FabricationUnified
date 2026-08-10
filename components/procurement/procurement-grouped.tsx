@@ -17,14 +17,30 @@ import { useToast } from "@/lib/hooks/use-toast";
 import { formatAED } from "@/lib/utils";
 import { fmtDate } from "@/lib/date";
 import { materialRequestDraft } from "@/lib/email-draft";
-import type { JobMaterial } from "@/lib/types";
+/** The columns the grouped view needs; both materials and consumables fit. */
+export interface GroupedRow {
+  id: string;
+  item_name: string | null;
+  dimension?: string | null;
+  grade?: string | null;
+  qty: number | null;
+  unit: string | null;
+  supplier: string | null;
+  supplier_id: string | null;
+  pr_no: string | null;
+  lpo_no: string | null;
+  order_date: string | null;
+  delivery_date: string | null;
+  request_date?: string | null;
+  total_price: number | null;
+}
 
 export interface JobBucket {
   jobId: string | null;
   jobCode: string;
   jobDescription: string | null;
   siteCode: string | null;
-  rows: JobMaterial[];
+  rows: GroupedRow[];
 }
 
 export interface ProjectBucket {
@@ -40,12 +56,14 @@ export function ProcurementGrouped({
   senderName,
   companyName,
   departmentName,
+  emptyLabel = "No material records match these filters.",
 }: {
   buckets: ProjectBucket[];
   supplierEmails: Record<string, string>;
   senderName: string;
   companyName: string;
   departmentName: string;
+  emptyLabel?: string;
 }) {
   const [open, setOpen] = useState<Record<string, boolean>>(() =>
     buckets.length > 0 ? { [buckets[0].projectCode]: true } : {},
@@ -54,7 +72,7 @@ export function ProcurementGrouped({
   if (buckets.length === 0)
     return (
       <p className="border border-border bg-card p-10 text-center text-sm text-muted-foreground">
-        No material records match these filters.
+        {emptyLabel}
       </p>
     );
 
@@ -158,11 +176,13 @@ function JobPanel({
       siteCode: job.siteCode,
       projectCode,
       requiredBy: outstanding
-        .map((r) => r.request_date)
+        .map((r) => r.request_date ?? null)
         .filter(Boolean)
         .sort()[0] as string | undefined,
       lines: outstanding.map((r) => ({
         item: r.item_name ?? "—",
+        dimension: r.dimension,
+        grade: r.grade,
         qty: r.qty,
         unit: r.unit,
         note: r.pr_no ? `PR ${r.pr_no}` : null,
@@ -222,6 +242,8 @@ function JobPanel({
         <TableHeader>
           <TableRow>
             <TableHead>Item</TableHead>
+            <TableHead>Dimension</TableHead>
+            <TableHead>Grade</TableHead>
             <TableHead>Qty</TableHead>
             <TableHead>Supplier</TableHead>
             <TableHead>PR / LPO</TableHead>
@@ -236,6 +258,8 @@ function JobPanel({
               <TableCell className="max-w-[20rem] truncate text-xs">
                 {r.item_name ?? "—"}
               </TableCell>
+              <TableCell className="text-center text-xs">{r.dimension ?? "—"}</TableCell>
+              <TableCell className="text-center font-mono text-xs">{r.grade ?? "—"}</TableCell>
               <TableCell className="text-right tabular text-xs">
                 {r.qty ?? "—"} {r.unit ?? ""}
               </TableCell>

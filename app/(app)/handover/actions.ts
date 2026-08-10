@@ -12,6 +12,7 @@ const optNum = z.preprocess(
 const optStr = z.preprocess((v) => (v === "" ? undefined : v), z.string().optional());
 
 const handoverSchema = z.object({
+  job_id: z.preprocess((v) => (v === "" ? undefined : v), z.string().optional()),
   job_description: z.string().trim().min(1, "Description is required"),
   qty: optNum,
   site_id: optStr,
@@ -23,6 +24,7 @@ const handoverSchema = z.object({
 
 function handoverPayload(v: z.infer<typeof handoverSchema>) {
   return {
+    job_id: v.job_id && v.job_id !== "none" ? v.job_id : null,
     job_description: v.job_description,
     qty: v.qty ?? null,
     site_id: v.site_id && v.site_id !== "none" ? v.site_id : null,

@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Plus, Pencil, Trash2, FileText, Send } from "lucide-react";
 import {
@@ -30,6 +31,8 @@ export function HandoverManager({
   forecasted,
   drawingsByHandover,
   siteOptions,
+  jobOptions,
+  jobCodes,
   siteContactEmails,
   senderName,
   companyName,
@@ -41,6 +44,9 @@ export function HandoverManager({
   forecasted: HandoverItem[];
   drawingsByHandover: Record<string, Drawing[]>;
   siteOptions: { value: string; label: string }[];
+  /** Jobs from the Jobs tab, so a handover item points at a real job. */
+  jobOptions: { value: string; label: string }[];
+  jobCodes: Record<string, string>;
   /** Site id -> the site's point of contact, used to address the notice. */
   siteContactEmails: Record<string, string>;
   senderName: string;
@@ -54,6 +60,13 @@ export function HandoverManager({
   const [pending, start] = useTransition();
 
   const fields: FieldDef[] = [
+    {
+      key: "job_id",
+      label: "Job (from the Jobs tab)",
+      type: "select",
+      options: [{ value: "none", label: "— Not raised as a job yet —" }, ...jobOptions],
+      colSpan: 2,
+    },
     { key: "job_description", label: "Job Description", required: true, colSpan: 2 },
     { key: "qty", label: "Qty", type: "number", step: "0.01" },
     {
@@ -119,7 +132,17 @@ export function HandoverManager({
           <div key={it.id} className="border border-border bg-card">
             <div className="flex items-start justify-between gap-2 border-b border-border p-3">
               <div className="min-w-0">
-                <div className="truncate text-sm font-medium">{it.job_description}</div>
+                <div className="flex items-center gap-2">
+                  {it.job_id && (
+                    <Link
+                      href={`/jobs/${it.job_id}/worksheet`}
+                      className="code-chip shrink-0 text-steel hover:underline"
+                    >
+                      {jobCodes[it.job_id] ?? "job"}
+                    </Link>
+                  )}
+                  <span className="truncate text-sm font-medium">{it.job_description}</span>
+                </div>
                 <div className="mt-0.5 flex flex-wrap gap-x-4 gap-y-0.5 font-mono text-[10px] uppercase text-muted-foreground">
                   {it.qty != null && <span>Qty {it.qty}</span>}
                   {it.po_ref && <span>PO {it.po_ref}</span>}

@@ -6,6 +6,8 @@
 
 export interface DraftLine {
   item: string;
+  dimension?: string | null;
+  grade?: string | null;
   qty: number | null;
   unit: string | null;
   note?: string | null;
@@ -35,21 +37,20 @@ export function materialRequestDraft(d: MaterialDraft): string {
     `Material Request — ${d.jobCode}` +
     (d.jobDescription ? ` — ${d.jobDescription}` : "");
 
-  const header = [
-    `Job:      ${d.jobCode}`,
-    d.jobDescription ? `Scope:    ${d.jobDescription}` : null,
-    d.projectCode ? `Project:  ${d.projectCode}` : null,
-    d.siteCode ? `Site:     ${d.siteCode}` : null,
-    d.requiredBy ? `Required: ${d.requiredBy}` : null,
-  ].filter(Boolean) as string[];
+  // Job, scope, site, required-by and the sign-off are deliberately absent:
+  // the shop asked for a bare table it can paste into its own message, and
+  // the mail client already carries the sender's signature.
+  const describe = (l: DraftLine) =>
+    [l.item, l.dimension, l.grade].filter(Boolean).join(" ");
 
-  const w = Math.max(4, ...d.lines.map((l) => l.item.length));
+  const w = Math.max(4, ...d.lines.map((l) => describe(l).length));
+  const qw = Math.max(3, ...d.lines.map((l) => (l.qty == null ? 0 : String(l.qty).length)));
   const table = [
-    `${pad("Item", w)}  ${pad("Qty", 10)}  Unit`,
-    `${"-".repeat(w)}  ${"-".repeat(10)}  ----`,
+    `${pad("Item", w)}  ${pad("Qty", qw)}  Unit`,
+    `${"-".repeat(w)}  ${"-".repeat(qw)}  ----`,
     ...d.lines.map(
       (l) =>
-        `${pad(l.item, w)}  ${pad(l.qty == null ? "" : String(l.qty), 10)}  ${l.unit ?? ""}` +
+        `${pad(describe(l), w)}  ${pad(l.qty == null ? "" : String(l.qty), qw)}  ${l.unit ?? ""}` +
         (l.note ? `   (${l.note})` : ""),
     ),
   ];
@@ -59,17 +60,9 @@ export function materialRequestDraft(d: MaterialDraft): string {
     "",
     "Please quote and supply the following materials for the job below.",
     "",
-    ...header,
-    "",
     ...table,
     "",
     "Kindly confirm availability, unit rates and delivery date.",
-    "",
-    "Thank you.",
-    "",
-    d.senderName,
-    `${d.departmentName}`,
-    d.companyName,
   ].join("\n");
 
   const params = new URLSearchParams();

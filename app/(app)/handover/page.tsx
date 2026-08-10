@@ -28,7 +28,8 @@ export default async function HandoverPage() {
     (drawingsByHandover[d.handover_id] ??= []).push(d as Drawing);
   });
 
-  const [{ data: sites }, { data: contacts }, { data: cfgRows }] = await Promise.all([
+  const [{ data: sites }, { data: contacts }, { data: cfgRows }, { data: jobs }] =
+    await Promise.all([
     supabase.from("sites").select("id, code, name").eq("active", true).order("code"),
     // The site's point of contact addresses the transfer notice.
     supabase
@@ -38,12 +39,24 @@ export default async function HandoverPage() {
       .not("email", "is", null)
       .not("site_id", "is", null),
     supabase.from("app_config").select("key, value"),
+    supabase
+      .from("jobs_view")
+      .select("id, job_code, description")
+      .order("created_at", { ascending: false })
+      .limit(2000),
   ]);
   const siteOptions = (sites ?? []).map((s) => ({
     value: s.id,
     label: `${s.code} — ${s.name}`,
   }));
   const cfg = Object.fromEntries((cfgRows ?? []).map((r) => [r.key, r.value]));
+  const jobOptions = (jobs ?? []).map((j) => ({
+    value: j.id as string,
+    label: j.description ? `${j.job_code} — ${j.description}` : (j.job_code ?? ""),
+  }));
+  const jobCodes: Record<string, string> = Object.fromEntries(
+    (jobs ?? []).map((j) => [j.id as string, j.job_code ?? ""]),
+  );
 
   // A site in-charge wins over any other contact at that site.
   const siteContactEmails: Record<string, string> = {};
@@ -66,6 +79,8 @@ export default async function HandoverPage() {
           forecasted={forecasted}
           drawingsByHandover={drawingsByHandover}
           siteOptions={siteOptions}
+          jobOptions={jobOptions}
+          jobCodes={jobCodes}
           siteContactEmails={siteContactEmails}
           senderName={profile.full_name}
           companyName={cfg.company_name ?? "Six Construct"}
