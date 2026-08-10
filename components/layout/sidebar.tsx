@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronLeft, Factory } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NAV_ITEMS } from "./nav";
 import type { Tier } from "@/lib/types";
@@ -21,13 +21,15 @@ export function Sidebar({ tier }: { tier: Tier }) {
         collapsed ? "w-14" : "w-56",
       )}
     >
-      <div className="flex h-12 items-center gap-2 border-b border-border px-3">
-        <Factory className="h-5 w-5 shrink-0 text-primary" />
-        {!collapsed && (
-          <span className="font-mono text-xs font-semibold uppercase tracking-[0.2em] text-foreground">
-            BAF&nbsp;Job&nbsp;Book
-          </span>
-        )}
+      <div className="flex h-12 items-center border-b border-border px-3">
+        <span
+          className={cn(
+            "font-mono font-semibold uppercase tracking-[0.15em] text-foreground",
+            collapsed ? "text-[10px]" : "text-xs",
+          )}
+        >
+          {collapsed ? "FJB" : "Fabrication Job Book"}
+        </span>
       </div>
 
       <nav className="flex-1 space-y-0.5 overflow-y-auto p-2">

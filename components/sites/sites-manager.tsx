@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Plus, Pencil, Search } from "lucide-react";
 import { createSite, updateSite, toggleSiteActive } from "@/app/(app)/sites/actions";
@@ -17,6 +18,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useToast } from "@/lib/hooks/use-toast";
+import { contactRoleLabel } from "@/lib/types";
 import type { Site } from "@/lib/types";
 
 const fields: FieldDef[] = [
@@ -25,7 +27,20 @@ const fields: FieldDef[] = [
   { key: "location", label: "Location" },
 ];
 
-export function SitesManager({ sites }: { sites: Site[] }) {
+export interface SiteContact {
+  id: string;
+  name: string;
+  role: string;
+  site_id: string | null;
+}
+
+export function SitesManager({
+  sites,
+  contactsBySite,
+}: {
+  sites: Site[];
+  contactsBySite: Record<string, SiteContact[]>;
+}) {
   const router = useRouter();
   const { toast } = useToast();
   const [q, setQ] = useState("");
@@ -76,6 +91,7 @@ export function SitesManager({ sites }: { sites: Site[] }) {
             <TableHead className="w-24">Code</TableHead>
             <TableHead>Name</TableHead>
             <TableHead>Location</TableHead>
+            <TableHead>Point of Contact</TableHead>
             <TableHead className="w-28">Status</TableHead>
             <TableHead className="w-24" />
           </TableRow>
@@ -86,6 +102,26 @@ export function SitesManager({ sites }: { sites: Site[] }) {
               <TableCell className="code-chip text-steel">{s.code}</TableCell>
               <TableCell className="text-sm">{s.name}</TableCell>
               <TableCell className="text-xs text-muted-foreground">{s.location ?? "—"}</TableCell>
+              <TableCell className="text-xs">
+                {(contactsBySite[s.id] ?? []).length === 0 ? (
+                  <Link href="/contacts" className="text-muted-foreground hover:underline">
+                    — link a contact
+                  </Link>
+                ) : (
+                  <div className="flex flex-wrap gap-1">
+                    {(contactsBySite[s.id] ?? []).map((c) => (
+                      <Link
+                        key={c.id}
+                        href="/contacts"
+                        title={contactRoleLabel(c.role)}
+                        className="border border-border/70 px-1.5 py-0.5 hover:border-primary hover:text-primary"
+                      >
+                        {c.name}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </TableCell>
               <TableCell>
                 {s.active ? (
                   <Badge variant="com">Active</Badge>

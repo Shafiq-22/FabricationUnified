@@ -15,7 +15,7 @@ export function Topbar() {
       <InactivityLogout />
       <SearchBox compact />
       <div className="hidden font-mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground lg:block">
-        Workshop&nbsp;·&nbsp;Steel&nbsp;Fabrication
+        Steel&nbsp;Fabrication
       </div>
       <div className="flex items-center gap-3">
         <div className="text-right leading-tight">

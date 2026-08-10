@@ -40,6 +40,24 @@ export type Rfq = T["rfqs"]["Row"];
 export type InspectionReport = T["inspection_reports"]["Row"];
 export type Ncr = T["ncrs"]["Row"];
 export type MaintenanceRecord = T["maintenance_records"]["Row"];
+export type Contact = T["contacts"]["Row"];
+export type ContactAssignment = T["contact_assignments"]["Row"];
+
+// Who a point of contact is on a job or project. Welders and foremen are not
+// entered here — they are read straight off the timesheets.
+export const CONTACT_ROLES = [
+  { value: "project_incharge", label: "Project In-Charge" },
+  { value: "requisitioner", label: "Job Requisitioner" },
+  { value: "procurement", label: "Procurement" },
+  { value: "foreman", label: "Foreman" },
+  { value: "engineer", label: "Engineer" },
+  { value: "inspector", label: "Inspector" },
+  { value: "supplier_rep", label: "Supplier Rep" },
+  { value: "other", label: "Other" },
+] as const;
+
+export const contactRoleLabel = (role: string | null | undefined) =>
+  CONTACT_ROLES.find((r) => r.value === role)?.label ?? "Other";
 
 export const INSPECTION_RESULTS = [
   { value: "pass", label: "Pass", badge: "com" },
