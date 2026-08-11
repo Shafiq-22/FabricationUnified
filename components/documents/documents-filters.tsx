@@ -107,6 +107,7 @@ export function DocumentsFilters({ jobs }: { jobs: { value: string; label: strin
           [
             ["project", "Project"],
             ["job", "Job"],
+            ["certificate", "Certificate"],
             ["date", "Date"],
             ["uploader", "Uploader"],
           ] as [string, string][]

@@ -427,6 +427,7 @@ export type Database = {
           title: string | null
           uploaded_at: string
           uploaded_by: string | null
+          welder_certificate_id: string | null
         }
         Insert: {
           deleted_at?: string | null
@@ -443,6 +444,7 @@ export type Database = {
           title?: string | null
           uploaded_at?: string
           uploaded_by?: string | null
+          welder_certificate_id?: string | null
         }
         Update: {
           deleted_at?: string | null
@@ -459,6 +461,7 @@ export type Database = {
           title?: string | null
           uploaded_at?: string
           uploaded_by?: string | null
+          welder_certificate_id?: string | null
         }
         Relationships: [
           {
@@ -494,6 +497,13 @@ export type Database = {
             columns: ["uploaded_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_welder_certificate_id_fkey"
+            columns: ["welder_certificate_id"]
+            isOneToOne: false
+            referencedRelation: "welder_certificates"
             referencedColumns: ["id"]
           },
         ]
@@ -3288,6 +3298,7 @@ export type Database = {
           job_id: string | null
           line_count: number | null
           order_qty: number | null
+          pieces_per_bar: number | null
           profile_type: string | null
           theoretical_qty: number | null
           total_length: number | null
@@ -3326,6 +3337,7 @@ export type Database = {
       }
       auth_is_admin: { Args: never; Returns: boolean }
       auth_user_tier: { Args: never; Returns: number }
+      cfg_num: { Args: { p_default: number; p_key: string }; Returns: number }
       dashboard_financial_kpis: { Args: { p_month: string }; Returns: Json }
       global_search: {
         Args: { p_limit?: number; p_q: string }

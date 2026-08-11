@@ -34,17 +34,28 @@ export function DocumentUpload({
   jobOptions,
   defaultJobId,
   label = "Upload Document",
+  certificateId,
+  defaultDocType = "drawing",
+  triggerVariant,
+  triggerClassName,
+  icon,
 }: {
   jobOptions: { value: string; label: string }[];
   defaultJobId?: string;
   label?: string;
+  /** Attach the upload to a welder certificate instead of a job. */
+  certificateId?: string;
+  defaultDocType?: string;
+  triggerVariant?: "default" | "outline" | "ghost";
+  triggerClassName?: string;
+  icon?: React.ReactNode;
 }) {
   const router = useRouter();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [jobId, setJobId] = useState(defaultJobId ?? "none");
-  const [docType, setDocType] = useState<string>("drawing");
+  const [docType, setDocType] = useState<string>(defaultDocType);
   const [title, setTitle] = useState("");
   const [revision, setRevision] = useState("");
   const [notes, setNotes] = useState("");
@@ -55,7 +66,7 @@ export function DocumentUpload({
   const reset = () => {
     setFiles([]);
     setJobId(defaultJobId ?? "none");
-    setDocType("drawing");
+    setDocType(defaultDocType);
     setTitle("");
     setRevision("");
     setNotes("");
@@ -95,6 +106,7 @@ export function DocumentUpload({
         }
         const res = await registerDocument({
           job_id: jobId,
+          welder_certificate_id: certificateId,
           doc_type: docType,
           title: files.length === 1 ? title || file.name : file.name,
           revision,
@@ -150,8 +162,8 @@ export function DocumentUpload({
       }}
     >
       <DialogTrigger asChild>
-        <Button size="sm">
-          <Upload className="h-4 w-4" /> {label}
+        <Button size="sm" variant={triggerVariant} className={triggerClassName}>
+          {icon ?? <Upload className="h-4 w-4" />} {label}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-lg">
@@ -203,6 +215,7 @@ export function DocumentUpload({
               <Label className="text-xs">Revision</Label>
               <Input value={revision} onChange={(e) => setRevision(e.target.value)} placeholder="A / B / C" />
             </div>
+            {!certificateId && (
             <div className="col-span-2 space-y-1.5">
               <Label className="text-xs">Job</Label>
               <Select value={jobId} onValueChange={setJobId}>
@@ -219,6 +232,7 @@ export function DocumentUpload({
                 </SelectContent>
               </Select>
             </div>
+            )}
             {files.length <= 1 && (
               <div className="col-span-2 space-y-1.5">
                 <Label className="text-xs">Title</Label>

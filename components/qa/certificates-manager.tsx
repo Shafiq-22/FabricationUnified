@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Mail, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { Mail, Paperclip, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import {
   createCertificate,
   updateCertificate,
@@ -23,6 +23,8 @@ import {
 import { useToast } from "@/lib/hooks/use-toast";
 import { fmtDate } from "@/lib/date";
 import { certRenewalDraft, certExpiryNoticeDraft } from "@/lib/email-draft";
+import { DocumentUpload } from "@/components/documents/document-upload";
+import { CertificateFilesDialog, type CertFile } from "@/components/qa/certificate-files";
 
 export interface CertificateRow {
   id: string;
@@ -49,6 +51,7 @@ function daysLeft(expires: string | null): number | null {
 
 export function CertificatesManager({
   rows,
+  filesByCert,
   siteNames,
   siteOptions,
   personnelOptions,
@@ -61,6 +64,9 @@ export function CertificatesManager({
   canDelete,
 }: {
   rows: CertificateRow[];
+  /** Documents attached to each certificate — the same rows the Documents
+   *  tab lists, pointed at rather than copied. */
+  filesByCert: Record<string, CertFile[]>;
   siteNames: Record<string, string>;
   siteOptions: { value: string; label: string }[];
   personnelOptions: { value: string; label: string }[];
@@ -219,14 +225,15 @@ export function CertificatesManager({
               <TableHead>Date of Renewal</TableHead>
               <TableHead>Date of Expiry</TableHead>
               <TableHead>Site</TableHead>
+              <TableHead className="w-24">Files</TableHead>
               <TableHead className="w-28">Status</TableHead>
-              <TableHead className="w-32" />
+              <TableHead className="w-40" />
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={10} className="py-10 text-center text-xs text-muted-foreground">
+                <TableCell colSpan={11} className="py-10 text-center text-xs text-muted-foreground">
                   {rows.length === 0
                     ? "No welder certificates recorded yet."
                     : "No certificates match that search."}
@@ -252,6 +259,13 @@ export function CertificatesManager({
                   <TableCell className="text-center text-xs">{fmtDate(r.expires_on)}</TableCell>
                   <TableCell className="text-center font-mono text-xs">
                     {r.site_id ? siteNames[r.site_id] ?? "—" : "—"}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <CertificateFilesDialog
+                      certificateName={r.name}
+                      files={filesByCert[r.id] ?? []}
+                      canDelete={canDelete}
+                    />
                   </TableCell>
                   <TableCell className="text-center">
                     <Badge variant={b.variant}>{b.label}</Badge>
@@ -286,6 +300,17 @@ export function CertificatesManager({
                             <Mail className="h-3.5 w-3.5" />
                           </a>
                         </Button>
+                      )}
+                      {canEdit && (
+                        <DocumentUpload
+                          jobOptions={[]}
+                          certificateId={r.id}
+                          defaultDocType="certificate"
+                          label=""
+                          triggerVariant="ghost"
+                          triggerClassName="h-7 w-7 p-0"
+                          icon={<Paperclip className="h-3.5 w-3.5" />}
+                        />
                       )}
                       {canEdit && (
                         <RecordFormDialog

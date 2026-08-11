@@ -29,6 +29,7 @@ export default async function QaPage({ searchParams }: { searchParams: { tab?: T
     { data: certificates },
     { data: sites },
     { data: cfgRows },
+    { data: certFiles },
   ] = await Promise.all([
       supabase.from("inspection_reports").select("*").order("inspected_at", { ascending: false }).limit(1000),
       supabase.from("ncrs").select("*").order("raised_at", { ascending: false }).limit(1000),
@@ -42,6 +43,14 @@ export default async function QaPage({ searchParams }: { searchParams: { tab?: T
         .order("expires_on", { nullsFirst: false }),
       supabase.from("sites").select("id, code, name").order("code"),
       supabase.from("app_config").select("key, value"),
+      // The scans attached to certificates — the same rows the Documents
+      // tab lists, read here rather than copied.
+      supabase
+        .from("documents")
+        .select("id, title, original_filename, file_path, doc_type, uploaded_at, welder_certificate_id")
+        .not("welder_certificate_id", "is", null)
+        .is("deleted_at", null)
+        .order("uploaded_at", { ascending: false }),
     ]);
 
   const inspectionRows = (inspections ?? []) as InspectionReport[];
@@ -66,6 +75,11 @@ export default async function QaPage({ searchParams }: { searchParams: { tab?: T
   const cfg = Object.fromEntries((cfgRows ?? []).map((r: any) => [r.key, r.value]));
   const warnDays = Number(cfg.cert_expiry_warn_days ?? 60);
   const certRows = (certificates ?? []) as CertificateRow[];
+  const filesByCert: Record<string, any[]> = {};
+  for (const f of (certFiles ?? []) as any[]) {
+    if (!f.welder_certificate_id) continue;
+    (filesByCert[f.welder_certificate_id] ??= []).push(f);
+  }
   const siteNames: Record<string, string> = Object.fromEntries(
     (sites ?? []).map((s: any) => [s.id as string, s.code as string]),
   );
@@ -117,6 +131,7 @@ export default async function QaPage({ searchParams }: { searchParams: { tab?: T
         {tab === "certificates" ? (
           <CertificatesManager
             rows={certRows}
+            filesByCert={filesByCert}
             siteNames={siteNames}
             siteOptions={siteOptions}
             personnelOptions={inspectorOptions}

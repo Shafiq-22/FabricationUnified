@@ -11,8 +11,8 @@ import type { DocumentRow } from "@/lib/types";
 export const dynamic = "force-dynamic";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-export type DocView = "project" | "job" | "date" | "uploader";
-const VIEWS: DocView[] = ["project", "job", "date", "uploader"];
+export type DocView = "project" | "job" | "certificate" | "date" | "uploader";
+const VIEWS: DocView[] = ["project", "job", "certificate", "date", "uploader"];
 
 export default async function DocumentsPage({
   searchParams,
@@ -43,7 +43,7 @@ export default async function DocumentsPage({
     }
   }
 
-  const [{ data: docs }, { data: jobs }, { data: projects }, { data: users }] =
+  const [{ data: docs }, { data: jobs }, { data: projects }, { data: users }, { data: certs }] =
     await Promise.all([
       query,
       supabase
@@ -53,6 +53,11 @@ export default async function DocumentsPage({
         .limit(2000),
       supabase.from("projects_view").select("id, project_code, name").order("project_code"),
       supabase.from("users").select("id, full_name"),
+      supabase
+        .from("welder_certificates")
+        .select("id, name, ho_no, position, certificate_no")
+        .is("deleted_at", null)
+        .order("name"),
     ]);
 
   const rows = (docs ?? []) as DocumentRow[];
@@ -70,9 +75,11 @@ export default async function DocumentsPage({
     (users ?? []).map((u) => [u.id, u.full_name]),
   );
 
+  const certRows = (certs ?? []) as any[];
   const groups = buildGroups(view, rows, {
     jobRows,
     projectRows,
+    certRows,
     jobCodes,
     jobDesc,
     uploaderNames,
@@ -127,12 +134,43 @@ function buildGroups(
   ctx: {
     jobRows: any[];
     projectRows: any[];
+    certRows: any[];
     jobCodes: Record<string, string>;
     jobDesc: Record<string, string>;
     uploaderNames: Record<string, string>;
   },
 ): DocGroup[] {
-  const { jobRows, projectRows, jobCodes, jobDesc, uploaderNames } = ctx;
+  const { jobRows, projectRows, certRows, jobCodes, jobDesc, uploaderNames } = ctx;
+
+  if (view === "certificate") {
+    // Certificate scans are ordinary documents that happen to point at a
+    // welder certificate; this groups them by the ticket they belong to.
+    const out: DocGroup[] = [];
+    for (const c of certRows) {
+      const mine = rows.filter((d) => (d as any).welder_certificate_id === c.id);
+      if (mine.length === 0) continue;
+      out.push({
+        key: `c-${c.id}`,
+        label: c.name,
+        sublabel: [c.ho_no ? `HO ${c.ho_no}` : null, c.position, c.certificate_no]
+          .filter(Boolean)
+          .join(" · ") || null,
+        href: "/qa?tab=certificates",
+        docs: mine,
+      });
+    }
+    const rest = rows.filter((d) => !(d as any).welder_certificate_id);
+    if (rest.length > 0) {
+      out.push({
+        key: "not-a-certificate",
+        label: "Not a certificate",
+        sublabel: "Everything else",
+        href: null,
+        docs: rest,
+      });
+    }
+    return out;
+  }
 
   if (view === "project") {
     // Project -> Job. A document lives on one row; project_id is kept in step

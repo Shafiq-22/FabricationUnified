@@ -10,7 +10,8 @@ const optStr = z.preprocess((v) => (v === "" ? undefined : v), z.string().option
 
 const metaSchema = z.object({
   job_id: optStr,
-  doc_type: z.enum(["drawing", "requisition", "invoice", "po", "inspection_report", "photo", "email", "other"]),
+  welder_certificate_id: optStr,
+  doc_type: z.enum(["drawing", "requisition", "certificate", "invoice", "po", "inspection_report", "photo", "email", "other"]),
   title: optStr,
   revision: optStr,
   notes: optStr,
@@ -34,6 +35,10 @@ export async function registerDocument(values: Record<string, unknown>) {
   const supabase = createClient();
   const { error } = await supabase.from("documents").insert({
     job_id: v.job_id && v.job_id !== "none" ? v.job_id : null,
+    welder_certificate_id:
+      v.welder_certificate_id && v.welder_certificate_id !== "none"
+        ? v.welder_certificate_id
+        : null,
     doc_type: v.doc_type,
     title: v.title ?? v.original_filename ?? null,
     revision: v.revision ?? null,
@@ -52,6 +57,7 @@ export async function registerDocument(values: Record<string, unknown>) {
 
   revalidatePath("/documents");
   if (v.job_id) revalidatePath(`/jobs/${v.job_id}/worksheet`);
+  if (v.welder_certificate_id) revalidatePath("/qa");
   return { error: null };
 }
 
@@ -60,7 +66,7 @@ export async function updateDocument(id: string, values: Record<string, string>)
   if (profile.role_tier < 2) return { error: "Not authorized." };
 
   const schema = z.object({
-    doc_type: z.enum(["drawing", "requisition", "invoice", "po", "inspection_report", "photo", "email", "other"]),
+    doc_type: z.enum(["drawing", "requisition", "certificate", "invoice", "po", "inspection_report", "photo", "email", "other"]),
     title: optStr,
     revision: optStr,
     notes: optStr,
