@@ -7,7 +7,9 @@
 > `CLAUDE QUICK START` + `MACHINE‑READABLE STATE` at the bottom. Keep edits surgical to save
 > tokens: change the lines that changed, don't rewrite the whole file.
 >
-> **Last updated:** after commit `732a36e` (welder‑certificate documents). Migrations 0001–0047 applied.
+> **Last updated:** after the CONTINUATION.md audit (validated every claim against the repo, the
+> live DB, `tsc --noEmit` and `next build`; corrected 9 discrepancies and dropped the dead
+> `@tanstack/react-table` dep). Migrations 0001–0047 in repo; see **§5 migration bookkeeping**.
 
 ---
 
@@ -15,9 +17,9 @@
 
 - **Project:** "Fabrication Job Book" — internal web app for the **BAF (Workshop Steel Fabrication)** department of **Six Construct / Besix** (Dubai). Replaces a complex Excel job book. 10–20 concurrent users.
 - **Stack:** Next.js 14 (App Router) + TypeScript · Supabase (Postgres + Auth + RLS + Realtime + Storage) · Tailwind + shadcn/ui (Radix) · `@react-pdf/renderer` · recharts · exceljs. Deployed on Vercel.
-- **Repo state:** branch `claude/busy-mccarthy-W0FZV`, working tree **clean**, all work pushed. Develop and push **only** to this branch.
+- **Repo state:** branch is **per-session — read it from `git status`, don't trust a name written here.** Work to date landed on `claude/busy-mccarthy-W0FZV` (through `732a36e`); the audit pass ran on `claude/continuation-md-validation-0anxqi`. Push **only** to the branch the current session was assigned.
 - **Supabase project ref:** `gxupuxysfhmwdvztabtn` (region ap-south-1, **free tier — auto-pauses after ~7 days idle; has paused several times; restore via `restore_project` MCP tool or the dashboard**).
-- **DB migrations:** `supabase/migrations/0001…0047`. All 47 applied live. New schema work = new numbered migration file **and** apply it live via the Supabase MCP `apply_migration`.
+- **DB migrations:** `supabase/migrations/0001…0047` (47 files). Schema is in sync with live, but the file list and the live migration history are **not 1:1** — see **§5 migration bookkeeping** before counting. New schema work = new numbered migration file **and** apply it live via the Supabase MCP `apply_migration`.
 - **Hard constraint (original + still in force):** **No AI/LLM API calls inside the app.** It is a data‑management tool. All "email" features are `mailto:` drafts, never sent by the app. Notifications are **in‑app only** (bell), by explicit user decision.
 - **Security model (do not break):** 3 tiers. Money columns masked from Tier 1 at the DB level via definer "masking views" (`jobs_view`, `projects_view`, `inventory_items_view`) + column‑level SELECT grants; base‑table row SELECT policies exist too. See **AUTH & SECURITY**.
 - **Critical files:** `lib/types/index.ts` (aliases + enums), `lib/types/database.ts` (generated types — regenerate after every schema change), `lib/auth.ts`, `lib/supabase/{client,server,middleware}.ts`, `components/ui/table.tsx` (all tables centred + resizable), `lib/email-draft.ts`.
@@ -58,9 +60,10 @@
 | react-hook-form + zod + @hookform/resolvers | — | Validation. Server actions **also** re‑validate with zod. |
 | lucide-react | 0.439 | Icons. |
 | date-fns | 3.6 | Dates (`lib/date.ts`). |
-| @tanstack/react-table | 8.20 | Present in deps; most tables are hand‑rolled with the `ui/table` primitives, not this. **NEEDS VERIFICATION** whether still used anywhere. |
 
-**Package manager:** npm (there is a `package-lock.json`). **No Docker, no CI config** committed (NEEDS VERIFICATION — none found).
+~~`@tanstack/react-table`~~ — **removed** during the audit pass. It was carried in `package.json` but had **zero imports** anywhere in the repo; every table is hand‑rolled on the `ui/table` primitives. `tsc --noEmit` and `next build` both stayed green after `npm uninstall`. Don't re‑add it without a real consumer.
+
+**Package manager:** npm (there is a `package-lock.json`). **No Docker, no CI config** committed — verified: there is no `.github/` directory at all.
 
 **Theme tokens (light "match‑Excel"):** teal `#156082` (primary), orange `#E97132` (accent), navy `#0E2841`, blue‑grey `#D6DCE4` (header bands), gold `#FFC000` / green `#00B050` (status). Originally spec'd a *dark* industrial theme; the user switched to light to match an uploaded Excel workbook (decision, not a bug).
 
@@ -70,17 +73,21 @@
 
 ```
 FabricationUnified/
+├── middleware.ts                       # THE Next.js middleware entry (delegates to lib/supabase/middleware.ts)
 ├── app/
 │   ├── layout.tsx, page.tsx            # root; page.tsx redirects to /dashboard or /login
-│   ├── login/{page,actions}.tsx        # email/password sign-in
+│   ├── globals.css                     # theme tokens live here
+│   ├── login/{page,actions}.tsx, login-form.tsx   # email/password sign-in
 │   └── (app)/                          # PROTECTED route group
 │       ├── layout.tsx                  # getProfile() gate + Providers + Sidebar + Topbar(bell)
 │       ├── dashboard/page.tsx          # month KPIs + charts (dashboard-charts.tsx)
 │       ├── projects/{page,actions}.tsx, projects/new/page.tsx, projects/[id]/page.tsx
 │       ├── jobs/{page,actions}.tsx, jobs/[id]/worksheet/{page,actions}.tsx, jobs/[id]/roughsheet/{page,actions}.tsx
+│       │   └── jobs/[id]/import-actions.ts   # Excel/DSTV import server actions
 │       ├── contacts/{page,actions}.tsx # "Point of Contact" (was Clients)
+│       ├── clients/page.tsx            # legacy path, still present — redirects to /contacts
 │       ├── documents/{page,actions}.tsx
-│       ├── procurement/{page,actions}.tsx    # 4 sub-tabs via ?tab=
+│       ├── procurement/{page,actions}.tsx, procurement/supplier-actions.ts   # 4 sub-tabs via ?tab=
 │       ├── consumables/{page,actions}.tsx    # (also surfaced inside procurement)
 │       ├── inventory/{page,actions}.tsx
 │       ├── qa/{page,actions}.tsx, qa/certificates-actions.ts   # Inspections | NCRs | Welder Certificates
@@ -96,19 +103,22 @@ FabricationUnified/
 │   ├── layout/             # sidebar.tsx, topbar.tsx (+notification-bell.tsx), nav.ts, page-header.tsx, inactivity-logout.tsx
 │   ├── jobs/               # worksheet-panels, editable-table, equipment-charges-table, rough-sheet-editors,
 │   │                       #   comments-thread(@mentions+watch), tentative-panel(inflation), analytics-panel,
-│   │                       #   delete-job-button, job-status-control, import-dialog, new-job-dialog, etc.
-│   ├── projects/           # projects-manager, project-form(full-page create), project-detail(rollups+dedup)
+│   │                       #   delete-job-button, job-status-control/-badge, import-dialog, new-job-dialog,
+│   │                       #   job-meta-form, jobs-filter-bar, workforce-editor, copy-to-procurement-button
+│   ├── projects/           # projects-manager, project-form(full-page create), project-detail(rollups+dedup),
+│   │                       #   clients-manager (legacy, still present after the PoC rename)
 │   ├── contacts/           # contacts-registry, contacts-by-entity, types.ts
 │   ├── documents/          # document-upload(multi-file), documents-table, documents-grouped, documents-filters
 │   ├── procurement/        # procurement-manager, procurement-grouped, suppliers-manager, procurement-filters
 │   ├── consumables/        # consumables-manager
 │   ├── qa/                 # qa-managers, certificates-manager, certificate-files
-│   ├── records/            # timesheet-grid, equipment-usage-grid, maintenance-manager, master-lists, transfers-manager
+│   ├── records/            # timesheet-grid, timesheet-monthly, equipment-usage-grid, maintenance-manager,
+│   │                       #   master-lists, transfers-manager, record-form-dialog, date-selector, csv-export-button
 │   ├── handover/           # handover-manager
 │   ├── inventory/          # inventory-manager, movements-table
 │   ├── dashboard/          # kpi-card, dashboard-charts, month-selector
 │   ├── pdf/                # quotation/timesheet/equipment -document.tsx + -pdf-button.tsx
-│   ├── settings/, sites/, users/, search/, records/
+│   ├── settings/settings-client · sites/sites-manager · users/users-manager · search/search-box
 │   └── providers.tsx       # profile context provider
 ├── lib/
 │   ├── types/index.ts      # row aliases + all domain enums/const arrays (DOC_TYPES, CONTACT_ROLES, JOB_STATUSES, PROJECT_STATUSES, etc.)
@@ -123,7 +133,9 @@ FabricationUnified/
 ├── supabase/migrations/0001…0047.sql   # authoritative schema history
 ├── public/baf-logo.jpg     # Six Construct logo (extracted from quote PDF)
 ├── .env.example            # variable names only
-└── README.md               # module overview (predates PoC rename; slightly stale on Clients→PoC)
+├── .env.production         # COMMITTED, and safe — NEXT_PUBLIC_* only (see §6/§7)
+├── README.md               # module overview — STALE: still says "Clients" and "dark UI"
+└── next.config.mjs · tailwind.config.ts · postcss.config.mjs · tsconfig.json · components.json · .eslintrc.json
 ```
 
 **Do not casually modify:** `components/ui/table.tsx` (every table depends on its centred‑cell + resize behaviour), `lib/types/index.ts` enums (used app‑wide), the masking views/RLS in migrations.
@@ -160,14 +172,29 @@ app/(app)/layout.tsx → getProfile() → redirect to /login if no session / ina
 
 # 5. DATABASE
 
-**Authoritative schema = `supabase/migrations/*.sql` (0001–0047), all applied to project `gxupuxysfhmwdvztabtn`.** Regenerate `lib/types/database.ts` after any change (Supabase MCP `generate_typescript_types`; output is large — save to file and copy in).
+**Authoritative schema = `supabase/migrations/*.sql` (0001–0047), applied to project `gxupuxysfhmwdvztabtn`.** Regenerate `lib/types/database.ts` after any change (Supabase MCP `generate_typescript_types`; output is large — save to file and copy in).
+
+### Migration bookkeeping (read before counting)
+The repo has **47 files**; the live `supabase_migrations` history has **48 rows**. Verified during the
+audit: **the schema itself is in sync** — the mismatch is bookkeeping only, from how the work was applied.
+
+- **`0046_renumber_live_codes` is not in the live history at all.** It is pure DML (a one-off code
+  renumber), applied via `execute_sql` rather than `apply_migration`, so it never registered. Its
+  effects *are* live and confirmed: the surviving job is `BAF-INP-AP4-AUG-001` and the project is
+  `PRJ-2026-001`. Don't "re-apply" it — it is not idempotent.
+- **Two live rows have no repo file:** `notifications_realtime` and `revoke_job_collaborators_execute`.
+  Both were applied incrementally mid-session and then consolidated into repo file `0041`; their
+  content is verified present there (`alter publication supabase_realtime add table notifications`,
+  `revoke execute on function job_collaborators`). No action needed.
+
+So: `list_migrations` will never match `ls supabase/migrations` exactly. Compare **schema objects**, not counts.
 
 ### Core tables (not exhaustive; read migrations for columns)
 - **users** — app profile mirror of `auth.users` (id FK, full_name, email, role_tier→roles_config, active). `guard_last_admin` prevents removing the last admin.
 - **roles_config** — tier (1/2/3) → display_name.
 - **sites** — 116 site codes (code, name, location, active).
 - **jobs** — the central entity. `job_code` (e.g. `BAF-INP-OSS-JUN-001`), `code_tail` (SITE-MON-NNN), status, site_id, `project_id` (nullable), qty/unit, dates, **money columns** (charge_to_site, quote_before_margin, margin, final_quote, actual_cost, profit_loss, pl_percentage — all masked from Tier 1), `deleted_at`. Codes minted by `set_job_code` trigger via `next_job_seq`.
-- **jobs_view / projects_view / inventory_items_view** — definer masking views. `projects_view` also derives `job_count`, `completed_job_count`, `quoted_value`, `actual_value` from the project's jobs.
+- **jobs_view / projects_view / inventory_items_view** — definer masking views. `projects_view` also derives `job_count`, `completed_job_count`, `quoted_value`, `actual_value` from the project's jobs. **`inventory_low_stock` is a 4th SECURITY DEFINER view** (reorder-level report) — it shows up in the advisors alongside the three masking views.
 - **job_quote_/job_actual_ {materials, workforce, consumables, equipment, services}** — worksheet line tables (10 tables). Materials have `part_ref`, `dimension`, `grade`. Equipment/services added in 0034 with own margins. `total_cost` generated columns on equipment/services.
 - **job_quotation_summary / job_actual_summary** — computed summary rows.
 - **rough_sheet_items / cut_list_plates** (+ `_aggregated` views) — cut lists; grade columns; order‑qty via **nesting** (see BUSINESS LOGIC).
@@ -179,7 +206,7 @@ app/(app)/layout.tsx → getProfile() → redirect to /login if no session / ina
 - **personnel, equipment, timesheet_entries, equipment_usage** — records module. `personnel` has `site_id`, `user_id` (link to login), `welder_qualification` (labelled "Position" in UI), `qualification_expiry`.
 - **inventory_items, inventory_movements** — stock ledger; on‑hand derived by trigger.
 - **job_comments** (+ `mentions uuid[]`), **job_watchers, notifications** — collaboration/inbox (0041).
-- **audit_log** — append‑only; generic `audit_trigger()` on every table.
+- **audit_log** — append‑only; generic `audit_trigger()` on **44 of the 49 base tables**. Deliberately excluded: `audit_log` itself (would recurse), `job_code_sequences`, `project_code_sequences` (counters), `job_status_events`, `notifications` (already append‑only event logs). A new business table should get the trigger.
 - **app_config** — key/value settings (margins, timesheet rates, `inflation_rate_pct`, `bar_length_m`, `section_waste_pct`, `plate_waste_pct`, `cert_expiry_warn_days`, `cert_expiry_notify_email`, company/department names).
 - **job_code_sequences / project_code_sequences** — allocator counters. Derive next number from **live** rows (deleted codes free up — 0043).
 
@@ -202,8 +229,22 @@ app/(app)/layout.tsx → getProfile() → redirect to /login if no session / ina
 - **Tier gating:** UI via `nav.ts` `minTier` + `requireTier()`; **enforced at DB** via RLS. Money masked via definer views + column grants.
 - **RLS soft‑delete rule (critical, learned twice):** Postgres checks the *new* row of an UPDATE against SELECT policies. A SELECT policy of `... and deleted_at is null` makes setting `deleted_at` fail its own policy → 0 rows, silent no‑op. Fixed in 0042 by letting admins see deleted rows: `using ((tier>=N and deleted_at is null) or auth_is_admin())`.
 - **RLS filtered‑write rule (critical):** a table with RLS enabled but **no SELECT policy** makes every filtered UPDATE/DELETE match 0 rows (Postgres needs SELECT on WHERE columns). Fixed for `jobs`/`projects` in 0039. If a new masked table is added, it needs a SELECT policy too.
-- **Secrets:** only `.env.local` (never committed). `.env.example` has names only. Server‑only `SUPABASE_SERVICE_ROLE_KEY` used solely by admin actions.
-- **Advisors:** Supabase security advisors are checked after every migration. Standing WARN/INFO items are known & intentional (auth helper functions executable, masking views are definer, sequence tables RLS‑no‑policy). Any **new** advisor must be resolved.
+- **Secrets:** `.env.local` holds the real secrets and is **never committed** (it is git‑ignored). `.env.example` has names only. Server‑only `SUPABASE_SERVICE_ROLE_KEY` lives only in `.env.local` / the Vercel dashboard and is used solely by admin actions — **it is not in any committed file.**
+- **`.env.production` IS committed, deliberately.** It carries only `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` and `NEXT_PUBLIC_INACTIVITY_TIMEOUT_MINUTES` — all `NEXT_PUBLIC_*`, all shipped to the browser anyway, with RLS as the actual security boundary. Committing it keeps production builds reproducible. **Do not put a service‑role key or any non‑public value in it.** (Note `.gitignore` covers `.env`, `.env.local` and `.env.production.local`, but *not* `.env.production` — that is intentional, not an oversight.)
+
+### Advisor baseline (verified — treat these as the known-good set)
+Supabase advisors are checked after every migration. Everything below is **standing and intentional**;
+anything *not* on this list is new and must be resolved.
+
+| Advisor | Level | Objects | Why it's accepted |
+|---|---|---|---|
+| `security_definer_view` | **ERROR** | `jobs_view`, `projects_view`, `inventory_items_view`, `inventory_low_stock` | Definer is the whole mechanism — it's how money is masked from Tier 1. Making these invoker breaks the security model. |
+| `authenticated_security_definer_function_executable` | WARN | `auth_user_tier`, `auth_is_admin`, `admin_create_user`, `admin_reset_password`, `dashboard_financial_kpis`, `recompute_job_financials`, `recompute_all_jobs` | All are callable by `authenticated` by design. **Audit-verified: every one guards its own tier internally** (`auth_is_admin()` / `auth_user_tier()` / `role_tier` check in the body). The auth helpers must stay executable — RLS policies call them. |
+| `rls_enabled_no_policy` | INFO | `job_code_sequences`, `project_code_sequences` | Counter tables. RLS on + no policy = no client access at all, which is the intent; only definer allocators touch them. |
+| `auth_leaked_password_protection` | WARN | Auth config | HaveIBeenPwned check is **disabled**. Not enabled to date — reasonable to turn on in the Supabase dashboard as part of production hardening (see §19 P1). |
+
+`job_collaborators(uuid)` has **EXECUTE revoked** from `authenticated`/`anon` (verified) so it raises no
+advisor. `global_search` is SECURITY **INVOKER**, so RLS applies to it normally.
 
 ---
 
@@ -217,7 +258,7 @@ app/(app)/layout.tsx → getProfile() → redirect to /login if no session / ina
 | `NEXT_PUBLIC_SITE_URL` | yes | Auth redirects | auth |
 | `NEXT_PUBLIC_INACTIVITY_TIMEOUT_MINUTES` | optional (default 480) | Idle logout window | client |
 
-Never print real values. `.env.local` is git‑ignored.
+Never print the **service‑role key**. `.env.local` is git‑ignored. The three `NEXT_PUBLIC_*` values are also present in the committed `.env.production` and are public by design (see §6) — the service‑role key is not, and must never be committed.
 
 ---
 
@@ -229,6 +270,7 @@ npm run dev                 # local dev
 npm run build               # production build (also the type/route gate)
 npm run start               # serve build
 npm run lint                # eslint (next lint)
+npm run typecheck           # = tsc --noEmit (script exists; use either form)
 npx tsc --noEmit            # PRIMARY type gate — run after every change
 ```
 - **DB migrations:** author `supabase/migrations/NNNN_name.sql` **and** apply live via Supabase MCP `apply_migration` (project id `gxupuxysfhmwdvztabtn`). There is no local supabase stack in this environment.
@@ -327,9 +369,10 @@ npx tsc --noEmit            # PRIMARY type gate — run after every change
 - None tracked as blocking. Working tree clean, build green as of `732a36e`.
 
 ### POTENTIAL / WATCH
-- **Free‑tier Supabase** will keep auto‑pausing and may hit storage/row limits with real use — flagged repeatedly as a **pre‑production prerequisite to upgrade to Pro**. NEEDS the user's action.
-- `@tanstack/react-table` may be dead weight (NEEDS VERIFICATION).
-- README is slightly stale (still says "Clients", dark theme). Low impact.
+- **Free‑tier Supabase** will keep auto‑pausing and may hit storage/row limits with real use — flagged repeatedly as a **pre‑production prerequisite to upgrade to Pro**. NEEDS the user's action. (Project was `ACTIVE_HEALTHY` at the audit pass.)
+- ~~`@tanstack/react-table` may be dead weight~~ — **verified unused and removed.**
+- README is stale: still says "Industrial‑utilitarian dark UI" and "Projects & **Clients**". Confirmed, low impact.
+- Leaked‑password protection is off in Supabase Auth (see §6 advisor baseline).
 
 ---
 
@@ -360,8 +403,8 @@ Live DB was also **renumbered/cleaned** (0046 + manual): user emptied jobs/proje
 
 1. **Read this file fully**, then verify against the repo — do not trust it blindly.
 2. **Startup procedure:**
-   - `git status` (expect clean, branch `claude/busy-mccarthy-W0FZV`) and `git log --oneline -10`.
-   - `ls supabase/migrations | tail` to see the latest migration number.
+   - `git status` (expect clean) and `git log --oneline -10`. **Take the branch name from `git status`/your session assignment — this file does not pin one.**
+   - `ls supabase/migrations | tail` to see the latest migration number. Expect it to disagree with `list_migrations` by design — see §5.
    - If Supabase calls fail with 401/paused: the free project is paused — restore it (MCP `restore_project` or dashboard) before doing DB work.
    - `npm install` if `node_modules` is missing (fresh container).
 3. **Working method that this project expects:**
@@ -391,8 +434,8 @@ Live DB was also **renumbered/cleaned** (0046 + manual): user emptied jobs/proje
 | No automated tests | HIGH | Only tsc/build/manual SQL. Regressions rely on discipline. |
 | Free‑tier Supabase | HIGH (ops) | Auto‑pause + limits; upgrade before production. |
 | `lib/types/database.ts` manual regen | MEDIUM | Easy to forget after a migration → type drift. Always regen. |
-| README stale (Clients/dark theme) | LOW | Cosmetic. |
-| Possible unused `@tanstack/react-table` | LOW | Verify before removing. |
+| README stale (Clients/dark theme) | LOW | Cosmetic. Confirmed stale at the audit pass. |
+| Migration files ≠ live migration history | LOW | Bookkeeping only, schema verified in sync. See §5. |
 | Many `any` casts in page files (`/* eslint-disable @typescript-eslint/no-explicit-any */`) | LOW | Pragmatic around generated types. |
 
 ---
@@ -400,8 +443,8 @@ Live DB was also **renumbered/cleaned** (0046 + manual): user emptied jobs/proje
 # 19. NEXT ACTIONS
 
 - **P0 — none pending.** No uncommitted work, no open bug. Await the next `Changes.md`, or confirm acceptance testing.
-- **P1:** If moving toward production — upgrade Supabase to Pro; add a minimal smoke test (auth + one write per module); reconcile README with current features (PoC rename, light theme, new modules).
-- **P2:** Verify/remove `@tanstack/react-table`; consider a real notifications page (currently bell‑only); optional welder‑certificate scheduled expiry emails (needs the email decision revisited).
+- **P1:** If moving toward production — upgrade Supabase to Pro; enable leaked‑password protection in Auth; add a minimal smoke test (auth + one write per module); reconcile README with current features (PoC rename, light theme, new modules).
+- **P2:** Consider a real notifications page (currently bell‑only); optional welder‑certificate scheduled expiry emails (needs the email decision revisited); consider deleting the now‑dead `app/(app)/clients/page.tsx` redirect and `components/projects/clients-manager.tsx` if nothing links to them.
 - **P3:** Broader test coverage; performance review of dashboard/rollup queries at real data volume.
 
 **EXACT NEXT STEP:** Ask the user for the next `Changes_*.md` (or whether to proceed to acceptance/production hardening). Do not start speculative refactors.
@@ -425,15 +468,25 @@ project:
     - email = mailto drafts only; notifications in-app only
     - money masked from Tier 1 at DB level
 repository:
-  branch: claude/busy-mccarthy-W0FZV
+  branch: per-session — read from `git status`, not from this file
+  branch_history: [claude/busy-mccarthy-W0FZV (through 732a36e), claude/continuation-md-validation-0anxqi (audit pass)]
   clean: true
-  head: 732a36e
-  migrations: 0001..0047 (47, all applied live)
+  head: 732a36e + CONTINUATION.md audit commits
+  migrations:
+    files: 0001..0047 (47 in repo)
+    live_history_rows: 48
+    in_sync: true   # schema verified object-by-object; counts differ by design, see section 5
   tests: none
+  gates_verified: [tsc --noEmit clean, next build green]
 regression_invariant: recompute_job_financials must not change existing job quotes
 issues:
   blocking: []
-  watch: [free-tier auto-pause/limits, manual database.ts regen, stale README]
+  watch:
+    - free-tier auto-pause/limits
+    - manual database.ts regen
+    - stale README (dark UI / Clients)
+    - leaked-password protection disabled in Supabase Auth
+    - migration files vs live history counts differ (bookkeeping only)
 next_action:
   priority: P0
   task: await next Changes.md; reproduce each reported bug against live DB before fixing
