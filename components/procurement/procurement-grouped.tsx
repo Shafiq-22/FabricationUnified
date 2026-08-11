@@ -255,7 +255,7 @@ function JobPanel({
         <TableBody>
           {job.rows.map((r) => (
             <TableRow key={r.id}>
-              <TableCell className="max-w-[20rem] truncate text-xs">
+              <TableCell className="text-left max-w-[20rem] truncate text-xs">
                 {r.item_name ?? "—"}
               </TableCell>
               <TableCell className="text-center text-xs">{r.dimension ?? "—"}</TableCell>

@@ -248,7 +248,7 @@ function JobsTable({
                   {j.job_code}
                 </Link>
               </TableCell>
-              <TableCell className="max-w-[22rem] truncate text-xs">
+              <TableCell className="text-left max-w-[22rem] truncate text-xs">
                 {j.description ?? "—"}
               </TableCell>
               <TableCell className="text-center font-mono text-xs">

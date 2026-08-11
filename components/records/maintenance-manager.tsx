@@ -220,7 +220,7 @@ export function MaintenanceManager({
                 <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
                   {fmtDate(m.performed_on)}
                 </TableCell>
-                <TableCell className="max-w-[14rem] truncate text-xs">
+                <TableCell className="text-left max-w-[14rem] truncate text-xs">
                   {equipNames[m.equipment_id] ?? "—"}
                 </TableCell>
                 <TableCell>
@@ -228,7 +228,7 @@ export function MaintenanceManager({
                     {m.maintenance_type}
                   </Badge>
                 </TableCell>
-                <TableCell className="max-w-[16rem] truncate text-xs text-muted-foreground">
+                <TableCell className="text-left max-w-[16rem] truncate text-xs text-muted-foreground">
                   {m.description ?? "—"}
                 </TableCell>
                 <TableCell className="text-xs">

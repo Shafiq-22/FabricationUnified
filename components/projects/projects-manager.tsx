@@ -151,7 +151,7 @@ export function ProjectsManager({
                   {p.project_code}
                 </Link>
               </TableCell>
-              <TableCell className="max-w-[18rem] truncate text-sm">
+              <TableCell className="text-left max-w-[18rem] truncate text-sm">
                 <Link href={`/projects/${p.id}`} className="hover:underline">
                   {p.name}
                 </Link>

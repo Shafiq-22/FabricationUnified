@@ -12,6 +12,7 @@ import { TimesheetGrid, type JobOption, type SiteOption } from "@/components/rec
 import { TimesheetMonthly } from "@/components/records/timesheet-monthly";
 import { EquipmentUsageGrid } from "@/components/records/equipment-usage-grid";
 import { PersonnelManager, EquipmentManager } from "@/components/records/master-lists";
+import { TransfersManager, type TransferRow } from "@/components/records/transfers-manager";
 import { MaintenanceManager } from "@/components/records/maintenance-manager";
 import { TimesheetPdfButton } from "@/components/pdf/timesheet-pdf-button";
 import { EquipmentPdfButton } from "@/components/pdf/equipment-pdf-button";
@@ -25,7 +26,7 @@ import type {
 
 export const dynamic = "force-dynamic";
 
-type Tab = "timesheet" | "equipment" | "maintenance" | "manage";
+type Tab = "timesheet" | "equipment" | "maintenance" | "transfers" | "manage";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 export default async function RecordsPage({
@@ -71,8 +72,10 @@ export default async function RecordsPage({
       ? await EquipmentTab(supabase, searchParams, company, department)
       : tab === "maintenance"
         ? await MaintenanceTab(supabase, profile.role_tier)
-        : tab === "manage"
-          ? await ManageTab(supabase, isAdmin)
+        : tab === "transfers"
+          ? await TransfersTab(supabase, profile.role_tier)
+          : tab === "manage"
+            ? await ManageTab(supabase, isAdmin)
           : await TimesheetTab(supabase, searchParams, rates, rateByTrade, company, department);
 
   return (
@@ -85,6 +88,7 @@ export default async function RecordsPage({
         <TabLink current={tab} value="timesheet" label="Timesheet" params={searchParams} />
         <TabLink current={tab} value="equipment" label="Equipment Usage" params={searchParams} />
         <TabLink current={tab} value="maintenance" label="Maintenance" params={searchParams} />
+        <TabLink current={tab} value="transfers" label="Transfers" params={searchParams} />
         <TabLink current={tab} value="manage" label="Manage Lists" params={searchParams} />
       </div>
       {body}
@@ -292,14 +296,62 @@ async function MaintenanceTab(supabase: any, tier: number) {
 }
 
 async function ManageTab(supabase: any, isAdmin: boolean) {
-  const [{ data: personnel }, { data: equipment }] = await Promise.all([
+  const [{ data: personnel }, { data: equipment }, { data: sites }] = await Promise.all([
     supabase.from("personnel").select("*").order("created_at"),
     supabase.from("equipment").select("*").order("created_at"),
+    supabase.from("sites").select("id, code, name").eq("active", true).order("code"),
   ]);
+  const siteNames: Record<string, string> = Object.fromEntries(
+    (sites ?? []).map((s: any) => [s.id as string, s.code as string]),
+  );
+  const siteOptions = (sites ?? []).map((s: any) => ({
+    value: s.id as string,
+    label: `${s.code} — ${s.name}`,
+  }));
   return (
     <div className="space-y-6 p-6">
-      <PersonnelManager rows={(personnel ?? []) as Personnel[]} canDelete={isAdmin} />
+      <PersonnelManager
+        rows={(personnel ?? []) as Personnel[]}
+        canDelete={isAdmin}
+        siteNames={siteNames}
+        siteOptions={siteOptions}
+      />
       <EquipmentManager rows={(equipment ?? []) as Equipment[]} canDelete={isAdmin} />
+    </div>
+  );
+}
+
+async function TransfersTab(supabase: any, tier: number) {
+  const [{ data: transfers }, { data: personnel }, { data: sites }] = await Promise.all([
+    supabase.from("personnel_transfers").select("*").order("requested_on", { ascending: false }),
+    supabase.from("personnel").select("id, name, trade, ho_no").eq("active", true).order("name"),
+    supabase.from("sites").select("id, code, name").eq("active", true).order("code"),
+  ]);
+  const personnelNames: Record<string, string> = Object.fromEntries(
+    (personnel ?? []).map((p: any) => [p.id as string, p.name as string]),
+  );
+  const personnelOptions = (personnel ?? []).map((p: any) => ({
+    value: p.id as string,
+    label: p.ho_no ? `${p.name} (HO ${p.ho_no})` : (p.name as string),
+  }));
+  const siteNames: Record<string, string> = Object.fromEntries(
+    (sites ?? []).map((s: any) => [s.id as string, s.code as string]),
+  );
+  const siteOptions = (sites ?? []).map((s: any) => ({
+    value: s.id as string,
+    label: `${s.code} — ${s.name}`,
+  }));
+  return (
+    <div className="p-6">
+      <TransfersManager
+        rows={(transfers ?? []) as TransferRow[]}
+        personnelNames={personnelNames}
+        personnelOptions={personnelOptions}
+        siteNames={siteNames}
+        siteOptions={siteOptions}
+        canEdit={tier >= 2}
+        canDelete={tier >= 3}
+      />
     </div>
   );
 }

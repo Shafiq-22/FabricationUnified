@@ -156,7 +156,7 @@ export function InspectionsManager({
               <TableCell className="text-xs">
                 {r.inspector_id ? inspectorNames[r.inspector_id] ?? "—" : "—"}
               </TableCell>
-              <TableCell className="max-w-[18rem] truncate text-xs text-muted-foreground">
+              <TableCell className="text-left max-w-[18rem] truncate text-xs text-muted-foreground">
                 {r.notes ?? "—"}
               </TableCell>
               {canEdit && (
@@ -294,7 +294,7 @@ export function NcrsManager({
               <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
                 {fmtDate(n.raised_at)}
               </TableCell>
-              <TableCell className="max-w-[18rem] truncate text-sm">{n.title}</TableCell>
+              <TableCell className="text-left max-w-[18rem] truncate text-sm">{n.title}</TableCell>
               <TableCell className="code-chip text-steel">
                 {n.job_id ? jobCodes[n.job_id] ?? "—" : "—"}
               </TableCell>

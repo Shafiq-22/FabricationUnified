@@ -6,6 +6,7 @@ import { fmtDate } from "@/lib/date";
 import { formatAED, formatPercent } from "@/lib/utils";
 import { PageHeader } from "@/components/layout/page-header";
 import { JobStatusBadge } from "@/components/jobs/job-status-badge";
+import { DeleteJobButton } from "@/components/jobs/delete-job-button";
 import { JobsFilterBar } from "@/components/jobs/jobs-filter-bar";
 import { NewJobDialog } from "@/components/jobs/new-job-dialog";
 import {
@@ -28,6 +29,7 @@ export default async function JobsPage({
 }) {
   const profile = await getProfile();
   const showMoney = canSeeFinancials(profile.role_tier);
+  const canDelete = profile.role_tier >= 3;
   const supabase = createClient();
 
   let query = supabase
@@ -80,13 +82,14 @@ export default async function JobsPage({
                 {showMoney && <TableHead>Final Quote</TableHead>}
                 {showMoney && <TableHead>Actual Cost</TableHead>}
                 {showMoney && <TableHead>P/L %</TableHead>}
+                {canDelete && <TableHead className="w-12" />}
               </TableRow>
             </TableHeader>
             <TableBody>
               {jobs.length === 0 && (
                 <TableRow>
                   <TableCell
-                    colSpan={showMoney ? 9 : 6}
+                    colSpan={(showMoney ? 9 : 6) + (canDelete ? 1 : 0)}
                     className="py-10 text-center text-sm text-muted-foreground"
                   >
                     No jobs match the current filters.
@@ -106,7 +109,7 @@ export default async function JobsPage({
                   <TableCell className="font-mono text-xs" title={j.site_name ?? ""}>
                     {j.site_code}
                   </TableCell>
-                  <TableCell className="max-w-[22rem] truncate text-xs">
+                  <TableCell className="text-left max-w-[22rem] truncate text-xs">
                     {j.description}
                   </TableCell>
                   <TableCell>
@@ -135,6 +138,11 @@ export default async function JobsPage({
                       }`}
                     >
                       {formatPercent(j.pl_percentage)}
+                    </TableCell>
+                  )}
+                  {canDelete && (
+                    <TableCell>
+                      <DeleteJobButton jobId={j.id ?? ""} jobCode={j.job_code} />
                     </TableCell>
                   )}
                 </TableRow>

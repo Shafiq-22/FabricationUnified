@@ -2164,6 +2164,7 @@ export type Database = {
           id: string
           name: string
           qualification_expiry: string | null
+          site_id: string | null
           trade: string | null
           welder_qualification: string | null
         }
@@ -2175,6 +2176,7 @@ export type Database = {
           id?: string
           name: string
           qualification_expiry?: string | null
+          site_id?: string | null
           trade?: string | null
           welder_qualification?: string | null
         }
@@ -2186,6 +2188,7 @@ export type Database = {
           id?: string
           name?: string
           qualification_expiry?: string | null
+          site_id?: string | null
           trade?: string | null
           welder_qualification?: string | null
         }
@@ -2195,6 +2198,107 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "personnel_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      personnel_transfers: {
+        Row: {
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          effective_on: string | null
+          from_site_id: string | null
+          id: string
+          notes: string | null
+          personnel_id: string
+          reason: string | null
+          requested_by: string | null
+          requested_on: string
+          status: string
+          to_site_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          effective_on?: string | null
+          from_site_id?: string | null
+          id?: string
+          notes?: string | null
+          personnel_id: string
+          reason?: string | null
+          requested_by?: string | null
+          requested_on?: string
+          status?: string
+          to_site_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          effective_on?: string | null
+          from_site_id?: string | null
+          id?: string
+          notes?: string | null
+          personnel_id?: string
+          reason?: string | null
+          requested_by?: string | null
+          requested_on?: string
+          status?: string
+          to_site_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "personnel_transfers_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "personnel_transfers_from_site_id_fkey"
+            columns: ["from_site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "personnel_transfers_personnel_id_fkey"
+            columns: ["personnel_id"]
+            isOneToOne: false
+            referencedRelation: "job_workforce_contacts"
+            referencedColumns: ["personnel_id"]
+          },
+          {
+            foreignKeyName: "personnel_transfers_personnel_id_fkey"
+            columns: ["personnel_id"]
+            isOneToOne: false
+            referencedRelation: "personnel"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "personnel_transfers_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "personnel_transfers_to_site_id_fkey"
+            columns: ["to_site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
             referencedColumns: ["id"]
           },
         ]
@@ -2646,6 +2750,92 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "roles_config"
             referencedColumns: ["tier"]
+          },
+        ]
+      }
+      welder_certificates: {
+        Row: {
+          certificate_no: string | null
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          expires_on: string | null
+          ho_no: string | null
+          id: string
+          issued_on: string | null
+          issuer: string | null
+          name: string
+          notes: string | null
+          personnel_id: string | null
+          position: string | null
+          renewed_on: string | null
+          site_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          certificate_no?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          expires_on?: string | null
+          ho_no?: string | null
+          id?: string
+          issued_on?: string | null
+          issuer?: string | null
+          name: string
+          notes?: string | null
+          personnel_id?: string | null
+          position?: string | null
+          renewed_on?: string | null
+          site_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          certificate_no?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          expires_on?: string | null
+          ho_no?: string | null
+          id?: string
+          issued_on?: string | null
+          issuer?: string | null
+          name?: string
+          notes?: string | null
+          personnel_id?: string | null
+          position?: string | null
+          renewed_on?: string | null
+          site_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "welder_certificates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "welder_certificates_personnel_id_fkey"
+            columns: ["personnel_id"]
+            isOneToOne: false
+            referencedRelation: "job_workforce_contacts"
+            referencedColumns: ["personnel_id"]
+          },
+          {
+            foreignKeyName: "welder_certificates_personnel_id_fkey"
+            columns: ["personnel_id"]
+            isOneToOne: false
+            referencedRelation: "personnel"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "welder_certificates_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
           },
         ]
       }

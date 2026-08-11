@@ -5,11 +5,12 @@ import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/layout/page-header";
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { InspectionsManager, NcrsManager } from "@/components/qa/qa-managers";
+import { CertificatesManager, type CertificateRow } from "@/components/qa/certificates-manager";
 import type { InspectionReport, Ncr } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-type Tab = "inspections" | "ncrs";
+type Tab = "inspections" | "ncrs" | "certificates";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 export default async function QaPage({ searchParams }: { searchParams: { tab?: Tab } }) {
@@ -19,13 +20,28 @@ export default async function QaPage({ searchParams }: { searchParams: { tab?: T
   const canDelete = profile.role_tier >= 3;
   const supabase = createClient();
 
-  const [{ data: inspections }, { data: ncrs }, { data: jobs }, { data: personnel }, { data: projects }] =
-    await Promise.all([
+  const [
+    { data: inspections },
+    { data: ncrs },
+    { data: jobs },
+    { data: personnel },
+    { data: projects },
+    { data: certificates },
+    { data: sites },
+    { data: cfgRows },
+  ] = await Promise.all([
       supabase.from("inspection_reports").select("*").order("inspected_at", { ascending: false }).limit(1000),
       supabase.from("ncrs").select("*").order("raised_at", { ascending: false }).limit(1000),
       supabase.from("jobs_view").select("id, job_code").order("created_at", { ascending: false }).limit(2000),
       supabase.from("personnel").select("id, name, trade").eq("active", true).order("name"),
       supabase.from("projects_view").select("id, project_code, name").order("project_code"),
+      supabase
+        .from("welder_certificates")
+        .select("*")
+        .is("deleted_at", null)
+        .order("expires_on", { nullsFirst: false }),
+      supabase.from("sites").select("id, code, name").order("code"),
+      supabase.from("app_config").select("key, value"),
     ]);
 
   const inspectionRows = (inspections ?? []) as InspectionReport[];
@@ -47,6 +63,22 @@ export default async function QaPage({ searchParams }: { searchParams: { tab?: T
     label: `${p.project_code} — ${p.name}`,
   }));
 
+  const cfg = Object.fromEntries((cfgRows ?? []).map((r: any) => [r.key, r.value]));
+  const warnDays = Number(cfg.cert_expiry_warn_days ?? 60);
+  const certRows = (certificates ?? []) as CertificateRow[];
+  const siteNames: Record<string, string> = Object.fromEntries(
+    (sites ?? []).map((s: any) => [s.id as string, s.code as string]),
+  );
+  const siteOptions = (sites ?? []).map((s: any) => ({
+    value: s.id as string,
+    label: `${s.code} — ${s.name}`,
+  }));
+  const expiringCerts = certRows.filter((c) => {
+    if (!c.expires_on) return false;
+    const left = Math.ceil((new Date(c.expires_on).getTime() - Date.now()) / 86_400_000);
+    return left <= warnDays;
+  }).length;
+
   const openNcrs = ncrRows.filter((n) => n.status !== "closed").length;
   const failed = inspectionRows.filter((i) => i.result === "fail").length;
   const passRate =
@@ -65,17 +97,38 @@ export default async function QaPage({ searchParams }: { searchParams: { tab?: T
       <div className="flex gap-1 border-b border-border bg-card px-6">
         <TabLink current={tab} value="inspections" label="Inspections" />
         <TabLink current={tab} value="ncrs" label="NCRs" />
+        <TabLink current={tab} value="certificates" label="Welder Certificates" />
       </div>
 
-      <div className="grid grid-cols-2 gap-3 p-6 pb-0 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 p-6 pb-0 sm:grid-cols-5">
         <KpiCard label="Inspections" value={String(inspectionRows.length)} accent="neutral" />
         <KpiCard label="Pass Rate" value={passRate == null ? "—" : `${passRate}%`} accent={passRate != null && passRate >= 90 ? "positive" : "amber"} />
         <KpiCard label="Failed" value={String(failed)} accent={failed > 0 ? "negative" : "positive"} />
         <KpiCard label="Open NCRs" value={String(openNcrs)} accent={openNcrs > 0 ? "negative" : "positive"} />
+        <KpiCard
+          label="Certs Expiring"
+          value={String(expiringCerts)}
+          hint={`within ${warnDays} days`}
+          accent={expiringCerts > 0 ? "amber" : "positive"}
+        />
       </div>
 
       <div className="p-6">
-        {tab === "inspections" ? (
+        {tab === "certificates" ? (
+          <CertificatesManager
+            rows={certRows}
+            siteNames={siteNames}
+            siteOptions={siteOptions}
+            personnelOptions={inspectorOptions}
+            warnDays={warnDays}
+            notifyEmail={cfg.cert_expiry_notify_email ?? ""}
+            senderName={profile.full_name}
+            companyName={cfg.company_name ?? "Six Construct"}
+            departmentName={cfg.department_name ?? "Steel Fabrication"}
+            canEdit={canEdit}
+            canDelete={canDelete}
+          />
+        ) : tab === "inspections" ? (
           <InspectionsManager
             rows={inspectionRows}
             jobOptions={jobOptions}

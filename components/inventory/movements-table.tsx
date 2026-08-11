@@ -80,7 +80,7 @@ export function MovementsTable({
               <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
                 {fmtDate(m.moved_on)}
               </TableCell>
-              <TableCell className="max-w-[18rem] truncate text-xs">
+              <TableCell className="text-left max-w-[18rem] truncate text-xs">
                 {itemNames[m.inventory_item_id] ?? "—"}
               </TableCell>
               <TableCell>
@@ -96,7 +96,7 @@ export function MovementsTable({
               <TableCell className="font-mono text-xs text-steel">
                 {m.job_id ? jobCodes[m.job_id] ?? "—" : "—"}
               </TableCell>
-              <TableCell className="max-w-[16rem] truncate text-xs text-muted-foreground">
+              <TableCell className="text-left max-w-[16rem] truncate text-xs text-muted-foreground">
                 {m.note ?? "—"}
               </TableCell>
               {canDelete && (

@@ -17,12 +17,21 @@ import { useToast } from "@/lib/hooks/use-toast";
 import { formatAED } from "@/lib/utils";
 import type { Personnel, Equipment } from "@/lib/types";
 
-const personFields: FieldDef[] = [
+const buildPersonFields = (
+  siteOptions: { value: string; label: string }[],
+): FieldDef[] => [
   { key: "ho_no", label: "HO No" },
   { key: "name", label: "Name", required: true },
   { key: "trade", label: "Trade", colSpan: 2, placeholder: "Welder / Weld-FM / Weld-GL…" },
-  { key: "welder_qualification", label: "Welder Qualification", placeholder: "e.g. ISO 9606-1 141" },
-  { key: "qualification_expiry", label: "Qualification Expiry", type: "date" },
+  {
+    key: "site_id",
+    label: "Site (currently deployed)",
+    type: "select",
+    options: [{ value: "none", label: "— Unassigned —" }, ...siteOptions],
+    colSpan: 2,
+  },
+  { key: "welder_qualification", label: "Position", placeholder: "1G / 3G / 6G…" },
+  { key: "qualification_expiry", label: "Position Expiry", type: "date" },
 ];
 const equipFields: FieldDef[] = [
   { key: "sixco_no", label: "Sixco No" },
@@ -47,8 +56,20 @@ function useRun() {
   return { run, pending };
 }
 
-export function PersonnelManager({ rows, canDelete }: { rows: Personnel[]; canDelete: boolean }) {
+export function PersonnelManager({
+  rows,
+  canDelete,
+  siteNames = {},
+  siteOptions = [],
+}: {
+  rows: Personnel[];
+  canDelete: boolean;
+  /** Site id -> code, for the deployment column. */
+  siteNames?: Record<string, string>;
+  siteOptions?: { value: string; label: string }[];
+}) {
   const { run, pending } = useRun();
+  const personFields = buildPersonFields(siteOptions);
   return (
     <section className="border border-border bg-card">
       <div className="flex items-center justify-between border-b border-border px-4 py-2">
@@ -59,11 +80,12 @@ export function PersonnelManager({ rows, canDelete }: { rows: Personnel[]; canDe
       <Table>
         <TableHeader><TableRow>
           <TableHead className="w-28">HO No</TableHead><TableHead>Name</TableHead>
-          <TableHead>Trade</TableHead><TableHead>Qualification</TableHead>
+          <TableHead>Trade</TableHead><TableHead>Position</TableHead>
+          <TableHead className="w-28">Site</TableHead>
           <TableHead className="w-24">Status</TableHead><TableHead className="w-28" />
         </TableRow></TableHeader>
         <TableBody>
-          {rows.length === 0 && <TableRow><TableCell colSpan={6} className="py-8 text-center text-sm text-muted-foreground">No personnel yet — add some.</TableCell></TableRow>}
+          {rows.length === 0 && <TableRow><TableCell colSpan={7} className="py-8 text-center text-sm text-muted-foreground">No personnel yet — add some.</TableCell></TableRow>}
           {rows.map((p) => {
             const expired =
               p.qualification_expiry != null &&
@@ -87,6 +109,9 @@ export function PersonnelManager({ rows, canDelete }: { rows: Personnel[]; canDe
                 ) : (
                   <span className="text-muted-foreground">—</span>
                 )}
+              </TableCell>
+              <TableCell className="text-center font-mono text-xs">
+                {p.site_id ? siteNames[p.site_id] ?? "—" : <span className="text-muted-foreground">—</span>}
               </TableCell>
               <TableCell>{p.active ? <Badge variant="com">Active</Badge> : <Badge variant="secondary">Inactive</Badge>}</TableCell>
               <TableCell>

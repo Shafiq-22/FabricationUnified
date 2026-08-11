@@ -137,7 +137,7 @@ export function DocumentsTable({
           )}
           {rows.map((d) => (
             <TableRow key={d.id}>
-              <TableCell className="max-w-[22rem] truncate text-xs">
+              <TableCell className="text-left max-w-[22rem] truncate text-xs">
                 <span className="inline-flex items-center gap-1.5">
                   <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                   {d.title ?? d.original_filename ?? "Untitled"}

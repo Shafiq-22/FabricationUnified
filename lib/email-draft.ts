@@ -27,40 +27,33 @@ export interface MaterialDraft {
   senderName: string;
 }
 
-/** Right-pads so the plain-text table lines up in a monospaced mail client. */
-function pad(s: string, width: number) {
-  return s.length >= width ? s.slice(0, width) : s + " ".repeat(width - s.length);
-}
-
 export function materialRequestDraft(d: MaterialDraft): string {
   const subject =
     `Material Request — ${d.jobCode}` +
     (d.jobDescription ? ` — ${d.jobDescription}` : "");
 
-  // Job, scope, site, required-by and the sign-off are deliberately absent:
-  // the shop asked for a bare table it can paste into its own message, and
+  // A numbered list, not a plain-text table: mail clients reflow proportional
+  // text and a column layout collapses, whereas numbered lines survive.
+  // Job, scope, site, required-by and the sign-off are deliberately absent —
   // the mail client already carries the sender's signature.
   const describe = (l: DraftLine) =>
     [l.item, l.dimension, l.grade].filter(Boolean).join(" ");
 
-  const w = Math.max(4, ...d.lines.map((l) => describe(l).length));
-  const qw = Math.max(3, ...d.lines.map((l) => (l.qty == null ? 0 : String(l.qty).length)));
-  const table = [
-    `${pad("Item", w)}  ${pad("Qty", qw)}  Unit`,
-    `${"-".repeat(w)}  ${"-".repeat(qw)}  ----`,
-    ...d.lines.map(
-      (l) =>
-        `${pad(describe(l), w)}  ${pad(l.qty == null ? "" : String(l.qty), qw)}  ${l.unit ?? ""}` +
-        (l.note ? `   (${l.note})` : ""),
-    ),
-  ];
+  const list = d.lines.map((l, i) => {
+    const qty = [l.qty == null ? null : String(l.qty), l.unit].filter(Boolean).join(" ");
+    return (
+      `${i + 1}. ${describe(l)}` +
+      (qty ? ` — ${qty}` : "") +
+      (l.note ? ` (${l.note})` : "")
+    );
+  });
 
   const body = [
     "Dear Sir/Madam,",
     "",
     "Please quote and supply the following materials for the job below.",
     "",
-    ...table,
+    ...list,
     "",
     "Kindly confirm availability, unit rates and delivery date.",
   ].join("\n");
@@ -118,6 +111,104 @@ export function transferNoticeDraft(d: TransferNotice): string {
     ...(d.remark ? ["", `Remarks:   ${d.remark}`] : []),
     "",
     "Kindly arrange to receive and acknowledge on delivery.",
+    "",
+    "Thank you.",
+    "",
+    d.senderName,
+    d.departmentName,
+    d.companyName,
+  ].join("\n");
+
+  const params = new URLSearchParams();
+  params.set("subject", subject);
+  params.set("body", body);
+  const qs = params.toString().replace(/\+/g, "%20");
+  return `mailto:${encodeURIComponent(d.to ?? "").replace(/%40/g, "@")}?${qs}`;
+}
+
+export interface CertRenewalDraft {
+  to?: string | null;
+  cc?: string | null;
+  companyName: string;
+  departmentName: string;
+  senderName: string;
+  welders: {
+    name: string;
+    hoNo?: string | null;
+    position?: string | null;
+    certificateNo?: string | null;
+    expiresOn?: string | null;
+  }[];
+}
+
+/**
+ * Enquiry to the certifying body to renew welder qualifications. Numbered
+ * like the material request, for the same reason: mail clients reflow
+ * proportional text and a column layout collapses.
+ */
+export function certRenewalDraft(d: CertRenewalDraft): string {
+  const subject =
+    d.welders.length === 1
+      ? `Welder Qualification Renewal — ${d.welders[0].name}`
+      : `Welder Qualification Renewal — ${d.welders.length} welders`;
+
+  const list = d.welders.map((w, i) =>
+    [
+      `${i + 1}. ${w.name}`,
+      w.hoNo ? `HO ${w.hoNo}` : null,
+      w.position ? `position ${w.position}` : null,
+      w.certificateNo ? `cert ${w.certificateNo}` : null,
+      w.expiresOn ? `expires ${w.expiresOn}` : null,
+    ]
+      .filter(Boolean)
+      .join(" — "),
+  );
+
+  const body = [
+    "Dear Sir/Madam,",
+    "",
+    "Please arrange renewal of the welder qualifications listed below.",
+    "",
+    ...list,
+    "",
+    "Kindly confirm your charges, the testing date and the documents required.",
+  ].join("\n");
+
+  const params = new URLSearchParams();
+  params.set("subject", subject);
+  params.set("body", body);
+  if (d.cc) params.set("cc", d.cc);
+  const qs = params.toString().replace(/\+/g, "%20");
+  return `mailto:${encodeURIComponent(d.to ?? "").replace(/%40/g, "@")}?${qs}`;
+}
+
+/** Heads-up to the welder (or their supervisor) that a ticket is running out. */
+export function certExpiryNoticeDraft(d: {
+  to?: string | null;
+  companyName: string;
+  departmentName: string;
+  senderName: string;
+  welderName: string;
+  hoNo?: string | null;
+  position?: string | null;
+  expiresOn?: string | null;
+  daysLeft?: number | null;
+}): string {
+  const subject = `Welder Qualification Expiring — ${d.welderName}`;
+  const body = [
+    "Dear Sir/Madam,",
+    "",
+    `The welding qualification below is due to expire${
+      d.daysLeft != null ? ` in ${d.daysLeft} day(s)` : ""
+    }.`,
+    "",
+    `Welder:    ${d.welderName}`,
+    ...(d.hoNo ? [`HO No:     ${d.hoNo}`] : []),
+    ...(d.position ? [`Position:  ${d.position}`] : []),
+    ...(d.expiresOn ? [`Expires:   ${d.expiresOn}`] : []),
+    "",
+    "Please arrange re-testing before the expiry date so the welder can",
+    "continue on certified work without interruption.",
     "",
     "Thank you.",
     "",

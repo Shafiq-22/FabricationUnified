@@ -131,7 +131,7 @@ export function ConsumablesManager({
               <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
                 {fmtDate(r.order_date)}
               </TableCell>
-              <TableCell className="max-w-[16rem] truncate text-xs">{r.item_name}</TableCell>
+              <TableCell className="text-left max-w-[16rem] truncate text-xs">{r.item_name}</TableCell>
               <TableCell className="text-xs">{r.unit}</TableCell>
               <TableCell className="text-right tabular text-xs">{r.qty}</TableCell>
               <TableCell className="text-right tabular text-xs">{formatAED(r.unit_price)}</TableCell>

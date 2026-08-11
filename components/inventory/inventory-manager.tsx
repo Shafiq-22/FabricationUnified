@@ -171,7 +171,7 @@ export function InventoryManager({
               <TableCell>
                 <Badge variant={r.item_type === "remnant" ? "inp" : "secondary"}>{r.item_type}</Badge>
               </TableCell>
-              <TableCell className="max-w-[18rem] truncate text-xs">{r.description}</TableCell>
+              <TableCell className="text-left max-w-[18rem] truncate text-xs">{r.description}</TableCell>
               <TableCell className="text-xs">{r.material_grade ?? "—"}</TableCell>
               <TableCell className="text-xs">{r.dimensions ?? "—"}</TableCell>
               <TableCell

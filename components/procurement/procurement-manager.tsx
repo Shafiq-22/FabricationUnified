@@ -131,7 +131,7 @@ export function ProcurementManager({
               <TableCell className="font-mono text-xs text-steel">
                 {r.job_id ? jobCodes[r.job_id] ?? "—" : "—"}
               </TableCell>
-              <TableCell className="max-w-[16rem] truncate text-xs">
+              <TableCell className="text-left max-w-[16rem] truncate text-xs">
                 {r.item_name}
                 {(r.dimension || r.grade) && (
                   <span className="ml-1 text-muted-foreground">

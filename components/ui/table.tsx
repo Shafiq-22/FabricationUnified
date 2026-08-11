@@ -89,7 +89,11 @@ const TableCell = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <td
     ref={ref}
+    // Cells centre by default to match the headers. Long free text opts out
+    // with text-left, figures with text-right; an explicit class always wins
+    // because it comes later in the merged list.
     className={cn(
+      "text-center",
       "px-3 py-2 align-middle [&:has([role=checkbox])]:pr-0",
       className,
     )}
