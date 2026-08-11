@@ -10,7 +10,7 @@ const optStr = z.preprocess((v) => (v === "" ? undefined : v), z.string().option
 
 const metaSchema = z.object({
   job_id: optStr,
-  doc_type: z.enum(["drawing", "invoice", "po", "inspection_report", "photo", "email", "other"]),
+  doc_type: z.enum(["drawing", "requisition", "invoice", "po", "inspection_report", "photo", "email", "other"]),
   title: optStr,
   revision: optStr,
   notes: optStr,
@@ -60,7 +60,7 @@ export async function updateDocument(id: string, values: Record<string, string>)
   if (profile.role_tier < 2) return { error: "Not authorized." };
 
   const schema = z.object({
-    doc_type: z.enum(["drawing", "invoice", "po", "inspection_report", "photo", "email", "other"]),
+    doc_type: z.enum(["drawing", "requisition", "invoice", "po", "inspection_report", "photo", "email", "other"]),
     title: optStr,
     revision: optStr,
     notes: optStr,

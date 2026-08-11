@@ -66,6 +66,8 @@ export default async function SettingsPage({
               ot: Number(cfg.timesheet_ot_rate ?? 45),
             }}
             inflationPct={Number(cfg.inflation_rate_pct ?? 10)}
+            certWarnDays={Number(cfg.cert_expiry_warn_days ?? 7)}
+            certNotifyEmail={cfg.cert_expiry_notify_email ?? ""}
           />
         )}
       </div>

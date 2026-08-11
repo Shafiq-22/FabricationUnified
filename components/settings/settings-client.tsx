@@ -55,6 +55,8 @@ export function SettingsClient({
   margins,
   timesheetRates,
   inflationPct,
+  certWarnDays,
+  certNotifyEmail,
 }: {
   roles: RoleConfig[];
   company: string;
@@ -63,6 +65,8 @@ export function SettingsClient({
   margins: { material: number; workforce: number; consumables: number };
   timesheetRates: { normal: number; ot: number };
   inflationPct: number;
+  certWarnDays: number;
+  certNotifyEmail: string;
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -111,6 +115,8 @@ export function SettingsClient({
         <TimesheetRatesForm
           rates={timesheetRates}
           inflationPct={inflationPct}
+          certWarnDays={certWarnDays}
+          certNotifyEmail={certNotifyEmail}
           pending={pending}
           onSave={(v) => run(() => updateTimesheetRates(v), "Timesheet rates saved")}
         />
@@ -305,17 +311,23 @@ function MarginsForm({
 function TimesheetRatesForm({
   rates,
   inflationPct,
+  certWarnDays,
+  certNotifyEmail,
   onSave,
   pending,
 }: {
   rates: { normal: number; ot: number };
   inflationPct: number;
+  certWarnDays: number;
+  certNotifyEmail: string;
   onSave: (v: Record<string, string>) => void;
   pending: boolean;
 }) {
   const [n, setN] = useState(String(rates.normal));
   const [o, setO] = useState(String(rates.ot));
   const [inf, setInf] = useState(String(inflationPct));
+  const [certDays, setCertDays] = useState(String(certWarnDays));
+  const [certEmail, setCertEmail] = useState(certNotifyEmail);
   return (
     <div className="space-y-4">
       <div className="space-y-2">
@@ -332,6 +344,38 @@ function TimesheetRatesForm({
         <p className="text-xs text-muted-foreground">
           Ages historic purchase prices forward in tentative quoting, compounded by
           how old each price is. Prices under a month old are used as they stand.
+        </p>
+      </div>
+
+      <div className="space-y-2 border-t border-border pt-3">
+        <Label className="text-[10px] uppercase text-muted-foreground">
+          Welder certificate reminder
+        </Label>
+        <div className="flex items-end gap-2">
+          <div className="space-y-1">
+            <Label className="text-[10px] uppercase text-muted-foreground">Days ahead</Label>
+            <Input
+              type="number"
+              min="1"
+              value={certDays}
+              onChange={(e) => setCertDays(e.target.value)}
+              className="h-8 w-24 text-sm"
+            />
+          </div>
+          <div className="flex-1 space-y-1">
+            <Label className="text-[10px] uppercase text-muted-foreground">Notify</Label>
+            <Input
+              type="email"
+              value={certEmail}
+              onChange={(e) => setCertEmail(e.target.value)}
+              placeholder="who to warn about an expiring ticket"
+              className="h-8 text-sm"
+            />
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          How far ahead a certificate counts as expiring, and the address the
+          drafted reminder is addressed to.
         </p>
       </div>
 
@@ -360,6 +404,8 @@ function TimesheetRatesForm({
             timesheet_normal_rate: n,
             timesheet_ot_rate: o,
             inflation_rate_pct: inf,
+            cert_expiry_warn_days: certDays,
+            cert_expiry_notify_email: certEmail,
           })
         }
       >

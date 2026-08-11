@@ -108,6 +108,7 @@ export const RFQ_STATUSES = [
 
 export const DOC_TYPES = [
   { value: "drawing", label: "Drawing" },
+  { value: "requisition", label: "Requisition" },
   { value: "po", label: "Purchase Order" },
   { value: "invoice", label: "Invoice" },
   { value: "inspection_report", label: "Inspection Report" },

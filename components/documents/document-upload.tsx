@@ -42,7 +42,7 @@ export function DocumentUpload({
   const router = useRouter();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [jobId, setJobId] = useState(defaultJobId ?? "none");
   const [docType, setDocType] = useState<string>("drawing");
   const [title, setTitle] = useState("");
@@ -53,7 +53,7 @@ export function DocumentUpload({
   const [, start] = useTransition();
 
   const reset = () => {
-    setFile(null);
+    setFiles([]);
     setJobId(defaultJobId ?? "none");
     setDocType("drawing");
     setTitle("");
@@ -65,50 +65,72 @@ export function DocumentUpload({
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    if (!file) {
-      setError("Choose a file to upload.");
+    if (files.length === 0) {
+      setError("Choose at least one file to upload.");
       return;
     }
-    if (file.size > MAX_MB * 1024 * 1024) {
-      setError(`File is larger than ${MAX_MB} MB.`);
+    const tooBig = files.find((f) => f.size > MAX_MB * 1024 * 1024);
+    if (tooBig) {
+      setError(`${tooBig.name} is larger than ${MAX_MB} MB.`);
       return;
     }
 
     setBusy(true);
     try {
       const supabase = createClient();
-      const path = documentObjectPath(jobId, file.name);
-      const { error: upErr } = await supabase.storage
-        .from(DOCUMENTS_BUCKET)
-        .upload(path, file, { cacheControl: "3600", upsert: false });
-      if (upErr) {
-        setError(upErr.message);
-        return;
+      const uploaded: string[] = [];
+      const failures: string[] = [];
+
+      // Each file is registered on its own, so one bad file does not lose
+      // the rest. The title is only applied when a single file is chosen —
+      // several files keep their own names.
+      for (const file of files) {
+        const path = documentObjectPath(jobId, file.name);
+        const { error: upErr } = await supabase.storage
+          .from(DOCUMENTS_BUCKET)
+          .upload(path, file, { cacheControl: "3600", upsert: false });
+        if (upErr) {
+          failures.push(`${file.name}: ${upErr.message}`);
+          continue;
+        }
+        const res = await registerDocument({
+          job_id: jobId,
+          doc_type: docType,
+          title: files.length === 1 ? title || file.name : file.name,
+          revision,
+          notes,
+          file_path: path,
+          original_filename: file.name,
+          mime_type: file.type || "application/octet-stream",
+          size_bytes: file.size,
+        });
+        if (res.error) failures.push(`${file.name}: ${res.error}`);
+        else uploaded.push(path);
       }
 
-      const res = await registerDocument({
-        job_id: jobId,
-        doc_type: docType,
-        title: title || file.name,
-        revision,
-        notes,
-        file_path: path,
-        original_filename: file.name,
-        mime_type: file.type || "application/octet-stream",
-        size_bytes: file.size,
+      if (uploaded.length === 0) {
+        setError(failures.join("; ") || "Upload failed.");
+        return;
+      }
+      if (failures.length > 0) {
+        toast({
+          variant: "destructive",
+          title: `${failures.length} file(s) failed`,
+          description: failures.join("; "),
+        });
+      }
+
+      // Open a single upload so the user can check it went up intact.
+      // Several at once would be caught by the popup blocker.
+      if (uploaded.length === 1) {
+        const view = await getViewUrl(uploaded[0]);
+        if (view.url) window.open(view.url, "_blank", "noopener,noreferrer");
+      }
+
+      toast({
+        title: uploaded.length === 1 ? "Document uploaded" : `${uploaded.length} documents uploaded`,
+        description: uploaded.length === 1 ? files[0].name : undefined,
       });
-      if (res.error) {
-        setError(res.error);
-        return;
-      }
-
-      // Open the file the user just uploaded so they can check it went up
-      // intact. The tab is opened synchronously-ish off the click that
-      // started the upload, so it is not treated as a popup.
-      const view = await getViewUrl(path);
-      if (view.url) window.open(view.url, "_blank", "noopener,noreferrer");
-
-      toast({ title: "Document uploaded", description: file.name });
       setOpen(false);
       reset();
       start(() => router.refresh());
@@ -139,19 +161,26 @@ export function DocumentUpload({
         <form onSubmit={submit} className="space-y-3">
           <div className="space-y-1.5">
             <Label htmlFor="file" className="text-xs">
-              File * <span className="text-muted-foreground">(max {MAX_MB} MB)</span>
+              Files * <span className="text-muted-foreground">(max {MAX_MB} MB each)</span>
             </Label>
             <Input
               id="file"
               type="file"
+              multiple
               required
               onChange={(e) => {
-                const f = e.target.files?.[0] ?? null;
-                setFile(f);
-                if (f && !title) setTitle(f.name);
+                const picked = Array.from(e.target.files ?? []);
+                setFiles(picked);
+                if (picked.length === 1 && !title) setTitle(picked[0].name);
               }}
               className="text-xs file:mr-2 file:border-0 file:bg-secondary file:px-2 file:py-1 file:text-xs"
             />
+            {files.length > 1 && (
+              <p className="text-[11px] text-muted-foreground">
+                {files.length} files selected — each keeps its own filename as its
+                title, and the type, revision and notes below apply to all of them.
+              </p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -190,10 +219,12 @@ export function DocumentUpload({
                 </SelectContent>
               </Select>
             </div>
-            <div className="col-span-2 space-y-1.5">
-              <Label className="text-xs">Title</Label>
-              <Input value={title} onChange={(e) => setTitle(e.target.value)} />
-            </div>
+            {files.length <= 1 && (
+              <div className="col-span-2 space-y-1.5">
+                <Label className="text-xs">Title</Label>
+                <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+              </div>
+            )}
             <div className="col-span-2 space-y-1.5">
               <Label className="text-xs">Notes</Label>
               <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} className="text-xs" />
@@ -209,7 +240,7 @@ export function DocumentUpload({
 
           <DialogFooter>
             <Button type="submit" disabled={busy}>
-              {busy ? "Uploading…" : "Upload"}
+              {busy ? "Uploading…" : files.length > 1 ? `Upload ${files.length} files` : "Upload"}
             </Button>
           </DialogFooter>
         </form>

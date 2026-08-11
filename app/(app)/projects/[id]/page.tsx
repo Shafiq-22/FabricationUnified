@@ -91,12 +91,28 @@ export default async function ProjectPage({ params }: { params: { id: string } }
         .select("id, name, role, organisation, email")
         .in("id", Array.from(new Set(relevant.map((a: any) => a.contact_id))));
       const byId = new Map((people ?? []).map((c: any) => [c.id, c]));
-      contacts = relevant.map((a: any) => ({
-        id: a.id,
-        role: a.role,
-        jobCode: a.job_id ? (jobCodes[a.job_id] ?? null) : null,
-        contact: byId.get(a.contact_id) ?? null,
-      }));
+      // One person in one capacity is one entry, however many ways they are
+      // attached: assigned to the project and to two of its jobs still reads
+      // as a single line listing those jobs.
+      const merged = new Map<string, any>();
+      for (const a of relevant) {
+        const key = `${a.contact_id}:${a.role}`;
+        const jobCode = a.job_id ? (jobCodes[a.job_id] ?? null) : null;
+        const seen = merged.get(key);
+        if (seen) {
+          if (jobCode && !seen.jobCodes.includes(jobCode)) seen.jobCodes.push(jobCode);
+          if (!a.job_id) seen.onProject = true;
+        } else {
+          merged.set(key, {
+            id: a.id,
+            role: a.role,
+            jobCodes: jobCode ? [jobCode] : [],
+            onProject: !a.job_id,
+            contact: byId.get(a.contact_id) ?? null,
+          });
+        }
+      }
+      contacts = Array.from(merged.values());
     }
   }
 

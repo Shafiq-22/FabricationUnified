@@ -432,7 +432,12 @@ function PeopleList({ contacts }: { contacts: any[] }) {
             </a>
           )}
           <p className="mt-1 font-mono text-[11px] text-muted-foreground">
-            {a.jobCode ? `via ${a.jobCode}` : "project level"}
+            {[
+              a.onProject ? "project level" : null,
+              a.jobCodes?.length ? `via ${a.jobCodes.join(", ")}` : null,
+            ]
+              .filter(Boolean)
+              .join(" · ") || "project level"}
           </p>
         </div>
       ))}

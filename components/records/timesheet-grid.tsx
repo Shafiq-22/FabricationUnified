@@ -12,6 +12,7 @@ import type { Personnel, TimesheetEntry } from "@/lib/types";
 export interface JobOption {
   id: string;
   job_code: string;
+  description: string | null;
   site_code: string | null;
   ref: string | null;
 }
@@ -83,9 +84,14 @@ export function TimesheetGrid({
       const job = jobs.find((j) => j.id === jobId);
       const prev = jobs.find((j) => j.id === row.job_id);
       const next: Cell = { ...row, job_id: jobId };
+      // Autofill from the job, but never overwrite something typed by hand:
+      // a field is replaced only when it is empty or still holds the value
+      // the previously selected job put there.
       if (job) {
         if (!row.site || row.site === (prev?.site_code ?? "")) next.site = job.site_code ?? "";
         if (!row.job_ref || row.job_ref === (prev?.ref ?? "")) next.job_ref = job.ref ?? "";
+        if (!row.job_description || row.job_description === (prev?.description ?? ""))
+          next.job_description = job.description ?? "";
       }
       return { ...d, [pid]: next };
     });

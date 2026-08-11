@@ -142,11 +142,12 @@ async function TimesheetTab(
   const view = sp.view === "monthly" ? "monthly" : "daily";
 
   const [{ data: jobsRaw }, { data: sitesRaw }] = await Promise.all([
-    supabase.from("jobs_view").select("id, job_code, site_code, company_job_code, quotation_ref").order("created_at", { ascending: false }).limit(2000),
+    supabase.from("jobs_view").select("id, job_code, description, site_code, company_job_code, quotation_ref").order("created_at", { ascending: false }).limit(2000),
     supabase.from("sites").select("code, name").eq("active", true).order("code"),
   ]);
   const jobs: JobOption[] = (jobsRaw ?? []).map((j: any) => ({
-    id: j.id, job_code: j.job_code, site_code: j.site_code, ref: j.company_job_code ?? j.quotation_ref ?? null,
+    id: j.id, job_code: j.job_code, description: j.description ?? null, site_code: j.site_code,
+    ref: j.company_job_code ?? j.quotation_ref ?? null,
   }));
   const jobCodes: Record<string, string> = Object.fromEntries((jobsRaw ?? []).map((j: any) => [j.id, j.job_code]));
   const sites: SiteOption[] = (sitesRaw ?? []).map((s: any) => ({ code: s.code, name: s.name }));

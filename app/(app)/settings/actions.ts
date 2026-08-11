@@ -84,6 +84,8 @@ const tsRatesSchema = z.object({
   timesheet_normal_rate: z.coerce.number().min(0),
   timesheet_ot_rate: z.coerce.number().min(0),
   inflation_rate_pct: z.coerce.number().min(0).max(100),
+  cert_expiry_warn_days: z.coerce.number().int().min(1).max(365),
+  cert_expiry_notify_email: z.string().trim(),
 });
 
 export async function updateTimesheetRates(values: Record<string, string>) {
@@ -100,6 +102,8 @@ export async function updateTimesheetRates(values: Record<string, string>) {
       { key: "timesheet_normal_rate", value: String(parsed.data.timesheet_normal_rate) },
       { key: "timesheet_ot_rate", value: String(parsed.data.timesheet_ot_rate) },
       { key: "inflation_rate_pct", value: String(parsed.data.inflation_rate_pct) },
+      { key: "cert_expiry_warn_days", value: String(parsed.data.cert_expiry_warn_days) },
+      { key: "cert_expiry_notify_email", value: parsed.data.cert_expiry_notify_email },
     ],
     { onConflict: "key" },
   );

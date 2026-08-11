@@ -1,19 +1,31 @@
+"use client";
+
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
+import { useResizableColumns } from "@/lib/hooks/use-resizable-columns";
 
 const Table = React.forwardRef<
   HTMLTableElement,
-  React.HTMLAttributes<HTMLTableElement>
->(({ className, ...props }, ref) => (
-  <div className="relative w-full overflow-auto">
-    <table
-      ref={ref}
-      className={cn("w-full caption-bottom text-sm", className)}
-      {...props}
-    />
-  </div>
-));
+  React.HTMLAttributes<HTMLTableElement> & {
+    /**
+     * Stable name for remembering column widths. Defaults to the page path
+     * plus the header labels, which is stable for a given table layout.
+     */
+    resizeKey?: string;
+  }
+>(({ className, resizeKey, ...props }, ref) => {
+  const wrap = useResizableColumns(resizeKey);
+  return (
+    <div ref={wrap} className="relative w-full overflow-auto">
+      <table
+        ref={ref}
+        className={cn("w-full caption-bottom text-sm", className)}
+        {...props}
+      />
+    </div>
+  );
+});
 Table.displayName = "Table";
 
 const TableHeader = React.forwardRef<

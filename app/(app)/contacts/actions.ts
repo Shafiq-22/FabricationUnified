@@ -129,7 +129,13 @@ export async function assignContact(values: Record<string, string>) {
     note: parsed.data.note ?? null,
     created_by: profileId,
   });
-  if (error) return { error: error.message };
+  if (error)
+    return {
+      error:
+        error.code === "23505"
+          ? "That contact is already assigned here in that capacity."
+          : error.message,
+    };
   revalidatePath("/contacts");
   return { error: null };
 }

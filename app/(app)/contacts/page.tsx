@@ -81,9 +81,17 @@ export default async function ContactsPage({
     groups = projectRows.map((p) => {
       const jobIds = jobRows.filter((j) => j.project_id === p.id).map((j) => j.id as string);
       // A project's people = those assigned to the project itself plus
-      // everyone assigned to any of its jobs.
+      // everyone assigned to any of its jobs, collapsed so that being
+      // attached both ways does not list the same person twice.
+      const seen = new Set<string>();
       const assigned = assignmentRows
         .filter((a) => a.project_id === p.id || (a.job_id && jobIds.includes(a.job_id)))
+        .filter((a) => {
+          const key = `${a.contact_id}:${a.role}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        })
         .map((a) => ({ ...a, contact: contactsById.get(a.contact_id) ?? null }));
       return {
         id: p.id,
