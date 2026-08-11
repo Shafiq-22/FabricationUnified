@@ -6,8 +6,13 @@ import { useProfile } from "@/components/providers";
 import { Button } from "@/components/ui/button";
 import { InactivityLogout } from "./inactivity-logout";
 import { SearchBox } from "@/components/search/search-box";
+import { NotificationBell, type NotificationRow } from "./notification-bell";
 
-export function Topbar() {
+export function Topbar({
+  notifications = [],
+}: {
+  notifications?: NotificationRow[];
+}) {
   const profile = useProfile();
 
   return (
@@ -18,6 +23,7 @@ export function Topbar() {
         Steel&nbsp;Fabrication
       </div>
       <div className="flex items-center gap-3">
+        <NotificationBell initial={notifications} userId={profile.id} />
         <div className="text-right leading-tight">
           <div className="text-sm font-medium">{profile.full_name}</div>
           <div className="font-mono text-[10px] uppercase tracking-wide text-amber">

@@ -109,15 +109,24 @@ export async function replaceJobLines(
   return { error: null };
 }
 
-export async function addComment(jobId: string, body: string) {
+export async function addComment(
+  jobId: string,
+  body: string,
+  mentions: string[] = [],
+) {
   const profile = await getProfile();
   const text = body.trim();
   if (!text) return { error: "Comment cannot be empty." };
 
   const supabase = createClient();
-  const { error } = await supabase
-    .from("job_comments")
-    .insert({ job_id: jobId, user_id: profile.id, body: text });
+  // Mentions decide who is notified: named people only, or every
+  // collaborator when nobody is named. The fan-out is a database trigger.
+  const { error } = await supabase.from("job_comments").insert({
+    job_id: jobId,
+    user_id: profile.id,
+    body: text,
+    mentions: mentions.length > 0 ? mentions : null,
+  });
   if (error) return { error: error.message };
 
   revalidatePath(`/jobs/${jobId}/worksheet`);

@@ -110,8 +110,19 @@ export default async function WorksheetPage({
       .order("uploaded_at", { ascending: false }),
   ]);
 
-  const { data: users } = await supabase.from("users").select("id, full_name");
+  const [{ data: users }, { data: watch }] = await Promise.all([
+    supabase.from("users").select("id, full_name, active"),
+    supabase
+      .from("job_watchers")
+      .select("watching")
+      .eq("job_id", params.id)
+      .eq("user_id", profile.id)
+      .maybeSingle(),
+  ]);
   const authorNames = Object.fromEntries((users ?? []).map((u) => [u.id, u.full_name]));
+  const mentionable = (users ?? [])
+    .filter((u) => u.active)
+    .map((u) => ({ id: u.id, name: u.full_name }));
 
   const quoteToJob = daysBetween(job.created_at, job.start_date);
   const leadTime = daysBetween(job.start_date, job.completion_date);
@@ -240,6 +251,8 @@ export default async function WorksheetPage({
           authorNames={authorNames}
           currentUserId={profile.id}
           isAdmin={profile.role_tier >= 3}
+          mentionable={mentionable}
+          watching={watch?.watching ?? null}
         />
       </div>
     </div>

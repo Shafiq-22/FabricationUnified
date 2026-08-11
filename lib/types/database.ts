@@ -1324,6 +1324,7 @@ export type Database = {
           created_at: string
           id: string
           job_id: string
+          mentions: string[] | null
           user_id: string | null
         }
         Insert: {
@@ -1331,6 +1332,7 @@ export type Database = {
           created_at?: string
           id?: string
           job_id: string
+          mentions?: string[] | null
           user_id?: string | null
         }
         Update: {
@@ -1338,6 +1340,7 @@ export type Database = {
           created_at?: string
           id?: string
           job_id?: string
+          mentions?: string[] | null
           user_id?: string | null
         }
         Relationships: [
@@ -1829,6 +1832,49 @@ export type Database = {
           },
         ]
       }
+      job_watchers: {
+        Row: {
+          created_at: string
+          job_id: string
+          user_id: string
+          watching: boolean
+        }
+        Insert: {
+          created_at?: string
+          job_id: string
+          user_id: string
+          watching?: boolean
+        }
+        Update: {
+          created_at?: string
+          job_id?: string
+          user_id?: string
+          watching?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_watchers_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_watchers_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_watchers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       jobs: {
         Row: {
           actual_cost: number | null
@@ -2155,6 +2201,84 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          actor_id: string | null
+          body: string | null
+          comment_id: string | null
+          created_at: string
+          href: string | null
+          id: string
+          job_id: string | null
+          kind: string
+          read_at: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          actor_id?: string | null
+          body?: string | null
+          comment_id?: string | null
+          created_at?: string
+          href?: string | null
+          id?: string
+          job_id?: string | null
+          kind?: string
+          read_at?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          actor_id?: string | null
+          body?: string | null
+          comment_id?: string | null
+          created_at?: string
+          href?: string | null
+          id?: string
+          job_id?: string | null
+          kind?: string
+          read_at?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "job_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       personnel: {
         Row: {
           active: boolean
@@ -2166,6 +2290,7 @@ export type Database = {
           qualification_expiry: string | null
           site_id: string | null
           trade: string | null
+          user_id: string | null
           welder_qualification: string | null
         }
         Insert: {
@@ -2178,6 +2303,7 @@ export type Database = {
           qualification_expiry?: string | null
           site_id?: string | null
           trade?: string | null
+          user_id?: string | null
           welder_qualification?: string | null
         }
         Update: {
@@ -2190,6 +2316,7 @@ export type Database = {
           qualification_expiry?: string | null
           site_id?: string | null
           trade?: string | null
+          user_id?: string | null
           welder_qualification?: string | null
         }
         Relationships: [
@@ -2205,6 +2332,13 @@ export type Database = {
             columns: ["site_id"]
             isOneToOne: false
             referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "personnel_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -3204,6 +3338,7 @@ export type Database = {
           title: string
         }[]
       }
+      job_collaborators: { Args: { p_job_id: string }; Returns: string[] }
       next_job_seq: { Args: { p_year_month: string }; Returns: number }
       next_project_seq: { Args: { p_year: string }; Returns: number }
       plate_pieces_per_sheet: {
