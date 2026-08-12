@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/auth";
 import { canSeeFinancials, isAdmin } from "@/lib/types";
+import { MARGIN_SECTIONS, type MarginSection } from "@/lib/margins";
 
 // Editable columns per worksheet child table (computed cols are excluded).
 const CHILD_TABLES = {
@@ -407,16 +408,6 @@ export async function copyWorksheetToProcurement(
   return { error: null, count: rows.length };
 }
 
-/** The five costed sections, in the order the Quotation tab shows them. */
-export const MARGIN_SECTIONS = [
-  { key: "material", column: "margin_material_pct", label: "Material" },
-  { key: "workforce", column: "margin_workforce_pct", label: "Workforce" },
-  { key: "consumables", column: "margin_consumables_pct", label: "Consumables" },
-  { key: "equipment", column: "margin_equipment_pct", label: "Equipment" },
-  { key: "services", column: "margin_services_pct", label: "Services" },
-] as const;
-
-export type MarginSection = (typeof MARGIN_SECTIONS)[number]["key"];
 
 /**
  * Set this job's own margin per section. A null (blank) entry clears the

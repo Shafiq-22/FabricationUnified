@@ -5,14 +5,17 @@ import { useRouter } from "next/navigation";
 import { Save, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/lib/hooks/use-toast";
+import { setJobMargins } from "@/app/(app)/jobs/[id]/worksheet/actions";
+// Data and types come from a plain module: a "use server" file may only export
+// async functions, so importing this array from the actions file would hand the
+// client `undefined` and crash the page on render.
 import {
   MARGIN_SECTIONS,
-  setJobMargins,
+  type MarginMap,
   type MarginSection,
-} from "@/app/(app)/jobs/[id]/worksheet/actions";
+  type OverrideMap,
+} from "@/lib/margins";
 
-export type MarginMap = Record<MarginSection, number>;
-export type OverrideMap = Partial<Record<MarginSection, number | null>>;
 
 /**
  * Margin control, one row per costed section (Changes II item 4, replacing the

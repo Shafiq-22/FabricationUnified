@@ -12,7 +12,8 @@ import { AnalyticsPanel } from "@/components/jobs/analytics-panel";
 import { TentativePanel, type HistoricLookup } from "@/components/jobs/tentative-panel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ImportDialog } from "@/components/jobs/import-dialog";
-import { SectionMargins, type MarginMap, type OverrideMap } from "@/components/jobs/section-margins";
+import { SectionMargins } from "@/components/jobs/section-margins";
+import type { MarginMap, OverrideMap } from "@/lib/margins";
 import { QuoteActualExportButtons } from "@/components/pdf/quote-actual-export-buttons";
 import {
   replaceJobLines,
