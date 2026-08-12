@@ -908,6 +908,7 @@ export type Database = {
           created_by: string | null
           id: string
           inventory_item_id: string
+          job_actual_material_id: string | null
           job_id: string | null
           job_material_id: string | null
           moved_on: string
@@ -920,6 +921,7 @@ export type Database = {
           created_by?: string | null
           id?: string
           inventory_item_id: string
+          job_actual_material_id?: string | null
           job_id?: string | null
           job_material_id?: string | null
           moved_on?: string
@@ -932,6 +934,7 @@ export type Database = {
           created_by?: string | null
           id?: string
           inventory_item_id?: string
+          job_actual_material_id?: string | null
           job_id?: string | null
           job_material_id?: string | null
           moved_on?: string
@@ -966,6 +969,13 @@ export type Database = {
             columns: ["inventory_item_id"]
             isOneToOne: false
             referencedRelation: "inventory_low_stock"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_movements_job_actual_material_id_fkey"
+            columns: ["job_actual_material_id"]
+            isOneToOne: false
+            referencedRelation: "job_actual_materials"
             referencedColumns: ["id"]
           },
           {

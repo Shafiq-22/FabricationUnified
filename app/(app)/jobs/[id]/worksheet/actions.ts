@@ -122,13 +122,73 @@ export async function replaceJobLines(
     if (error) return { error: error.message };
   }
 
+  // Material drawn from the yard has to leave the yard.
+  if (table === "job_actual_materials") {
+    const stockErr = await syncStockIssues(supabase, jobId, payload);
+    if (stockErr) return { error: stockErr };
+  }
+
   // Re-derive the job's quote/final/margin/actual/P&L from all sections.
   await supabase.rpc("recompute_job_financials", { p_job_id: jobId });
 
   revalidatePath(`/jobs/${jobId}/worksheet`);
   revalidatePath("/jobs");
   revalidatePath("/dashboard");
+  revalidatePath("/inventory");
   return { error: null };
+}
+
+/**
+ * Keep the stock ledger in step with the Actual material lines: one `issue`
+ * movement per line that is marked as drawn from stock and names the item.
+ *
+ * Keyed on job_actual_material_id (unique), so saving the same section again
+ * updates the movement in place instead of issuing the steel twice. Lines that
+ * stop being stock-drawn have their movement removed here; lines deleted
+ * outright are handled by the FK cascade, and on-hand corrects itself either
+ * way because the trigger re-sums the whole ledger rather than applying a
+ * delta. Quantity is stored signed, and an issue is negative.
+ */
+async function syncStockIssues(
+  supabase: ReturnType<typeof createClient>,
+  jobId: string,
+  payload: Record<string, unknown>[],
+): Promise<string | null> {
+  const lineIds = payload.map((r) => r.id as string);
+  if (lineIds.length === 0) return null;
+
+  const wanted = payload.filter(
+    (r) => r.from_stock === true && r.inventory_item_id && Number(r.qty) > 0,
+  );
+  const wantedIds = new Set(wanted.map((r) => r.id as string));
+
+  // Lines that are no longer stock-drawn must not keep a movement.
+  const stale = lineIds.filter((id) => !wantedIds.has(id));
+  if (stale.length) {
+    const { error } = await supabase
+      .from("inventory_movements")
+      .delete()
+      .in("job_actual_material_id", stale);
+    if (error) return error.message;
+  }
+
+  if (wanted.length === 0) return null;
+
+  const today = new Date().toISOString().slice(0, 10);
+  const rows = wanted.map((r) => ({
+    inventory_item_id: r.inventory_item_id as string,
+    job_actual_material_id: r.id as string,
+    job_id: jobId,
+    movement_type: "issue",
+    qty: -Math.abs(Number(r.qty)),
+    moved_on: today,
+    note: `Issued to job worksheet: ${String(r.material_name ?? "").trim() || "material"}`,
+  }));
+
+  const { error } = await supabase
+    .from("inventory_movements")
+    .upsert(rows as never, { onConflict: "job_actual_material_id" });
+  return error ? error.message : null;
 }
 
 /** Quote section -> the Actual section it seeds. Both sides share a shape. */
