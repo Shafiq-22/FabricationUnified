@@ -33,7 +33,6 @@ export type Drawing = T["drawings"]["Row"];
 export type AuditEntry = T["audit_log"]["Row"];
 export type Supplier = T["suppliers"]["Row"];
 export type DocumentRow = T["documents"]["Row"];
-export type Client = T["clients"]["Row"];
 export type Project = T["projects"]["Row"];
 export type ProjectView = V["projects_view"]["Row"];
 export type Rfq = T["rfqs"]["Row"];

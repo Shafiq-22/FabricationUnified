@@ -65,50 +65,6 @@ export type Database = {
         }
         Relationships: []
       }
-      clients: {
-        Row: {
-          active: boolean
-          address: string | null
-          contact_email: string | null
-          contact_name: string | null
-          contact_phone: string | null
-          created_at: string
-          created_by: string | null
-          id: string
-          name: string
-        }
-        Insert: {
-          active?: boolean
-          address?: string | null
-          contact_email?: string | null
-          contact_name?: string | null
-          contact_phone?: string | null
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          name: string
-        }
-        Update: {
-          active?: boolean
-          address?: string | null
-          contact_email?: string | null
-          contact_name?: string | null
-          contact_phone?: string | null
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          name?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "clients_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       consumables: {
         Row: {
           created_at: string
@@ -2572,7 +2528,6 @@ export type Database = {
       projects: {
         Row: {
           actual_completion: string | null
-          client_id: string | null
           contract_value: number | null
           created_at: string
           created_by: string | null
@@ -2589,7 +2544,6 @@ export type Database = {
         }
         Insert: {
           actual_completion?: string | null
-          client_id?: string | null
           contract_value?: number | null
           created_at?: string
           created_by?: string | null
@@ -2606,7 +2560,6 @@ export type Database = {
         }
         Update: {
           actual_completion?: string | null
-          client_id?: string | null
           contract_value?: number | null
           created_at?: string
           created_by?: string | null
@@ -2622,13 +2575,6 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "projects_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "projects_created_by_fkey"
             columns: ["created_by"]
@@ -2647,7 +2593,6 @@ export type Database = {
       }
       rfqs: {
         Row: {
-          client_id: string | null
           created_at: string
           created_by: string | null
           deleted_at: string | null
@@ -2662,7 +2607,6 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          client_id?: string | null
           created_at?: string
           created_by?: string | null
           deleted_at?: string | null
@@ -2677,7 +2621,6 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          client_id?: string | null
           created_at?: string
           created_by?: string | null
           deleted_at?: string | null
@@ -2692,13 +2635,6 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "rfqs_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "rfqs_created_by_fkey"
             columns: ["created_by"]
@@ -3359,8 +3295,6 @@ export type Database = {
         Row: {
           actual_completion: string | null
           actual_value: number | null
-          client_id: string | null
-          client_name: string | null
           completed_job_count: number | null
           contract_value: number | null
           created_at: string | null
@@ -3380,13 +3314,6 @@ export type Database = {
           updated_at: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "projects_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "projects_created_by_fkey"
             columns: ["created_by"]

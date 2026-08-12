@@ -15,16 +15,12 @@ export default async function ProjectsPage() {
   const canDelete = isAdmin(profile.role_tier);
   const supabase = createClient();
 
-  const [{ data: projects }, { data: clients }, { data: sites }] = await Promise.all([
+  const [{ data: projects }, { data: sites }] = await Promise.all([
     supabase.from("projects_view").select("*").order("project_code", { ascending: false }),
-    supabase.from("clients").select("id, name, active").order("name"),
     supabase.from("sites").select("id, code, name").eq("active", true).order("code"),
   ]);
 
   const projectRows = (projects ?? []) as ProjectView[];
-  const clientOptions = (clients ?? [])
-    .filter((c: any) => c.active)
-    .map((c: any) => ({ value: c.id as string, label: c.name as string }));
   const siteOptions = (sites ?? []).map((s: any) => ({
     value: s.id as string,
     label: `${s.code} — ${s.name}`,
@@ -39,7 +35,6 @@ export default async function ProjectsPage() {
       <div className="p-6">
         <ProjectsManager
           rows={projectRows}
-          clientOptions={clientOptions}
           siteOptions={siteOptions}
           showMoney={showMoney}
           canEdit={canEdit}

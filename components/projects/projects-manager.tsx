@@ -24,14 +24,12 @@ import { PROJECT_STATUSES, type ProjectView } from "@/lib/types";
 
 export function ProjectsManager({
   rows,
-  clientOptions,
   siteOptions,
   showMoney,
   canEdit,
   canDelete,
 }: {
   rows: ProjectView[];
-  clientOptions: { value: string; label: string }[];
   siteOptions: { value: string; label: string }[];
   showMoney: boolean;
   canEdit: boolean;
@@ -44,12 +42,6 @@ export function ProjectsManager({
 
   const fields: FieldDef[] = [
     { key: "name", label: "Project Name", required: true, colSpan: 2 },
-    {
-      key: "client_id",
-      label: "Client",
-      type: "select",
-      options: [{ value: "none", label: "— None —" }, ...clientOptions],
-    },
     {
       key: "site_id",
       label: "Site",
@@ -74,7 +66,7 @@ export function ProjectsManager({
     const term = q.trim().toLowerCase();
     if (!term) return rows;
     return rows.filter((p) =>
-      [p.name, p.project_code, p.client_name, p.site_code].some((f) =>
+      [p.name, p.project_code, p.site_code].some((f) =>
         (f ?? "").toLowerCase().includes(term),
       ),
     );
@@ -119,7 +111,6 @@ export function ProjectsManager({
           <TableRow>
             <TableHead>Code</TableHead>
             <TableHead>Project</TableHead>
-            <TableHead>Client</TableHead>
             <TableHead>Site</TableHead>
             <TableHead className="text-center">Status</TableHead>
             <TableHead className="text-center">Jobs</TableHead>
@@ -156,7 +147,6 @@ export function ProjectsManager({
                   {p.name}
                 </Link>
               </TableCell>
-              <TableCell className="text-xs">{p.client_name ?? "—"}</TableCell>
               <TableCell className="font-mono text-xs" title={p.site_name ?? ""}>
                 {p.site_code ?? "—"}
               </TableCell>

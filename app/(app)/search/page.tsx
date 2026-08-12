@@ -20,7 +20,6 @@ interface Hit {
 const KIND_BADGE: Record<string, "qtn" | "inp" | "com" | "del" | "hal" | "secondary"> = {
   Job: "inp",
   Project: "del",
-  Client: "secondary",
   Document: "qtn",
   Stock: "com",
   Supplier: "secondary",
@@ -46,7 +45,7 @@ export default async function SearchPage({
   }
 
   // Group results by kind, preserving a stable display order.
-  const order = ["Job", "Project", "Client", "Document", "Stock", "Supplier", "NCR", "Comment"];
+  const order = ["Job", "Project", "Document", "Stock", "Supplier", "NCR", "Comment"];
   const grouped = order
     .map((k) => ({ kind: k, rows: hits.filter((h) => h.kind === k) }))
     .filter((g) => g.rows.length > 0);

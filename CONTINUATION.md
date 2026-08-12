@@ -7,9 +7,9 @@
 > `CLAUDE QUICK START` + `MACHINE‑READABLE STATE` at the bottom. Keep edits surgical to save
 > tokens: change the lines that changed, don't rewrite the whole file.
 >
-> **Last updated:** after **Changes II (12/08/2026)** — all five items delivered, plus a P0 fix to
-> tier guards left inside function bodies by 0049 (see §14). Migrations 0001–0053 in repo; see
-> **§5 migration bookkeeping**.
+> **Last updated:** after a full end-to-end audit — which found an **unauthenticated read leak on
+> three definer views (fixed, 0054)** — and the removal of the dead Clients model (0055).
+> Migrations 0001–0055 in repo; see **§5 migration bookkeeping**.
 
 ---
 
@@ -19,7 +19,7 @@
 - **Stack:** Next.js 14 (App Router) + TypeScript · Supabase (Postgres + Auth + RLS + Realtime + Storage) · Tailwind + shadcn/ui (Radix) · `@react-pdf/renderer` · recharts · exceljs. Deployed on Vercel.
 - **Repo state:** branch is **per-session — read it from `git status`, don't trust a name written here.** Work to date landed on `claude/busy-mccarthy-W0FZV` (through `732a36e`); the audit pass ran on `claude/continuation-md-validation-0anxqi`. Push **only** to the branch the current session was assigned.
 - **Supabase project ref:** `gxupuxysfhmwdvztabtn` (region ap-south-1, **free tier — auto-pauses after ~7 days idle; has paused several times; restore via `restore_project` MCP tool or the dashboard**).
-- **DB migrations:** `supabase/migrations/0001…0053` (53 files, **57 live history rows**). Schema is in sync with live, but the file list and the live migration history are **not 1:1** — see **§5 migration bookkeeping** before counting. New schema work = new numbered migration file **and** apply it live via the Supabase MCP `apply_migration`.
+- **DB migrations:** `supabase/migrations/0001…0055` (55 files, **59 live history rows**). Schema is in sync with live, but the file list and the live migration history are **not 1:1** — see **§5 migration bookkeeping** before counting. New schema work = new numbered migration file **and** apply it live via the Supabase MCP `apply_migration`.
 - **Hard constraint (original + still in force):** **No AI/LLM API calls inside the app.** It is a data‑management tool. All "email" features are `mailto:` drafts, never sent by the app. Notifications are **in‑app only** (bell), by explicit user decision.
 - **Security model (do not break):** 3 tiers. Money columns masked from **Tier 2** (0049; it was Tier 1 before) at the DB level via definer "masking views" (`jobs_view`, `projects_view`, `inventory_items_view`) keyed on **`auth_can_see_money()`**; the money columns are additionally revoked from `authenticated` on the base tables, for every tier. See **AUTH & SECURITY**.
 - **Critical files:** `lib/types/index.ts` (aliases + enums), `lib/types/database.ts` (generated types — regenerate after every schema change), `lib/auth.ts`, `lib/supabase/{client,server,middleware}.ts`, `components/ui/table.tsx` (all tables centred + resizable), `lib/email-draft.ts`.
@@ -90,7 +90,8 @@ FabricationUnified/
 │       ├── jobs/{page,actions}.tsx, jobs/[id]/worksheet/{page,actions}.tsx, jobs/[id]/roughsheet/{page,actions}.tsx
 │       │   └── jobs/[id]/import-actions.ts   # Excel/DSTV import server actions
 │       ├── contacts/{page,actions}.tsx # "Point of Contact" (was Clients)
-│       ├── clients/page.tsx            # legacy path, still present — redirects to /contacts
+│       ├── clients/page.tsx            # legacy URL only — redirects to /contacts (kept for old bookmarks;
+│       │                               #   unrelated to the removed `clients` table)
 │       ├── documents/{page,actions}.tsx
 │       ├── procurement/{page,actions}.tsx, procurement/supplier-actions.ts   # 4 sub-tabs via ?tab=
 │       ├── consumables/{page,actions}.tsx    # (also surfaced inside procurement)
@@ -110,8 +111,7 @@ FabricationUnified/
 │   │                       #   comments-thread(@mentions+watch), tentative-panel(inflation), analytics-panel,
 │   │                       #   delete-job-button, job-status-control/-badge, import-dialog, new-job-dialog,
 │   │                       #   job-meta-form, jobs-filter-bar, workforce-editor, copy-to-procurement-button
-│   ├── projects/           # projects-manager, project-form(full-page create), project-detail(rollups+dedup),
-│   │                       #   clients-manager (legacy, still present after the PoC rename)
+│   ├── projects/           # projects-manager, project-form(full-page create), project-detail(rollups+dedup)
 │   ├── contacts/           # contacts-registry, contacts-by-entity, types.ts
 │   ├── documents/          # document-upload(multi-file), documents-table, documents-grouped, documents-filters
 │   ├── procurement/        # procurement-manager, procurement-grouped, suppliers-manager, procurement-filters
@@ -211,7 +211,7 @@ So: `list_migrations` will never match `ls supabase/migrations` exactly. Compare
 - **job_quotation_summary / job_actual_summary** — computed summary rows.
 - **rough_sheet_items / cut_list_plates** (+ `_aggregated` views) — cut lists; grade columns; order‑qty via **nesting** (see BUSINESS LOGIC).
 - **suppliers, job_materials, consumables** — procurement. `historic_prices` view aggregates by item+supplier. Consumables and job_materials carry `dimension`/`grade`; consumables carry `job_id`.
-- **clients, projects, rfqs** — hierarchy above jobs. `project_code` = `PRJ-YYYY-NNN`.
+- **projects, rfqs** — above jobs. `project_code` = `PRJ-YYYY-NNN`. **`clients` was removed in 0055** (dead: no UI could create one). `rfqs` survives but is also dead in the app — a type alias and nothing else; a candidate for its own removal.
 - **contacts, contact_assignments** — Point of Contact. Unique indexes (0045) prevent duplicate (contact, job/project, role). `job_workforce_contacts` view derives crew from timesheets.
 - **documents** — private Storage bucket `documents` + table. Nullable `job_id`, `project_id` (synced by trigger from the job), `welder_certificate_id` (0047). `doc_type` check includes `requisition`, `certificate`.
 - **inspection_reports, ncrs, welder_certificates, personnel_transfers, maintenance_records** — QA & records.
@@ -274,6 +274,15 @@ anything *not* on this list is new and must be resolved.
 `job_collaborators(uuid)` has **EXECUTE revoked** from `authenticated`/`anon` (verified) so it raises no
 advisor — which is why `auth_can_act_on_job()` exists: policies run as the caller, so they cannot
 call `job_collaborators` directly. `global_search` is SECURITY **INVOKER**, so RLS applies normally.
+
+⚠️ **A definer view's GRANT is its entire access control.** `security_invoker = false` means RLS on
+the base table does **not** apply, so Supabase's default `grant all ... to anon` left
+`projects_view`, `inventory_items_view` and `inventory_low_stock` readable **without signing in**
+(confirmed live: anon read `PRJ-2026-001`). Fixed in **0054**. `jobs_view` had been revoked long ago;
+the others were missed, and the advisors do not catch this — they flag the views as definer but never
+ask *who may call them*. **Any new masking view must `revoke all ... from anon` explicitly**, and a
+view that is DROPped and recreated silently reverts to default grants, so restore them in the same
+migration (0055 does this).
 
 ⚠️ **When adding a SECURITY DEFINER function, revoke EXECUTE from `public, anon` explicitly.** A new
 function grants EXECUTE to PUBLIC by default; `auth_can_see_money()` tripped a fresh
@@ -567,8 +576,8 @@ repository:
   clean: true
   head: 732a36e + CONTINUATION.md audit commits
   migrations:
-    files: 0001..0053 (53 in repo)
-    live_history_rows: 57
+    files: 0001..0055 (55 in repo)
+    live_history_rows: 59
     in_sync: true   # schema verified object-by-object; counts differ by design, see section 5
   tests: none
   gates_verified: [tsc --noEmit clean, next build green]

@@ -84,7 +84,6 @@ export function ProjectDetail({
   documents: any[];
   contacts: any[];
   meta: {
-    client: string;
     site: string;
     start: string;
     target: string;
@@ -109,7 +108,6 @@ export function ProjectDetail({
   return (
     <div className="p-6 pt-4">
       <dl className="mb-4 grid grid-cols-2 gap-x-6 gap-y-2 border border-border bg-card p-3 text-xs sm:grid-cols-3 lg:grid-cols-6">
-        <Meta label="Client" value={meta.client} />
         <Meta label="Site" value={meta.site} />
         <Meta label="Start" value={meta.start} />
         <Meta label="Target" value={meta.target} />

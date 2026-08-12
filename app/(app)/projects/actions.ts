@@ -20,81 +20,9 @@ async function requireEngineer() {
   return profile;
 }
 
-/* ---------------- Clients ---------------- */
-const clientSchema = z.object({
-  name: z.string().trim().min(1, "Name is required"),
-  contact_name: optStr,
-  contact_email: optStr,
-  contact_phone: optStr,
-  address: optStr,
-});
-const DUP_CLIENT = "A client with this name already exists.";
-
-function clientPayload(v: z.infer<typeof clientSchema>) {
-  return {
-    name: v.name.trim(),
-    contact_name: v.contact_name ?? null,
-    contact_email: v.contact_email ?? null,
-    contact_phone: v.contact_phone ?? null,
-    address: v.address ?? null,
-  };
-}
-
-export async function createClientRecord(values: Record<string, string>) {
-  let profile;
-  try { profile = await requireEngineer(); } catch (e) { return { error: (e as Error).message }; }
-  const parsed = clientSchema.safeParse(values);
-  if (!parsed.success) return { error: parsed.error.errors[0]?.message ?? "Invalid input." };
-  const supabase = createClient();
-  const { error } = await supabase
-    .from("clients")
-    .insert({ ...clientPayload(parsed.data), created_by: profile.id });
-  if (error) return { error: error.code === "23505" ? DUP_CLIENT : error.message };
-  revalidatePath("/clients");
-  return { error: null };
-}
-
-export async function updateClientRecord(id: string, values: Record<string, string>) {
-  try { await requireEngineer(); } catch (e) { return { error: (e as Error).message }; }
-  const parsed = clientSchema.safeParse(values);
-  if (!parsed.success) return { error: parsed.error.errors[0]?.message ?? "Invalid input." };
-  const supabase = createClient();
-  const { error } = await supabase.from("clients").update(clientPayload(parsed.data)).eq("id", id);
-  if (error) return { error: error.code === "23505" ? DUP_CLIENT : error.message };
-  revalidatePath("/clients");
-  return { error: null };
-}
-
-export async function toggleClientActive(id: string, active: boolean) {
-  try { await requireEngineer(); } catch (e) { return { error: (e as Error).message }; }
-  const supabase = createClient();
-  const { error } = await supabase.from("clients").update({ active }).eq("id", id);
-  if (error) return { error: error.message };
-  revalidatePath("/clients");
-  return { error: null };
-}
-
-export async function deleteClientRecord(id: string) {
-  const profile = await getProfile();
-  if (!isAdmin(profile.role_tier)) return { error: "Only administrators may delete clients." };
-  const supabase = createClient();
-  const { error } = await supabase.from("clients").delete().eq("id", id);
-  if (error) {
-    return {
-      error:
-        error.code === "23503"
-          ? "This client has linked projects — deactivate it instead."
-          : error.message,
-    };
-  }
-  revalidatePath("/clients");
-  return { error: null };
-}
-
 /* ---------------- Projects ---------------- */
 const projectSchema = z.object({
   name: z.string().trim().min(1, "Name is required"),
-  client_id: optStr,
   site_id: optStr,
   status: z.enum([
     "rfq", "quoted", "won", "in_fabrication", "qa", "dispatch", "installed", "closed", "lost",
@@ -109,7 +37,6 @@ const projectSchema = z.object({
 function projectPayload(v: z.infer<typeof projectSchema>) {
   return {
     name: v.name.trim(),
-    client_id: pick(v.client_id),
     site_id: pick(v.site_id),
     status: v.status,
     contract_value: v.contract_value ?? null,

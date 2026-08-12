@@ -152,7 +152,6 @@ export default async function ProjectPage({ params }: { params: { id: string } }
           </>
         ) : (
           <>
-            <KpiCard label="Client" value={p.client_name ?? "—"} accent="neutral" />
             <KpiCard label="Site" value={p.site_code ?? "—"} hint={p.site_name ?? undefined} accent="neutral" />
             <KpiCard label="Target" value={fmtDate(p.target_completion)} accent="neutral" />
           </>
@@ -169,7 +168,6 @@ export default async function ProjectPage({ params }: { params: { id: string } }
         documents={documents}
         contacts={contacts}
         meta={{
-          client: p.client_name ?? "—",
           site: p.site_code ? `${p.site_code} — ${p.site_name ?? ""}` : "—",
           start: fmtDate(p.start_date),
           target: fmtDate(p.target_completion),
