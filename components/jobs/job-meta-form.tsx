@@ -8,9 +8,30 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/lib/hooks/use-toast";
 import type { JobView } from "@/lib/types";
 
+/**
+ * What the job is. These drive the header and the job register, and until now
+ * they could only be set when the job was created — there was no way to correct
+ * a description or a quantity afterwards. `updateJobDetails` always accepted
+ * them; only the form left them out.
+ */
+const DISPLAY_FIELDS: { key: keyof JobView; label: string; type?: string }[] = [
+  { key: "qty", label: "Qty", type: "number" },
+  { key: "unit", label: "Unit" },
+  { key: "start_date", label: "Start Date", type: "date" },
+  { key: "completion_date", label: "Completion Date", type: "date" },
+];
+
+/** The paperwork raised against the job. */
 const FIELDS: { key: keyof JobView; label: string; type?: string }[] = [
   { key: "company_job_code", label: "Company Job Code" },
   { key: "quotation_ref", label: "Quotation Ref" },
@@ -18,16 +39,28 @@ const FIELDS: { key: keyof JobView; label: string; type?: string }[] = [
   { key: "lpo_ref", label: "LPO Ref" },
   { key: "inbound_outpass", label: "Inbound Outpass" },
   { key: "exit_outpass", label: "Exit Outpass" },
-  { key: "completion_date", label: "Completion Date", type: "date" },
 ];
 
-export function JobMetaForm({ job, editable }: { job: JobView; editable: boolean }) {
+export function JobMetaForm({
+  job,
+  editable,
+  siteOptions = [],
+}: {
+  job: JobView;
+  editable: boolean;
+  /** Active sites, so the job can be moved between them. */
+  siteOptions?: { value: string; label: string }[];
+}) {
   const router = useRouter();
   const { toast } = useToast();
   const [pending, start] = useTransition();
   const [form, setForm] = useState(() => {
     const init: Record<string, string> = {};
-    FIELDS.forEach((f) => (init[f.key as string] = (job[f.key] as string) ?? ""));
+    [...DISPLAY_FIELDS, ...FIELDS].forEach(
+      (f) => (init[f.key as string] = job[f.key] == null ? "" : String(job[f.key])),
+    );
+    init.description = (job.description as string) ?? "";
+    init.site_id = (job.site_id as string) ?? "";
     init.comments = (job.comments as string) ?? "";
     return init;
   });
@@ -36,7 +69,12 @@ export function JobMetaForm({ job, editable }: { job: JobView; editable: boolean
 
   const save = () =>
     start(async () => {
-      const res = await updateJobDetails(job.id as string, form);
+      // Drop blanks: site_id is a uuid and qty a number in the schema, so an
+      // empty string would fail validation rather than mean "unchanged".
+      const payload = Object.fromEntries(
+        Object.entries(form).filter(([, v]) => v !== ""),
+      );
+      const res = await updateJobDetails(job.id as string, payload);
       if (res?.error) toast({ variant: "destructive", title: "Save failed", description: res.error });
       else {
         toast({ title: "Job details saved" });
@@ -47,6 +85,52 @@ export function JobMetaForm({ job, editable }: { job: JobView; editable: boolean
   return (
     <div className="border border-border bg-card">
       <h3 className="border-b border-border px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        Job Details
+      </h3>
+      <div className="grid grid-cols-2 gap-3 p-4 md:grid-cols-3 lg:grid-cols-4">
+        <div className="col-span-2 space-y-1 md:col-span-3 lg:col-span-2">
+          <Label className="text-[10px] uppercase text-muted-foreground">Description</Label>
+          <Input
+            value={form.description}
+            disabled={!editable}
+            onChange={(e) => set("description", e.target.value)}
+            className="h-8 text-xs"
+          />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-[10px] uppercase text-muted-foreground">Site</Label>
+          <Select
+            value={form.site_id}
+            disabled={!editable}
+            onValueChange={(v) => set("site_id", v)}
+          >
+            <SelectTrigger className="h-8 text-xs">
+              <SelectValue placeholder="—" />
+            </SelectTrigger>
+            <SelectContent>
+              {siteOptions.map((s) => (
+                <SelectItem key={s.value} value={s.value}>
+                  {s.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        {DISPLAY_FIELDS.map((f) => (
+          <div key={f.key as string} className="space-y-1">
+            <Label className="text-[10px] uppercase text-muted-foreground">{f.label}</Label>
+            <Input
+              type={f.type ?? "text"}
+              value={form[f.key as string]}
+              disabled={!editable}
+              onChange={(e) => set(f.key as string, e.target.value)}
+              className="h-8 text-xs"
+            />
+          </div>
+        ))}
+      </div>
+
+      <h3 className="border-y border-border px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         Document References
       </h3>
       <div className="grid grid-cols-2 gap-3 p-4 md:grid-cols-3 lg:grid-cols-4">

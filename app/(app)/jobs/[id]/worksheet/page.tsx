@@ -138,7 +138,7 @@ export default async function WorksheetPage({
       .order("seq_no", { ascending: false }),
   ]);
 
-  const [{ data: users }, { data: watch }] = await Promise.all([
+  const [{ data: users }, { data: watch }, { data: siteRows }] = await Promise.all([
     supabase.from("users").select("id, full_name, active"),
     supabase
       .from("job_watchers")
@@ -146,6 +146,7 @@ export default async function WorksheetPage({
       .eq("job_id", params.id)
       .eq("user_id", profile.id)
       .maybeSingle(),
+    supabase.from("sites").select("id, code, name").eq("active", true).order("code"),
   ]);
   const authorNames = Object.fromEntries((users ?? []).map((u) => [u.id, u.full_name]));
   const mentionable = (users ?? [])
@@ -290,7 +291,14 @@ export default async function WorksheetPage({
           isAdmin={isAdmin(profile.role_tier)}
           editable={editable}
         />
-        <JobMetaForm job={job} editable={editable} />
+        <JobMetaForm
+          job={job}
+          editable={editable}
+          siteOptions={(siteRows ?? []).map((s: any) => ({
+            value: s.id as string,
+            label: `${s.code} — ${s.name}`,
+          }))}
+        />
         <CommentsThread
           jobId={params.id}
           initial={comments ?? []}
