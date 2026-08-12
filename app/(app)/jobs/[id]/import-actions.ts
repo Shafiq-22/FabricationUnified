@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/auth";
+import { canSeeFinancials } from "@/lib/types";
 
 export type ImportTarget =
   | "rough_sheet_items"
@@ -30,7 +31,10 @@ export async function appendJobLines(
   rows: Record<string, unknown>[],
 ): Promise<{ error: string | null; inserted?: number }> {
   const profile = await getProfile();
-  if (profile.role_tier < 2) return { error: "You are not allowed to import." };
+  // Import targets are quotation cost tables, so this follows money
+  // visibility rather than general edit rights.
+  if (!canSeeFinancials(profile.role_tier))
+    return { error: "You are not allowed to import." };
 
   const allowed = ALLOWED[target];
   if (!allowed) return { error: "Invalid import target." };

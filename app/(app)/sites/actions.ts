@@ -4,6 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/auth";
+import { isAdmin } from "@/lib/types";
 
 const schema = z.object({
   code: z.string().trim().min(1, "Code is required").max(8, "Code too long"),
@@ -13,7 +14,7 @@ const schema = z.object({
 
 async function requireAdmin() {
   const profile = await getProfile();
-  if (profile.role_tier < 3) throw new Error("Only administrators may manage sites.");
+  if (!isAdmin(profile.role_tier)) throw new Error("Only administrators may manage sites.");
 }
 
 export async function createSite(values: Record<string, string>) {

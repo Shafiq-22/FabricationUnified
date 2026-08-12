@@ -7,6 +7,7 @@ import { KpiCard } from "@/components/dashboard/kpi-card";
 import { InspectionsManager, NcrsManager } from "@/components/qa/qa-managers";
 import { CertificatesManager, type CertificateRow } from "@/components/qa/certificates-manager";
 import type { InspectionReport, Ncr } from "@/lib/types";
+import { canEdit as canEditTier, isAdmin } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -16,8 +17,8 @@ type Tab = "inspections" | "ncrs" | "certificates";
 export default async function QaPage({ searchParams }: { searchParams: { tab?: Tab } }) {
   const profile = await getProfile();
   const tab: Tab = searchParams.tab ?? "inspections";
-  const canEdit = profile.role_tier >= 2;
-  const canDelete = profile.role_tier >= 3;
+  const canEdit = canEditTier(profile.role_tier);
+  const canDelete = isAdmin(profile.role_tier);
   const supabase = createClient();
 
   const [

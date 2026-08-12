@@ -4,6 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/auth";
+import { canEdit, isAdmin } from "@/lib/types";
 
 const optNum = z.preprocess(
   (v) => (v === "" || v == null ? undefined : Number(v)),
@@ -41,7 +42,7 @@ const DUP = "An item with this code already exists.";
 
 export async function createInventoryItem(values: Record<string, string>) {
   const profile = await getProfile();
-  if (profile.role_tier < 2) return { error: "Not authorized." };
+  if (!canEdit(profile.role_tier)) return { error: "Not authorized." };
   const parsed = itemSchema.safeParse(values);
   if (!parsed.success) return { error: parsed.error.errors[0]?.message ?? "Invalid input." };
 
@@ -56,7 +57,7 @@ export async function createInventoryItem(values: Record<string, string>) {
 
 export async function updateInventoryItem(id: string, values: Record<string, string>) {
   const profile = await getProfile();
-  if (profile.role_tier < 2) return { error: "Not authorized." };
+  if (!canEdit(profile.role_tier)) return { error: "Not authorized." };
   const parsed = itemSchema.safeParse(values);
   if (!parsed.success) return { error: parsed.error.errors[0]?.message ?? "Invalid input." };
 
@@ -69,7 +70,7 @@ export async function updateInventoryItem(id: string, values: Record<string, str
 
 export async function toggleInventoryItem(id: string, active: boolean) {
   const profile = await getProfile();
-  if (profile.role_tier < 2) return { error: "Not authorized." };
+  if (!canEdit(profile.role_tier)) return { error: "Not authorized." };
   const supabase = createClient();
   const { error } = await supabase.from("inventory_items").update({ active }).eq("id", id);
   if (error) return { error: error.message };
@@ -79,7 +80,7 @@ export async function toggleInventoryItem(id: string, active: boolean) {
 
 export async function deleteInventoryItem(id: string) {
   const profile = await getProfile();
-  if (profile.role_tier < 3) return { error: "Only administrators may delete stock items." };
+  if (!isAdmin(profile.role_tier)) return { error: "Only administrators may delete stock items." };
   const supabase = createClient();
   const { error } = await supabase.from("inventory_items").delete().eq("id", id);
   if (error) return { error: error.message };
@@ -104,7 +105,7 @@ const moveSchema = z.object({
  */
 export async function addMovement(values: Record<string, string>) {
   const profile = await getProfile();
-  if (profile.role_tier < 2) return { error: "Not authorized." };
+  if (!canEdit(profile.role_tier)) return { error: "Not authorized." };
   const parsed = moveSchema.safeParse(values);
   if (!parsed.success) return { error: parsed.error.errors[0]?.message ?? "Invalid input." };
   const v = parsed.data;
@@ -135,7 +136,7 @@ export async function addMovement(values: Record<string, string>) {
 
 export async function deleteMovement(id: string) {
   const profile = await getProfile();
-  if (profile.role_tier < 3) return { error: "Only administrators may delete movements." };
+  if (!isAdmin(profile.role_tier)) return { error: "Only administrators may delete movements." };
   const supabase = createClient();
   const { error } = await supabase.from("inventory_movements").delete().eq("id", id);
   if (error) return { error: error.message };

@@ -5,6 +5,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/auth";
+import { canEdit, isAdmin } from "@/lib/types";
 
 const optNum = z.preprocess(
   (v) => (v === "" || v == null ? undefined : Number(v)),
@@ -15,7 +16,7 @@ const pick = (v: string | undefined) => (v && v !== "none" ? v : null);
 
 async function requireEngineer() {
   const profile = await getProfile();
-  if (profile.role_tier < 2) throw new Error("You are not allowed to edit this.");
+  if (!canEdit(profile.role_tier)) throw new Error("You are not allowed to edit this.");
   return profile;
 }
 
@@ -75,7 +76,7 @@ export async function toggleClientActive(id: string, active: boolean) {
 
 export async function deleteClientRecord(id: string) {
   const profile = await getProfile();
-  if (profile.role_tier < 3) return { error: "Only administrators may delete clients." };
+  if (!isAdmin(profile.role_tier)) return { error: "Only administrators may delete clients." };
   const supabase = createClient();
   const { error } = await supabase.from("clients").delete().eq("id", id);
   if (error) {
@@ -225,7 +226,7 @@ export async function updateProject(id: string, values: Record<string, string>) 
 
 export async function deleteProject(id: string) {
   const profile = await getProfile();
-  if (profile.role_tier < 3) return { error: "Only administrators may delete projects." };
+  if (!isAdmin(profile.role_tier)) return { error: "Only administrators may delete projects." };
   const supabase = createClient();
   const { error } = await supabase
     .from("projects")
@@ -269,7 +270,7 @@ export async function detachJobFromProject(projectId: string, jobId: string) {
 /** Soft-delete the job itself. Administrators only, as on the Jobs tab. */
 export async function deleteJobFromProject(projectId: string, jobId: string) {
   const profile = await getProfile();
-  if (profile.role_tier < 3) return { error: "Only administrators may delete jobs." };
+  if (!isAdmin(profile.role_tier)) return { error: "Only administrators may delete jobs." };
   const supabase = createClient();
   const { error } = await supabase
     .from("jobs")

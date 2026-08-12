@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/auth";
 import { supplierNameFor } from "@/app/(app)/procurement/supplier-actions";
+import { canEdit, isAdmin } from "@/lib/types";
 
 const optNum = z.preprocess(
   (v) => (v === "" || v == null ? undefined : Number(v)),
@@ -57,7 +58,7 @@ function payload(v: z.infer<typeof schema>, supplierName: string | null) {
 
 export async function createConsumable(values: Record<string, string>) {
   const profile = await getProfile();
-  if (profile.role_tier < 2) return { error: "Not authorized." };
+  if (!canEdit(profile.role_tier)) return { error: "Not authorized." };
   const parsed = schema.safeParse(values);
   if (!parsed.success) return { error: parsed.error.errors[0]?.message ?? "Invalid input." };
 
@@ -74,7 +75,7 @@ export async function createConsumable(values: Record<string, string>) {
 
 export async function updateConsumable(id: string, values: Record<string, string>) {
   const profile = await getProfile();
-  if (profile.role_tier < 2) return { error: "Not authorized." };
+  if (!canEdit(profile.role_tier)) return { error: "Not authorized." };
   const parsed = schema.safeParse(values);
   if (!parsed.success) return { error: parsed.error.errors[0]?.message ?? "Invalid input." };
 
@@ -92,7 +93,7 @@ export async function updateConsumable(id: string, values: Record<string, string
 
 export async function deleteConsumable(id: string) {
   const profile = await getProfile();
-  if (profile.role_tier < 3) return { error: "Only administrators may delete." };
+  if (!isAdmin(profile.role_tier)) return { error: "Only administrators may delete." };
   const supabase = createClient();
   const { error } = await supabase
     .from("consumables")

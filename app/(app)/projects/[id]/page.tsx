@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/auth";
-import { canSeeFinancials, PROJECT_STATUSES } from "@/lib/types";
+import { PROJECT_STATUSES, canEdit as canEditTier, canSeeFinancials, isAdmin } from "@/lib/types";
 import { PageHeader } from "@/components/layout/page-header";
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { Badge } from "@/components/ui/badge";
@@ -20,7 +20,7 @@ export const dynamic = "force-dynamic";
 export default async function ProjectPage({ params }: { params: { id: string } }) {
   const profile = await getProfile();
   const showMoney = canSeeFinancials(profile.role_tier);
-  const canEdit = profile.role_tier >= 2;
+  const canEdit = canEditTier(profile.role_tier);
   const supabase = createClient();
 
   const { data: project } = await supabase
@@ -178,7 +178,7 @@ export default async function ProjectPage({ params }: { params: { id: string } }
         }}
         showMoney={showMoney}
         canEdit={canEdit}
-        canDelete={profile.role_tier >= 3}
+        canDelete={isAdmin(profile.role_tier)}
       />
     </div>
   );

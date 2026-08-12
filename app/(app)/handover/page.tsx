@@ -3,6 +3,7 @@ import { getProfile } from "@/lib/auth";
 import { PageHeader } from "@/components/layout/page-header";
 import { HandoverManager } from "@/components/handover/handover-manager";
 import type { HandoverItem, Drawing } from "@/lib/types";
+import { canEdit, isAdmin } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -85,8 +86,8 @@ export default async function HandoverPage() {
           senderName={profile.full_name}
           companyName={cfg.company_name ?? "Six Construct"}
           departmentName={cfg.department_name ?? "Steel Fabrication"}
-          editable={profile.role_tier >= 2}
-          canDelete={profile.role_tier >= 3}
+          editable={canEdit(profile.role_tier)}
+          canDelete={isAdmin(profile.role_tier)}
         />
       </div>
     </div>

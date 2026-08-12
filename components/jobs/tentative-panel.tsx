@@ -1,5 +1,11 @@
 "use client";
 
+import { useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { ArrowLeftRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/lib/hooks/use-toast";
+import { applyTentativeToQuote } from "@/app/(app)/jobs/[id]/worksheet/actions";
 import { formatAED } from "@/lib/utils";
 
 export interface TentativeItem {
@@ -37,12 +43,20 @@ export function TentativePanel({
   items,
   historic,
   inflationPct = 0,
+  jobId,
+  editable = false,
 }: {
   items: TentativeItem[];
   historic: HistoricLookup;
   /** Yearly inflation from Settings, applied to the age of each price. */
   inflationPct?: number;
+  /** Job whose quoted lines the re-priced figures can be written back to. */
+  jobId?: string;
+  editable?: boolean;
 }) {
+  const router = useRouter();
+  const { toast } = useToast();
+  const [applying, startApply] = useTransition();
   const rows = items.map((it) => {
     const h = historic[it.name.trim().toLowerCase()];
     const price = h?.avg ?? h?.last ?? null;
@@ -52,17 +66,60 @@ export function TentativePanel({
     return { ...it, price, adjusted, ageDays: inf?.ageDays ?? null, applied: inf?.applied ?? false, total, matched: !!h };
   });
   const indicative = rows.reduce((s, r) => s + (r.total ?? 0), 0);
+  const applicable = rows.filter((r) => r.adjusted != null);
+
+  const applyToQuote = () => {
+    if (!jobId) return;
+    if (
+      !confirm(
+        `Write these ${applicable.length} re-priced unit cost(s) onto the matching Quotation lines?\n\n` +
+          "Lines with no historic match are left alone.",
+      )
+    )
+      return;
+    startApply(async () => {
+      const res = await applyTentativeToQuote(
+        jobId,
+        applicable.map((r) => ({ name: r.name, kind: r.kind, unitCost: r.adjusted as number })),
+      );
+      if (res.error) {
+        toast({ variant: "destructive", title: "Could not apply", description: res.error });
+      } else {
+        toast({
+          title: "Quotation re-priced",
+          description: `${res.updated ?? 0} line(s) updated from historic prices.`,
+        });
+        router.refresh();
+      }
+    });
+  };
 
   return (
     <div className="panel-surface">
-      <div className="border-b border-panel-border px-3 py-2">
-        <h3 className="text-xs font-semibold uppercase tracking-wide">
-          Tentative Quotation (historic prices)
-        </h3>
-        <p className="text-[11px] text-panel-foreground/60">
-          Indicative unit costs from past procurement, aged forward to today at{" "}
-          {inflationPct}% a year. Prices under a month old are used as they stand.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-2 border-b border-panel-border px-3 py-2">
+        <div>
+          <h3 className="text-xs font-semibold uppercase tracking-wide">
+            Tentative Quotation (historic prices)
+          </h3>
+          <p className="text-[11px] text-panel-foreground/60">
+            Indicative unit costs from past procurement, aged forward to today at{" "}
+            {inflationPct}% a year. Prices under a month old are used as they stand.
+          </p>
+        </div>
+        {editable && jobId && applicable.length > 0 && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-7 shrink-0"
+            disabled={applying}
+            onClick={applyToQuote}
+            title="Write these unit costs onto the matching Quotation lines"
+          >
+            <ArrowLeftRight className="h-3.5 w-3.5" />
+            {applying ? "Applying…" : "Apply to Quotation"}
+          </Button>
+        )}
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-xs tabular">

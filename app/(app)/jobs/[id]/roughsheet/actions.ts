@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/auth";
+import { canEdit } from "@/lib/types";
 
 /**
  * Pre-fill procurement (job_materials) from the rough-sheet order list:
@@ -11,7 +12,7 @@ import { getProfile } from "@/lib/auth";
  */
 export async function copyOrderListToProcurement(jobId: string) {
   const profile = await getProfile();
-  if (profile.role_tier < 2) return { error: "Not authorized." };
+  if (!canEdit(profile.role_tier)) return { error: "Not authorized." };
   const supabase = createClient();
 
   const [{ data: sections }, { data: plates }] = await Promise.all([

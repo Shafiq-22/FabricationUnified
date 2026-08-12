@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/layout/page-header";
 import { ContactsRegistry } from "@/components/contacts/contacts-registry";
 import { ContactsByEntity } from "@/components/contacts/contacts-by-entity";
+import { canEdit as canEditTier, isAdmin } from "@/lib/types";
 import type {
   Contact,
   ContactAssignment,
@@ -25,7 +26,7 @@ export default async function ContactsPage({
 }) {
   const profile = await getProfile();
   const tab: Tab = searchParams.tab ?? "registry";
-  const canEdit = profile.role_tier >= 2;
+  const canEdit = canEditTier(profile.role_tier);
   const supabase = createClient();
 
   const [
@@ -133,7 +134,7 @@ export default async function ContactsPage({
               .map((s) => ({ value: s.id, label: `${s.code} — ${s.name}` }))}
             assignmentCounts={countBy(assignmentRows, (a) => a.contact_id)}
             canEdit={canEdit}
-            canDelete={profile.role_tier >= 3}
+            canDelete={isAdmin(profile.role_tier)}
           />
         ) : (
           <ContactsByEntity

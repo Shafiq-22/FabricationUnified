@@ -24,6 +24,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { JobMaterial, Consumable, HistoricPrice, Supplier } from "@/lib/types";
+import { isAdmin } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -72,7 +73,7 @@ export default async function ProcurementPage({
   const profile = await requireTier(2);
   const tab: Tab = searchParams.tab ?? "procurement";
   const supabase = createClient();
-  const canDelete = profile.role_tier >= 3;
+  const canDelete = isAdmin(profile.role_tier);
 
   const suppliers = await loadSuppliers(supabase);
 

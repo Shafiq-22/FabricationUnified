@@ -176,6 +176,18 @@ export const TIER_DEFAULT_NAMES: Record<Tier, string> = {
   3: "Fabrication Manager",
 };
 
-export const canEdit = (tier: Tier) => tier >= 2;
-export const canSeeFinancials = (tier: Tier) => tier >= 2;
-export const isAdmin = (tier: Tier) => tier === 3;
+/*
+ * Tier model (re-cut in migration 0049, Changes I item 2):
+ *   Tier 1 — full access, including financials, and administrative rights
+ *   Tier 2 — full operational edit, NO financials, may delete only inside a
+ *            job it is assigned to (a job_collaborators match)
+ *   Tier 3 — full access, including financials, and administrative rights
+ *
+ * Tier 2 is now the only restricted tier; 1 and 3 are peers. These three
+ * predicates mirror `auth_can_see_money()` / `auth_is_admin()` in the
+ * database — change them together, and never rely on the UI alone: the
+ * database enforces the same rules independently.
+ */
+export const canEdit = (tier: Tier) => tier >= 1;
+export const canSeeFinancials = (tier: Tier) => tier !== 2;
+export const isAdmin = (tier: Tier) => tier === 1 || tier === 3;

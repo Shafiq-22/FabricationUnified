@@ -7,9 +7,8 @@
 > `CLAUDE QUICK START` + `MACHINE‑READABLE STATE` at the bottom. Keep edits surgical to save
 > tokens: change the lines that changed, don't rewrite the whole file.
 >
-> **Last updated:** after **Changes I (12/08/2026)** — items 1, 3, 4, 5(a) and 6 delivered;
-> item 2 (role model) and item 5(b) (quotation→tentative) are **awaiting the user's answer**,
-> see §19. Migrations 0001–0048 in repo; see **§5 migration bookkeeping**.
+> **Last updated:** after **Changes I (12/08/2026)** — **all six items delivered**, including the
+> re-cut role model (0049). Migrations 0001–0049 in repo; see **§5 migration bookkeeping**.
 
 ---
 
@@ -19,13 +18,12 @@
 - **Stack:** Next.js 14 (App Router) + TypeScript · Supabase (Postgres + Auth + RLS + Realtime + Storage) · Tailwind + shadcn/ui (Radix) · `@react-pdf/renderer` · recharts · exceljs. Deployed on Vercel.
 - **Repo state:** branch is **per-session — read it from `git status`, don't trust a name written here.** Work to date landed on `claude/busy-mccarthy-W0FZV` (through `732a36e`); the audit pass ran on `claude/continuation-md-validation-0anxqi`. Push **only** to the branch the current session was assigned.
 - **Supabase project ref:** `gxupuxysfhmwdvztabtn` (region ap-south-1, **free tier — auto-pauses after ~7 days idle; has paused several times; restore via `restore_project` MCP tool or the dashboard**).
-- **DB migrations:** `supabase/migrations/0001…0048` (48 files). Schema is in sync with live, but the file list and the live migration history are **not 1:1** — see **§5 migration bookkeeping** before counting. New schema work = new numbered migration file **and** apply it live via the Supabase MCP `apply_migration`.
+- **DB migrations:** `supabase/migrations/0001…0049` (49 files, **52 live history rows**). Schema is in sync with live, but the file list and the live migration history are **not 1:1** — see **§5 migration bookkeeping** before counting. New schema work = new numbered migration file **and** apply it live via the Supabase MCP `apply_migration`.
 - **Hard constraint (original + still in force):** **No AI/LLM API calls inside the app.** It is a data‑management tool. All "email" features are `mailto:` drafts, never sent by the app. Notifications are **in‑app only** (bell), by explicit user decision.
-- **Security model (do not break):** 3 tiers. Money columns masked from Tier 1 at the DB level via definer "masking views" (`jobs_view`, `projects_view`, `inventory_items_view`) + column‑level SELECT grants; base‑table row SELECT policies exist too. See **AUTH & SECURITY**.
+- **Security model (do not break):** 3 tiers. Money columns masked from **Tier 2** (0049; it was Tier 1 before) at the DB level via definer "masking views" (`jobs_view`, `projects_view`, `inventory_items_view`) keyed on **`auth_can_see_money()`**; the money columns are additionally revoked from `authenticated` on the base tables, for every tier. See **AUTH & SECURITY**.
 - **Critical files:** `lib/types/index.ts` (aliases + enums), `lib/types/database.ts` (generated types — regenerate after every schema change), `lib/auth.ts`, `lib/supabase/{client,server,middleware}.ts`, `components/ui/table.tsx` (all tables centred + resizable), `lib/email-draft.ts`.
 - **Regression invariant:** after any change touching financials, the recompute must leave existing job quotes byte‑identical. Historically verified values were 2500.00/2750.00/0.1000 etc.; the live DB was renumbered/emptied for testing (0046) so re‑derive current live values before asserting.
-- **EXACT NEXT STEP:** **Changes I (12/08/2026) is part-delivered.** Two items are blocked on the user and nothing else should start until they answer — see §19: (a) **item 2, the role model**, which as written gives Tier 1 *and* Tier 3 everything and moves financials away from Tier 2, inverting the masking predicate, and asks for delete "within assigned project/job" though **no user↔job/project assignment exists in the schema**; (b) **item 5(b)**, quotation→tentative, where Tentative already auto-derives from the quote.
-- **Older note:** There is **no committed pending task** beyond the above. The user drives work via dated `Changes_*.md` uploads. When one arrives: reproduce each reported bug against the live DB first (many "permission" bugs were RLS misconfigurations, not UI bugs), then implement + verify + commit per logical group. If asked to continue with nothing pending, ask the user for the next `Changes.md` or confirm the app is in acceptance.
+- **EXACT NEXT STEP:** There is **no committed pending task.** Changes I (12/08/2026) is fully delivered, including the re-cut role model (0049). Await the next `Changes_*.md`. The user drives work via dated `Changes_*.md` uploads. When one arrives: reproduce each reported bug against the live DB first (many "permission" bugs were RLS misconfigurations, not UI bugs), then implement + verify + commit per logical group. If asked to continue with nothing pending, ask the user for the next `Changes.md` or confirm the app is in acceptance.
 
 ---
 
@@ -37,10 +35,15 @@
 
 **Solution:** A multi‑user web app with per‑tier access, an append‑only audit log on every table, worksheet‑driven financials that recompute deterministically, and DB‑level masking so lower tiers physically cannot read money.
 
-**Users / roles (3 tiers, names are admin‑configurable in `roles_config`):**
-- **Tier 1 — Plant Manager** (default name): read‑only, **no financials at all** (masked at DB).
-- **Tier 2 — Fabrication Engineer**: full operational edit, sees financials, cannot delete.
-- **Tier 3 — Fabrication Manager / admin**: everything incl. soft‑delete, user management, settings.
+**Users / roles (3 tiers, names are admin‑configurable in `roles_config`) — RE‑CUT in 0049:**
+- **Tier 1 — Plant Manager** (default name): **full access, including financials and admin rights.**
+- **Tier 2 — Fabrication Engineer**: full operational edit, **no financials at all** (masked at DB, and the worksheet is hidden entirely); may delete **only within a job it is assigned to**.
+- **Tier 3 — Fabrication Manager / admin**: full access, including financials and admin rights.
+
+**Tier 2 is now the only restricted tier; 1 and 3 are peers.** This is the inverse of the original
+design (where tier 1 was the restricted one) — do not "correct" it back. "Assigned" means a
+`job_collaborators()` match: the job's creator, anyone who commented, staff linked through a
+timesheet, or an explicit watcher.
 
 ---
 
@@ -176,8 +179,10 @@ app/(app)/layout.tsx → getProfile() → redirect to /login if no session / ina
 **Authoritative schema = `supabase/migrations/*.sql` (0001–0047), applied to project `gxupuxysfhmwdvztabtn`.** Regenerate `lib/types/database.ts` after any change (Supabase MCP `generate_typescript_types`; output is large — save to file and copy in).
 
 ### Migration bookkeeping (read before counting)
-The repo has **47 files**; the live `supabase_migrations` history has **48 rows**. Verified during the
-audit: **the schema itself is in sync** — the mismatch is bookkeeping only, from how the work was applied.
+The repo has **49 files**; the live `supabase_migrations` history has **52 rows**. Verified: **the
+schema itself is in sync** — the mismatch is bookkeeping only, from how the work was applied.
+
+Sources of the drift, in order:
 
 - **`0046_renumber_live_codes` is not in the live history at all.** It is pure DML (a one-off code
   renumber), applied via `execute_sql` rather than `apply_migration`, so it never registered. Its
@@ -187,6 +192,11 @@ audit: **the schema itself is in sync** — the mismatch is bookkeeping only, fr
   Both were applied incrementally mid-session and then consolidated into repo file `0041`; their
   content is verified present there (`alter publication supabase_realtime add table notifications`,
   `revoke execute on function job_collaborators`). No action needed.
+
+- **File `0049` was applied as three live rows**: the main body, then
+  `last_admin_guard_covers_tier1` and `revoke_anon_execute_auth_can_see_money`, both written back
+  into the same file after live verification caught them. The file is the authoritative, complete
+  version — re-running it from scratch reproduces the live state.
 
 So: `list_migrations` will never match `ls supabase/migrations` exactly. Compare **schema objects**, not counts.
 
@@ -228,7 +238,23 @@ So: `list_migrations` will never match `ls supabase/migrations` exactly. Compare
 - **Auth:** Supabase email/password. Cookie session refreshed in middleware. `getProfile()` (React‑cached) resolves profile; signs out inactive users. 8‑hour idle logout (`components/layout/inactivity-logout.tsx`, `NEXT_PUBLIC_INACTIVITY_TIMEOUT_MINUTES`).
 - **Admin user creation:** `admin_create_user` / `admin_reset_password` RPCs (SECURITY DEFINER). Manually‑created `auth.users` rows must have `''` (not NULL) for `confirmation_token`, `recovery_token`, `email_change`, `email_change_token_new` or GoTrue login fails (see FAILED APPROACHES / migration 0010).
 - **Tier gating:** UI via `nav.ts` `minTier` + `requireTier()`; **enforced at DB** via RLS. Money masked via definer views + column grants.
-- **RLS soft‑delete rule (critical, learned twice):** Postgres checks the *new* row of an UPDATE against SELECT policies. A SELECT policy of `... and deleted_at is null` makes setting `deleted_at` fail its own policy → 0 rows, silent no‑op. Fixed in 0042 by letting admins see deleted rows: `using ((tier>=N and deleted_at is null) or auth_is_admin())`.
+- **The three predicates (0049) — change these together, never one alone:**
+  | Question | Database | TypeScript (`lib/types/index.ts`) | True for |
+  |---|---|---|---|
+  | May they see money? | `auth_can_see_money()` | `canSeeFinancials(tier)` | tiers 1, 3 |
+  | Are they an administrator? | `auth_is_admin()` | `isAdmin(tier)` | tiers 1, 3 |
+  | May they edit at all? | `auth_user_tier() >= 1` | `canEdit(tier)` | all tiers |
+  | May they act inside this job? | `auth_can_act_on_job(job_id)` | — (DB only) | admins anywhere; tier 2 on collaborator jobs |
+
+  The **12 worksheet tables** (`job_quote_*`, `job_actual_*`, both summaries) are pure cost data, so
+  their policies use `auth_can_see_money()` — tier 2 cannot read them at all, exactly as tier 1
+  could not before. Every other operational table dropped from `>= 2` to `>= 1` so tier 1 is not
+  locked out. `import-actions.ts` writes quotation tables, so it follows **money**, not `canEdit`.
+- **Residue worth knowing:** `labour_rates` and `equipment` carry rates and are still readable by
+  tier 2 (`>= 1`), because timesheets and equipment usage need them. That is unchanged from before
+  and was left alone deliberately — tightening it would break tier 2's operational work. Revisit
+  with the user if "no financials" is meant to cover trade and machine rates too.
+- **RLS soft‑delete rule (critical, learned three times — 0042, then again in 0049):** Postgres checks the *new* row of an UPDATE against SELECT policies. A SELECT policy of `... and deleted_at is null` makes setting `deleted_at` fail its own policy → 0 rows, silent no‑op. Fixed in 0042 by letting admins see deleted rows: `using ((tier>=N and deleted_at is null) or auth_is_admin())`. **0049 hit the same wall giving tier 2 a scoped delete** — the seven job-scoped tables (`documents`, `job_materials`, `consumables`, `handover_items`, `inspection_reports`, `ncrs`, `rfqs`) now also carry `or public.auth_can_act_on_job(job_id)` on SELECT/UPDATE/DELETE, **unqualified by `deleted_at`**, exactly the escape `auth_is_admin()` gets. Verified live: tier 2 soft-deleting on an assigned job affects 1 row; on a foreign job it is refused by name.
 - **RLS filtered‑write rule (critical):** a table with RLS enabled but **no SELECT policy** makes every filtered UPDATE/DELETE match 0 rows (Postgres needs SELECT on WHERE columns). Fixed for `jobs`/`projects` in 0039. If a new masked table is added, it needs a SELECT policy too.
 - **Secrets:** `.env.local` holds the real secrets and is **never committed** (it is git‑ignored). `.env.example` has names only. Server‑only `SUPABASE_SERVICE_ROLE_KEY` lives only in `.env.local` / the Vercel dashboard and is used solely by admin actions — **it is not in any committed file.**
 - **`.env.production` IS committed, deliberately.** It carries only `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` and `NEXT_PUBLIC_INACTIVITY_TIMEOUT_MINUTES` — all `NEXT_PUBLIC_*`, all shipped to the browser anyway, with RLS as the actual security boundary. Committing it keeps production builds reproducible. **Do not put a service‑role key or any non‑public value in it.** (Note `.gitignore` covers `.env`, `.env.local` and `.env.production.local`, but *not* `.env.production` — that is intentional, not an oversight.)
@@ -240,12 +266,18 @@ anything *not* on this list is new and must be resolved.
 | Advisor | Level | Objects | Why it's accepted |
 |---|---|---|---|
 | `security_definer_view` | **ERROR** | `jobs_view`, `projects_view`, `inventory_items_view`, `inventory_low_stock` | Definer is the whole mechanism — it's how money is masked from Tier 1. Making these invoker breaks the security model. |
-| `authenticated_security_definer_function_executable` | WARN | `auth_user_tier`, `auth_is_admin`, `admin_create_user`, `admin_reset_password`, `dashboard_financial_kpis`, `recompute_job_financials`, `recompute_all_jobs` | All are callable by `authenticated` by design. **Audit-verified: every one guards its own tier internally** (`auth_is_admin()` / `auth_user_tier()` / `role_tier` check in the body). The auth helpers must stay executable — RLS policies call them. |
+| `authenticated_security_definer_function_executable` | WARN | `auth_user_tier`, `auth_is_admin`, `auth_can_see_money`, `auth_can_act_on_job`, `admin_create_user`, `admin_reset_password`, `dashboard_financial_kpis`, `recompute_job_financials`, `recompute_all_jobs` | All are callable by `authenticated` by design. **Audit-verified: every one guards its own tier internally** (`auth_is_admin()` / `auth_user_tier()` / `role_tier` check in the body). The auth helpers must stay executable — RLS policies call them. |
 | `rls_enabled_no_policy` | INFO | `job_code_sequences`, `project_code_sequences` | Counter tables. RLS on + no policy = no client access at all, which is the intent; only definer allocators touch them. |
 | `auth_leaked_password_protection` | WARN | Auth config | HaveIBeenPwned check is **disabled**. Not enabled to date — reasonable to turn on in the Supabase dashboard as part of production hardening (see §19 P1). |
 
 `job_collaborators(uuid)` has **EXECUTE revoked** from `authenticated`/`anon` (verified) so it raises no
-advisor. `global_search` is SECURITY **INVOKER**, so RLS applies to it normally.
+advisor — which is why `auth_can_act_on_job()` exists: policies run as the caller, so they cannot
+call `job_collaborators` directly. `global_search` is SECURITY **INVOKER**, so RLS applies normally.
+
+⚠️ **When adding a SECURITY DEFINER function, revoke EXECUTE from `public, anon` explicitly.** A new
+function grants EXECUTE to PUBLIC by default; `auth_can_see_money()` tripped a fresh
+`anon_security_definer_function_executable` **ERROR-adjacent WARN** in 0049 until it was revoked.
+`create or replace` on an *existing* function keeps its ACL, which is why the older helpers were fine.
 
 ---
 
@@ -330,6 +362,8 @@ npx tsc --noEmit            # PRIMARY type gate — run after every change
 | Quotation → Actual transfer | COMPLETE | worksheet/actions `copyQuoteToActual` | replaces Actual, confirms first |
 | In-stock actual material + Actual vs Quoted | COMPLETE | worksheet-panels, 0048 | `from_stock` + `inventory_item_id` |
 | Delete: Contacts / Sites / Labour Rates | COMPLETE | contacts, sites, settings actions | admin-only, in-use guards |
+| Tentative → Quotation re-pricing | COMPLETE | tentative-panel, `applyTentativeToQuote` | name match; unmatched lines untouched |
+| Re-cut tier model (T2 restricted) | COMPLETE | 0049 + `lib/types/index.ts` | see §6 predicate table |
 | Resizable table columns | COMPLETE | ui/table + use-resizable-columns | localStorage per table |
 | Global search | COMPLETE | search/ | `global_search` RPC, SECURITY INVOKER |
 | Email sending | NOT PLANNED | — | mailto: drafts only, by decision |
@@ -457,7 +491,21 @@ Live DB was also **renumbered/cleaned** (0046 + manual): user emptied jobs/proje
 - **P2:** Consider a real notifications page (currently bell‑only); optional welder‑certificate scheduled expiry emails (needs the email decision revisited); consider deleting the now‑dead `app/(app)/clients/page.tsx` redirect and `components/projects/clients-manager.tsx` if nothing links to them.
 - **P3:** Broader test coverage; performance review of dashboard/rollup queries at real data volume.
 
-### Changes I (12/08/2026) — open items, BLOCKED ON THE USER
+### Changes I (12/08/2026) — CLOSED
+
+All six items delivered. Items 2 and 5(b) were settled by the user after the questions below were
+put to them; both answers are recorded here because the reasoning still matters.
+
+- **Item 2 — role model.** Confirmed: tiers 1 and 3 both get everything, tier 2 is the only
+  restricted tier, and "assigned" reuses `job_collaborators()` rather than a new assignment table.
+  Implemented in **0049** (see §6 for the predicate table). The original wording and the risks are
+  kept below since they explain why the change is shaped the way it is.
+- **Item 5(b) — quotation → tentative.** Confirmed: what was wanted is the **reverse** direction —
+  push the re-priced historic figures **back into** the quoted lines. Implemented as
+  `applyTentativeToQuote`, matching on item name, leaving unmatched lines untouched.
+
+<details>
+<summary>Original open-questions write-up (kept for context)</summary>
 
 **Item 2 — role model.** As written: Tier 1 "exclusive access to everything", Tier 2 "full
 operational edit, can't see financials, can delete within assigned project/job", Tier 3
@@ -479,8 +527,11 @@ auto-derives from the quote's Material and Consumable lines and re-prices them f
 other three sections (workforce/equipment/services — none of which have procurement history), or
 push its re-priced figures **back into** the quotation as unit costs. Needs the user to say which.
 
-**EXACT NEXT STEP:** Get answers on items 2 and 5(b) above, then implement. Do not guess at the
-tier model — it is the security boundary. Do not start speculative refactors.
+</details>
+
+**EXACT NEXT STEP:** Await the next `Changes_*.md`. Do not start speculative refactors. If the role
+model comes up again, read §6's predicate table first — the tier numbering is deliberately *not*
+"higher = more access" any more.
 
 ---
 
@@ -499,15 +550,15 @@ project:
   constraints:
     - no AI/LLM calls in app
     - email = mailto drafts only; notifications in-app only
-    - money masked from Tier 1 at DB level
+    - money masked from Tier 2 at DB level (re-cut in 0049; tiers 1 and 3 are peers)
 repository:
   branch: per-session — read from `git status`, not from this file
   branch_history: [claude/busy-mccarthy-W0FZV (through 732a36e), claude/continuation-md-validation-0anxqi (audit pass)]
   clean: true
   head: 732a36e + CONTINUATION.md audit commits
   migrations:
-    files: 0001..0048 (48 in repo)
-    live_history_rows: 49
+    files: 0001..0049 (49 in repo)
+    live_history_rows: 52
     in_sync: true   # schema verified object-by-object; counts differ by design, see section 5
   tests: none
   gates_verified: [tsc --noEmit clean, next build green]
@@ -522,10 +573,7 @@ issues:
     - migration files vs live history counts differ (bookkeeping only)
 next_action:
   priority: P0
-  task: >-
-    Changes I (12/08/2026) part-delivered. BLOCKED on the user for item 2 (role model —
-    inverts the money-masking predicate and needs an assignment concept that does not exist)
-    and item 5b (quotation→tentative — Tentative already auto-derives). See section 19.
+  task: await next Changes.md; reproduce each reported bug against live DB before fixing
 maintenance:
   keep_this_file_updated: true
   update_when: [new migration, new/changed feature, new/resolved bug, changed decision]

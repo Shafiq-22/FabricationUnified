@@ -11,6 +11,7 @@ import {
 } from "@/components/jobs/rough-sheet-editors";
 import { CopyToProcurementButton } from "@/components/jobs/copy-to-procurement-button";
 import { ImportDialog } from "@/components/jobs/import-dialog";
+import { canEdit } from "@/lib/types";
 import {
   Table,
   TableBody,
@@ -28,7 +29,7 @@ export default async function RoughSheetPage({
   params: { id: string };
 }) {
   const profile = await getProfile();
-  const editable = profile.role_tier >= 2;
+  const editable = canEdit(profile.role_tier);
   const supabase = createClient();
 
   const { data: job } = await supabase

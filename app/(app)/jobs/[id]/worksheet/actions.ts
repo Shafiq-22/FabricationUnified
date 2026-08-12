@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/auth";
+import { canSeeFinancials, isAdmin } from "@/lib/types";
 
 // Editable columns per worksheet child table (computed cols are excluded).
 const CHILD_TABLES = {
@@ -67,7 +68,8 @@ export type Row = { id?: string } & Record<string, unknown>;
 
 /**
  * Replace the full set of rows for a job's worksheet child table: upsert the
- * submitted rows and delete any that were removed. Engineer (Tier 2+) only.
+ * submitted rows and delete any that were removed. Restricted to tiers that
+ * may see money, since every worksheet line is a cost.
  */
 export async function replaceJobLines(
   jobId: string,
@@ -75,7 +77,7 @@ export async function replaceJobLines(
   rows: Row[],
 ): Promise<{ error: string | null }> {
   const profile = await getProfile();
-  if (profile.role_tier < 2) return { error: "You are not allowed to edit worksheets." };
+  if (!canSeeFinancials(profile.role_tier)) return { error: "You are not allowed to edit worksheets." };
 
   const allowed = CHILD_TABLES[table];
   if (!allowed) return { error: "Invalid table." };
@@ -148,7 +150,7 @@ export async function copyQuoteToActual(
   jobId: string,
 ): Promise<{ error: string | null; copied?: number }> {
   const profile = await getProfile();
-  if (profile.role_tier < 2) return { error: "You are not allowed to edit worksheets." };
+  if (!canSeeFinancials(profile.role_tier)) return { error: "You are not allowed to edit worksheets." };
 
   const supabase = createClient();
   let copied = 0;
@@ -195,6 +197,68 @@ export async function copyQuoteToActual(
   return { error: null, copied };
 }
 
+/**
+ * Write the Tentative tab's re-priced unit costs back onto the quoted lines,
+ * so a quote can be built from historic pricing in one step instead of being
+ * retyped. Matching is by item name, case- and whitespace-insensitive, which
+ * is the same key the Tentative estimator looks prices up under. Lines with no
+ * historic match are left exactly as they are.
+ *
+ * The prices come from the client because they are the figures the user is
+ * looking at when they press the button. That grants nothing extra — anyone
+ * who can call this could equally type the same unit cost into the table.
+ */
+export async function applyTentativeToQuote(
+  jobId: string,
+  prices: { name: string; kind: "Material" | "Consumable"; unitCost: number }[],
+): Promise<{ error: string | null; updated?: number }> {
+  const profile = await getProfile();
+  if (!canSeeFinancials(profile.role_tier))
+    return { error: "You are not allowed to edit worksheets." };
+
+  const supabase = createClient();
+  const norm = (s: unknown) => String(s ?? "").trim().toLowerCase();
+
+  const wanted = new Map<string, number>();
+  for (const p of prices) {
+    if (!Number.isFinite(p.unitCost) || p.unitCost < 0) continue;
+    wanted.set(`${p.kind}:${norm(p.name)}`, p.unitCost);
+  }
+  if (wanted.size === 0) return { error: "Nothing to apply — no historic prices matched." };
+
+  let updated = 0;
+  const sections = [
+    { table: "job_quote_materials" as const, nameCol: "material_name", kind: "Material" as const },
+    { table: "job_quote_consumables" as const, nameCol: "item_name", kind: "Consumable" as const },
+  ];
+
+  for (const s of sections) {
+    // Selected with "*" rather than a template string: a computed column list
+    // defeats the typed client's parsing of the select expression.
+    const { data, error } = await supabase.from(s.table).select("*").eq("job_id", jobId);
+    if (error) return { error: error.message };
+
+    for (const row of data ?? []) {
+      const r = row as Record<string, unknown>;
+      const price = wanted.get(`${s.kind}:${norm(r[s.nameCol])}`);
+      if (price == null) continue;
+      const { error: updErr } = await supabase
+        .from(s.table)
+        .update({ unit_cost: price })
+        .eq("id", r.id as string);
+      if (updErr) return { error: updErr.message };
+      updated += 1;
+    }
+  }
+
+  await supabase.rpc("recompute_job_financials", { p_job_id: jobId });
+
+  revalidatePath(`/jobs/${jobId}/worksheet`);
+  revalidatePath("/jobs");
+  revalidatePath("/dashboard");
+  return { error: null, updated };
+}
+
 export async function addComment(
   jobId: string,
   body: string,
@@ -234,7 +298,7 @@ export async function deleteComment(jobId: string, commentId: string) {
     .maybeSingle();
   if (readError) return { error: readError.message };
   if (!existing) return { error: "That comment no longer exists." };
-  if (existing.user_id !== profile.id && profile.role_tier < 3)
+  if (existing.user_id !== profile.id && !isAdmin(profile.role_tier))
     return { error: "You can only delete your own comments." };
 
   const { error } = await supabase.from("job_comments").delete().eq("id", commentId);

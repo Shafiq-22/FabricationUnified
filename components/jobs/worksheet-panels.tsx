@@ -403,7 +403,13 @@ export function WorksheetPanels({
 
         {/* TENTATIVE */}
         <TabsContent value="tentative">
-          <TentativePanel items={tentativeItems} historic={historic} inflationPct={inflationPct} />
+          <TentativePanel
+            items={tentativeItems}
+            historic={historic}
+            inflationPct={inflationPct}
+            jobId={jobId}
+            editable={editable}
+          />
         </TabsContent>
 
         {/* ANALYTICS */}

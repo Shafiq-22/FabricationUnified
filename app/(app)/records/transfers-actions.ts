@@ -4,6 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/auth";
+import { canEdit, isAdmin } from "@/lib/types";
 
 const blank = (v: unknown) => (v === "" || v === "none" || v == null ? undefined : v);
 const optStr = z.preprocess(blank, z.string().optional());
@@ -23,7 +24,7 @@ const schema = z.object({
 
 async function requireEditor() {
   const profile = await getProfile();
-  if (profile.role_tier < 2) throw new Error("You are not allowed to raise transfers.");
+  if (!canEdit(profile.role_tier)) throw new Error("You are not allowed to raise transfers.");
   return profile;
 }
 
@@ -105,7 +106,7 @@ export async function setTransferStatus(
 
 export async function deleteTransfer(id: string) {
   const profile = await getProfile();
-  if (profile.role_tier < 3) return { error: "Only administrators may delete transfers." };
+  if (!isAdmin(profile.role_tier)) return { error: "Only administrators may delete transfers." };
   const supabase = createClient();
   const { error } = await supabase.from("personnel_transfers").delete().eq("id", id);
   if (error) return { error: error.message };

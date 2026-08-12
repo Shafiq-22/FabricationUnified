@@ -4,6 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/auth";
+import { canEdit, isAdmin } from "@/lib/types";
 
 const blank = (v: unknown) => (v === "" || v === "none" || v == null ? undefined : v);
 const optStr = z.preprocess(blank, z.string().optional());
@@ -24,7 +25,7 @@ const schema = z.object({
 
 async function requireEditor() {
   const profile = await getProfile();
-  if (profile.role_tier < 2) throw new Error("You are not allowed to edit certificates.");
+  if (!canEdit(profile.role_tier)) throw new Error("You are not allowed to edit certificates.");
   return profile;
 }
 
@@ -74,7 +75,7 @@ export async function updateCertificate(id: string, values: Record<string, strin
 
 export async function deleteCertificate(id: string) {
   const profile = await getProfile();
-  if (profile.role_tier < 3) return { error: "Only administrators may delete certificates." };
+  if (!isAdmin(profile.role_tier)) return { error: "Only administrators may delete certificates." };
   const supabase = createClient();
   const { error } = await supabase
     .from("welder_certificates")

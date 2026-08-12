@@ -5,6 +5,7 @@ import { addMonths, parseISO, format } from "date-fns";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/auth";
+import { canEdit, isAdmin } from "@/lib/types";
 
 const optNum = z.preprocess(
   (v) => (v === "" || v == null ? undefined : Number(v)),
@@ -14,12 +15,12 @@ const optStr = z.preprocess((v) => (v === "" ? undefined : v), z.string().option
 
 async function requireEngineer() {
   const profile = await getProfile();
-  if (profile.role_tier < 2) throw new Error("You are not allowed to edit this.");
+  if (!canEdit(profile.role_tier)) throw new Error("You are not allowed to edit this.");
   return profile;
 }
 async function requireAdmin() {
   const profile = await getProfile();
-  if (profile.role_tier < 3) throw new Error("Only administrators may delete.");
+  if (!isAdmin(profile.role_tier)) throw new Error("Only administrators may delete.");
   return profile;
 }
 

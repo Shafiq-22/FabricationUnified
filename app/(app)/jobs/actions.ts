@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/auth";
+import { canEdit, isAdmin } from "@/lib/types";
 
 export type ActionState = { error: string | null };
 
@@ -28,7 +29,7 @@ export async function createJob(
   formData: FormData,
 ): Promise<ActionState> {
   const profile = await getProfile();
-  if (profile.role_tier < 2) return { error: "You are not allowed to create jobs." };
+  if (!canEdit(profile.role_tier)) return { error: "You are not allowed to create jobs." };
 
   const parsed = createSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
@@ -61,7 +62,7 @@ export async function createJob(
 
 export async function updateJobStatus(jobId: string, status: string) {
   const profile = await getProfile();
-  if (profile.role_tier < 2) return { error: "Not authorized." };
+  if (!canEdit(profile.role_tier)) return { error: "Not authorized." };
   const supabase = createClient();
   const { error } = await supabase.from("jobs").update({ status }).eq("id", jobId);
   if (error) return { error: error.message };
@@ -96,7 +97,7 @@ export async function updateJobDetails(
   values: Record<string, unknown>,
 ) {
   const profile = await getProfile();
-  if (profile.role_tier < 2) return { error: "Not authorized." };
+  if (!canEdit(profile.role_tier)) return { error: "Not authorized." };
   const parsed = detailsSchema.safeParse(values);
   if (!parsed.success) return { error: parsed.error.errors[0]?.message ?? "Invalid input." };
 
@@ -117,7 +118,7 @@ export async function updateJobDetails(
 
 export async function softDeleteJob(jobId: string) {
   const profile = await getProfile();
-  if (profile.role_tier < 3) return { error: "Only administrators may delete jobs." };
+  if (!isAdmin(profile.role_tier)) return { error: "Only administrators may delete jobs." };
   const supabase = createClient();
   const { error } = await supabase
     .from("jobs")

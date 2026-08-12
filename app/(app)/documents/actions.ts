@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/auth";
 import { DOCUMENTS_BUCKET } from "@/lib/storage";
+import { canEdit, isAdmin } from "@/lib/types";
 
 const optStr = z.preprocess((v) => (v === "" ? undefined : v), z.string().optional());
 
@@ -27,7 +28,7 @@ const metaSchema = z.object({
  */
 export async function registerDocument(values: Record<string, unknown>) {
   const profile = await getProfile();
-  if (profile.role_tier < 2) return { error: "Not authorized." };
+  if (!canEdit(profile.role_tier)) return { error: "Not authorized." };
   const parsed = metaSchema.safeParse(values);
   if (!parsed.success) return { error: parsed.error.errors[0]?.message ?? "Invalid input." };
   const v = parsed.data;
@@ -63,7 +64,7 @@ export async function registerDocument(values: Record<string, unknown>) {
 
 export async function updateDocument(id: string, values: Record<string, string>) {
   const profile = await getProfile();
-  if (profile.role_tier < 2) return { error: "Not authorized." };
+  if (!canEdit(profile.role_tier)) return { error: "Not authorized." };
 
   const schema = z.object({
     doc_type: z.enum(["drawing", "requisition", "certificate", "invoice", "po", "inspection_report", "photo", "email", "other"]),
@@ -121,7 +122,7 @@ export async function getViewUrl(filePath: string) {
 /** Soft delete (admin only, enforced again by the guard_soft_delete trigger). */
 export async function deleteDocument(id: string) {
   const profile = await getProfile();
-  if (profile.role_tier < 3) return { error: "Only administrators may delete documents." };
+  if (!isAdmin(profile.role_tier)) return { error: "Only administrators may delete documents." };
   const supabase = createClient();
   const { error } = await supabase
     .from("documents")

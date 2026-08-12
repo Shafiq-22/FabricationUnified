@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { Ruler, ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/auth";
-import { canSeeFinancials, type JobView } from "@/lib/types";
+import { canEdit, canSeeFinancials, isAdmin, type JobView } from "@/lib/types";
 import { fmtDate, daysBetween } from "@/lib/date";
 import { formatAED, formatPercent } from "@/lib/utils";
 import { PageHeader } from "@/components/layout/page-header";
@@ -27,7 +27,7 @@ export default async function WorksheetPage({
   params: { id: string };
 }) {
   const profile = await getProfile();
-  const editable = profile.role_tier >= 2;
+  const editable = canEdit(profile.role_tier);
   const showMoney = canSeeFinancials(profile.role_tier);
   const supabase = createClient();
 
@@ -39,7 +39,8 @@ export default async function WorksheetPage({
   if (!jobRow) notFound();
   const job = jobRow as JobView;
 
-  // Worksheet detail tables are Tier 2+; skip for Viewers.
+  // The worksheet is nothing but cost data, so it is skipped entirely for
+  // tiers that cannot see money (tier 2 under the 0049 model).
   let qm: any[] = [], qw: any[] = [], qc: any[] = [];
   let am: any[] = [], aw: any[] = [], ac: any[] = [];
   let qe: any[] = [], ae: any[] = [], qs: any[] = [], as_: any[] = [];
@@ -258,7 +259,7 @@ export default async function WorksheetPage({
             jobOptions={[{ value: params.id, label: job.job_code ?? "This job" }]}
             uploaderNames={authorNames}
             canEdit={editable}
-            canDelete={profile.role_tier >= 3}
+            canDelete={isAdmin(profile.role_tier)}
             compact
           />
         </section>
@@ -268,7 +269,7 @@ export default async function WorksheetPage({
           initial={comments ?? []}
           authorNames={authorNames}
           currentUserId={profile.id}
-          isAdmin={profile.role_tier >= 3}
+          isAdmin={isAdmin(profile.role_tier)}
           mentionable={mentionable}
           watching={watch?.watching ?? null}
         />

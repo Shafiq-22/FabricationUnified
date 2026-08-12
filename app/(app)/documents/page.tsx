@@ -7,6 +7,7 @@ import { DocumentsFilters } from "@/components/documents/documents-filters";
 import { DocumentsGrouped, type DocGroup } from "@/components/documents/documents-grouped";
 import { fmtDate } from "@/lib/date";
 import type { DocumentRow } from "@/lib/types";
+import { canEdit as canEditTier, isAdmin } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -20,8 +21,8 @@ export default async function DocumentsPage({
   searchParams: { type?: string; job?: string; q?: string; view?: string };
 }) {
   const profile = await getProfile();
-  const canEdit = profile.role_tier >= 2;
-  const canDelete = profile.role_tier >= 3;
+  const canEdit = canEditTier(profile.role_tier);
+  const canDelete = isAdmin(profile.role_tier);
   const view: DocView = VIEWS.includes(searchParams.view as DocView)
     ? (searchParams.view as DocView)
     : "project";

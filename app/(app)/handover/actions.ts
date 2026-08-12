@@ -4,6 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/auth";
+import { canEdit, isAdmin } from "@/lib/types";
 
 const optNum = z.preprocess(
   (v) => (v === "" || v == null ? undefined : Number(v)),
@@ -40,7 +41,7 @@ export async function createHandover(
   values: Record<string, string>,
 ) {
   const profile = await getProfile();
-  if (profile.role_tier < 2) return { error: "Not authorized." };
+  if (!canEdit(profile.role_tier)) return { error: "Not authorized." };
   const parsed = handoverSchema.safeParse(values);
   if (!parsed.success) return { error: parsed.error.errors[0]?.message ?? "Invalid input." };
   const supabase = createClient();
@@ -54,7 +55,7 @@ export async function createHandover(
 
 export async function updateHandover(id: string, values: Record<string, string>) {
   const profile = await getProfile();
-  if (profile.role_tier < 2) return { error: "Not authorized." };
+  if (!canEdit(profile.role_tier)) return { error: "Not authorized." };
   const parsed = handoverSchema.safeParse(values);
   if (!parsed.success) return { error: parsed.error.errors[0]?.message ?? "Invalid input." };
   const supabase = createClient();
@@ -69,7 +70,7 @@ export async function updateHandover(id: string, values: Record<string, string>)
 
 export async function deleteHandover(id: string) {
   const profile = await getProfile();
-  if (profile.role_tier < 3) return { error: "Only administrators may delete." };
+  if (!isAdmin(profile.role_tier)) return { error: "Only administrators may delete." };
   const supabase = createClient();
   const { error } = await supabase
     .from("handover_items")
@@ -89,7 +90,7 @@ const drawingSchema = z.object({
 
 export async function addDrawing(handoverId: string, values: Record<string, string>) {
   const profile = await getProfile();
-  if (profile.role_tier < 2) return { error: "Not authorized." };
+  if (!canEdit(profile.role_tier)) return { error: "Not authorized." };
   const parsed = drawingSchema.safeParse(values);
   if (!parsed.success) return { error: parsed.error.errors[0]?.message ?? "Invalid input." };
   const supabase = createClient();
@@ -107,7 +108,7 @@ export async function addDrawing(handoverId: string, values: Record<string, stri
 
 export async function deleteDrawing(id: string) {
   const profile = await getProfile();
-  if (profile.role_tier < 2) return { error: "Not authorized." };
+  if (!canEdit(profile.role_tier)) return { error: "Not authorized." };
   const supabase = createClient();
   const { error } = await supabase.from("drawings").delete().eq("id", id);
   if (error) return { error: error.message };

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/auth";
-import { canSeeFinancials, type JobView } from "@/lib/types";
+import { canEdit, canSeeFinancials, isAdmin, type JobView } from "@/lib/types";
 import { fmtDate } from "@/lib/date";
 import { formatAED, formatPercent } from "@/lib/utils";
 import { PageHeader } from "@/components/layout/page-header";
@@ -29,7 +29,7 @@ export default async function JobsPage({
 }) {
   const profile = await getProfile();
   const showMoney = canSeeFinancials(profile.role_tier);
-  const canDelete = profile.role_tier >= 3;
+  const canDelete = isAdmin(profile.role_tier);
   const supabase = createClient();
 
   let query = supabase
@@ -61,7 +61,7 @@ export default async function JobsPage({
   return (
     <div>
       <PageHeader title="Jobs Register" description={`${jobs.length} job(s)`}>
-        {profile.role_tier >= 2 && (
+        {canEdit(profile.role_tier) && (
           <NewJobDialog sites={sites ?? []} projects={projectOptions} />
         )}
       </PageHeader>

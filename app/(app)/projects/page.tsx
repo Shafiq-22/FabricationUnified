@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/auth";
-import { canSeeFinancials } from "@/lib/types";
+import { canEdit as canEditTier, canSeeFinancials, isAdmin } from "@/lib/types";
 import { PageHeader } from "@/components/layout/page-header";
 import { ProjectsManager } from "@/components/projects/projects-manager";
 import type { ProjectView } from "@/lib/types";
@@ -11,8 +11,8 @@ export const dynamic = "force-dynamic";
 export default async function ProjectsPage() {
   const profile = await getProfile();
   const showMoney = canSeeFinancials(profile.role_tier);
-  const canEdit = profile.role_tier >= 2;
-  const canDelete = profile.role_tier >= 3;
+  const canEdit = canEditTier(profile.role_tier);
+  const canDelete = isAdmin(profile.role_tier);
   const supabase = createClient();
 
   const [{ data: projects }, { data: clients }, { data: sites }] = await Promise.all([

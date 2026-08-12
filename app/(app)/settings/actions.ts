@@ -4,10 +4,11 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/auth";
+import { isAdmin } from "@/lib/types";
 
 async function requireAdmin() {
   const profile = await getProfile();
-  if (profile.role_tier < 3) throw new Error("Only administrators may change settings.");
+  if (!isAdmin(profile.role_tier)) throw new Error("Only administrators may change settings.");
 }
 
 export async function updateRoleName(tier: number, displayName: string) {

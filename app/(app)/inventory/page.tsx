@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/auth";
-import { canSeeFinancials } from "@/lib/types";
+import { canEdit as canEditTier, canSeeFinancials, isAdmin } from "@/lib/types";
 import { cn, formatAED } from "@/lib/utils";
 import { PageHeader } from "@/components/layout/page-header";
 import { KpiCard } from "@/components/dashboard/kpi-card";
@@ -22,8 +22,8 @@ export default async function InventoryPage({
   const profile = await getProfile();
   const tab: Tab = searchParams.tab ?? "stock";
   const showMoney = canSeeFinancials(profile.role_tier);
-  const canEdit = profile.role_tier >= 2;
-  const canDelete = profile.role_tier >= 3;
+  const canEdit = canEditTier(profile.role_tier);
+  const canDelete = isAdmin(profile.role_tier);
   const supabase = createClient();
 
   const [{ data: itemsRaw }, { data: jobsRaw }] = await Promise.all([

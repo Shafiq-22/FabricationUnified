@@ -16,6 +16,7 @@ import { TransfersManager, type TransferRow } from "@/components/records/transfe
 import { MaintenanceManager } from "@/components/records/maintenance-manager";
 import { TimesheetPdfButton } from "@/components/pdf/timesheet-pdf-button";
 import { EquipmentPdfButton } from "@/components/pdf/equipment-pdf-button";
+import { isAdmin as isAdminTier } from "@/lib/types";
 import type {
   Personnel,
   Equipment,
@@ -36,7 +37,7 @@ export default async function RecordsPage({
 }) {
   const profile = await requireTier(2);
   const tab: Tab = searchParams.tab ?? "timesheet";
-  const isAdmin = profile.role_tier >= 3;
+  const isAdmin = isAdminTier(profile.role_tier);
   const supabase = createClient();
 
   const { data: cfgRows } = await supabase

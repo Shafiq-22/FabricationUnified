@@ -4,6 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/auth";
+import { canEdit, isAdmin } from "@/lib/types";
 
 const optNum = z.preprocess(
   (v) => (v === "" || v == null ? undefined : Number(v)),
@@ -14,7 +15,7 @@ const pick = (v: string | undefined) => (v && v !== "none" ? v : null);
 
 async function requireEngineer() {
   const profile = await getProfile();
-  if (profile.role_tier < 2) throw new Error("You are not allowed to edit this.");
+  if (!canEdit(profile.role_tier)) throw new Error("You are not allowed to edit this.");
   return profile;
 }
 
@@ -66,7 +67,7 @@ export async function updateInspection(id: string, values: Record<string, string
 
 export async function deleteInspection(id: string) {
   const profile = await getProfile();
-  if (profile.role_tier < 3) return { error: "Only administrators may delete inspections." };
+  if (!isAdmin(profile.role_tier)) return { error: "Only administrators may delete inspections." };
   const supabase = createClient();
   const { error } = await supabase
     .from("inspection_reports")
@@ -135,7 +136,7 @@ export async function updateNcr(id: string, values: Record<string, string>) {
 
 export async function deleteNcr(id: string) {
   const profile = await getProfile();
-  if (profile.role_tier < 3) return { error: "Only administrators may delete NCRs." };
+  if (!isAdmin(profile.role_tier)) return { error: "Only administrators may delete NCRs." };
   const supabase = createClient();
   const { error } = await supabase
     .from("ncrs")
@@ -182,7 +183,7 @@ export async function createMaintenance(values: Record<string, string>) {
 
 export async function deleteMaintenance(id: string) {
   const profile = await getProfile();
-  if (profile.role_tier < 3) return { error: "Only administrators may delete maintenance records." };
+  if (!isAdmin(profile.role_tier)) return { error: "Only administrators may delete maintenance records." };
   const supabase = createClient();
   const { error } = await supabase.from("maintenance_records").delete().eq("id", id);
   if (error) return { error: error.message };

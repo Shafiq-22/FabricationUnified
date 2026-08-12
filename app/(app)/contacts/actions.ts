@@ -4,6 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/auth";
+import { canEdit, isAdmin } from "@/lib/types";
 
 const ROLES = [
   "project_incharge",
@@ -30,7 +31,7 @@ const contactSchema = z.object({
 
 async function requireEditor() {
   const profile = await getProfile();
-  if (profile.role_tier < 2) throw new Error("You do not have permission to edit contacts.");
+  if (!canEdit(profile.role_tier)) throw new Error("You do not have permission to edit contacts.");
   return profile;
 }
 
@@ -105,7 +106,7 @@ export async function toggleContactActive(id: string, active: boolean) {
  */
 export async function deleteContact(id: string) {
   const profile = await getProfile();
-  if (profile.role_tier < 3) return { error: "Only administrators may delete contacts." };
+  if (!isAdmin(profile.role_tier)) return { error: "Only administrators may delete contacts." };
 
   const supabase = createClient();
   const { count } = await supabase
