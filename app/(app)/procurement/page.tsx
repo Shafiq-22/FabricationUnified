@@ -49,8 +49,8 @@ type Tab = "procurement" | "consumables" | "suppliers" | "historic";
 async function loadSuppliers(supabase: any) {
   const [{ data: sup }, { data: jm }, { data: cons }] = await Promise.all([
     supabase.from("suppliers").select("*").order("name"),
-    supabase.from("job_materials").select("supplier_id").not("supplier_id", "is", null),
-    supabase.from("consumables").select("supplier_id").not("supplier_id", "is", null),
+    supabase.from("job_materials").select("supplier_id").is("deleted_at", null).not("supplier_id", "is", null),
+    supabase.from("consumables").select("supplier_id").is("deleted_at", null).not("supplier_id", "is", null),
   ]);
   const rows = (sup ?? []) as Supplier[];
   const usageCounts: Record<string, number> = {};
@@ -165,6 +165,7 @@ async function ProcurementSection(
   let query = supabase
     .from("job_materials")
     .select("*")
+    .is("deleted_at", null)
     .order("order_date", { ascending: false, nullsFirst: false })
     .limit(3000);
   if (sp.job) query = query.eq("job_id", sp.job);
@@ -244,7 +245,12 @@ async function ConsumablesSection(
   const grouped = (sp.group ?? "project") !== "flat";
 
   const [{ data }, { data: jobs }, { data: projects }, { data: cfgRows }] = await Promise.all([
-    supabase.from("consumables").select("*").eq("month_year", month).order("order_date", { ascending: false }),
+    supabase
+      .from("consumables")
+      .select("*")
+      .is("deleted_at", null)
+      .eq("month_year", month)
+      .order("order_date", { ascending: false }),
     supabase
       .from("jobs_view")
       .select("id, job_code, description, site_code, project_id")

@@ -32,8 +32,8 @@ export default async function QaPage({ searchParams }: { searchParams: { tab?: T
     { data: cfgRows },
     { data: certFiles },
   ] = await Promise.all([
-      supabase.from("inspection_reports").select("*").order("inspected_at", { ascending: false }).limit(1000),
-      supabase.from("ncrs").select("*").order("raised_at", { ascending: false }).limit(1000),
+      supabase.from("inspection_reports").select("*").is("deleted_at", null).order("inspected_at", { ascending: false }).limit(1000),
+      supabase.from("ncrs").select("*").is("deleted_at", null).order("raised_at", { ascending: false }).limit(1000),
       supabase.from("jobs_view").select("id, job_code").order("created_at", { ascending: false }).limit(2000),
       supabase.from("personnel").select("id, name, trade").eq("active", true).order("name"),
       supabase.from("projects_view").select("id, project_code, name").order("project_code"),

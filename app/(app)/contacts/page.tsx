@@ -132,7 +132,17 @@ export default async function ContactsPage({
             siteOptions={siteRows
               .filter((s) => s.active)
               .map((s) => ({ value: s.id, label: `${s.code} — ${s.name}` }))}
-            assignmentCounts={countBy(assignmentRows, (a) => a.contact_id)}
+            // Counted separately: a person assigned to a project *and* to a job
+            // inside it is two assignments, not two jobs. Lumping them together
+            // under a "Jobs" heading read as double-counting.
+            jobCounts={countBy(
+              assignmentRows.filter((a) => a.job_id),
+              (a) => a.contact_id,
+            )}
+            projectCounts={countBy(
+              assignmentRows.filter((a) => a.project_id),
+              (a) => a.contact_id,
+            )}
             canEdit={canEdit}
             canDelete={isAdmin(profile.role_tier)}
           />

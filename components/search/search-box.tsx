@@ -33,7 +33,7 @@ export function SearchBox({
         value={q}
         autoFocus={autoFocus}
         onChange={(e) => setQ(e.target.value)}
-        placeholder={compact ? "Search…" : "Search jobs, projects, documents, stock, NCRs…"}
+        placeholder={compact ? "Search…" : "Search jobs, projects, people, equipment, documents, stock…"}
         aria-label="Search"
         className={cn("pl-8", compact ? "h-8 w-56 text-xs" : "h-10")}
       />

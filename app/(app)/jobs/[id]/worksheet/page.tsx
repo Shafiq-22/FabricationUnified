@@ -126,6 +126,7 @@ export default async function WorksheetPage({
       .from("documents")
       .select("*")
       .eq("job_id", params.id)
+      .is("deleted_at", null)
       .order("uploaded_at", { ascending: false }),
     // Notes sit outside the money gate: tier 2 cannot see the worksheet but
     // still needs the job's written record.

@@ -31,6 +31,9 @@ export default async function DocumentsPage({
   let query = supabase
     .from("documents")
     .select("*")
+    // Administrators can see soft-deleted rows by policy (0042), so the list
+    // has to exclude them itself or a "deleted" document stays on screen.
+    .is("deleted_at", null)
     .order("uploaded_at", { ascending: false })
     .limit(2000);
   if (searchParams.type) query = query.eq("doc_type", searchParams.type);

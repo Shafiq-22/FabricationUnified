@@ -14,6 +14,7 @@ export default async function HandoverPage() {
   const { data: items } = await supabase
     .from("handover_items")
     .select("*")
+    .is("deleted_at", null)
     .order("created_at", { ascending: false });
   const all = (items ?? []) as HandoverItem[];
   const active = all.filter((i) => i.type === "active");
@@ -22,6 +23,7 @@ export default async function HandoverPage() {
   const { data: drawings } = await supabase
     .from("drawings")
     .select("*")
+    .is("deleted_at", null)
     .order("created_at", { ascending: true });
   const drawingsByHandover: Record<string, Drawing[]> = {};
   (drawings ?? []).forEach((d) => {

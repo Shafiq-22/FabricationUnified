@@ -24,6 +24,11 @@ const KIND_BADGE: Record<string, "qtn" | "inp" | "com" | "del" | "hal" | "second
   Stock: "com",
   Supplier: "secondary",
   NCR: "hal",
+  Contact: "del",
+  Personnel: "com",
+  Equipment: "qtn",
+  Certificate: "inp",
+  Note: "secondary",
   Comment: "secondary",
 };
 
@@ -45,7 +50,11 @@ export default async function SearchPage({
   }
 
   // Group results by kind, preserving a stable display order.
-  const order = ["Job", "Project", "Document", "Stock", "Supplier", "NCR", "Comment"];
+  // Display order; must stay in step with the branches of the global_search RPC.
+  const order = [
+    "Job", "Project", "Contact", "Personnel", "Equipment",
+    "Document", "Certificate", "Stock", "Supplier", "NCR", "Note", "Comment",
+  ];
   const grouped = order
     .map((k) => ({ kind: k, rows: hits.filter((h) => h.kind === k) }))
     .filter((g) => g.rows.length > 0);

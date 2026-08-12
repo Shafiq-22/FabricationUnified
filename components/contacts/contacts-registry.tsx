@@ -36,14 +36,18 @@ export function ContactsRegistry({
   contacts,
   siteNames,
   siteOptions,
-  assignmentCounts,
+  jobCounts,
+  projectCounts,
   canEdit,
   canDelete = false,
 }: {
   contacts: Contact[];
   siteNames: Record<string, string>;
   siteOptions: { value: string; label: string }[];
-  assignmentCounts: Record<string, number>;
+  /** Assignments naming a job, per contact. */
+  jobCounts: Record<string, number>;
+  /** Assignments naming a project, per contact. */
+  projectCounts: Record<string, number>;
   canEdit: boolean;
   canDelete?: boolean;
 }) {
@@ -162,6 +166,7 @@ export function ContactsRegistry({
             <TableHead className="text-center">Site</TableHead>
             <TableHead className="text-center">Contact</TableHead>
             <TableHead className="w-20 text-center">Jobs</TableHead>
+            <TableHead className="w-24 text-center">Projects</TableHead>
             <TableHead className="w-24 text-center">Status</TableHead>
             {canEdit && <TableHead className="w-28" />}
           </TableRow>
@@ -170,7 +175,7 @@ export function ContactsRegistry({
           {filtered.length === 0 && (
             <TableRow>
               <TableCell
-                colSpan={canEdit ? 8 : 7}
+                colSpan={canEdit ? 9 : 8}
                 className="py-8 text-center text-xs text-muted-foreground"
               >
                 No contacts yet. Add project in-charges, requisitioners and procurement
@@ -216,7 +221,10 @@ export function ContactsRegistry({
                 </div>
               </TableCell>
               <TableCell className="text-center text-xs tabular-nums">
-                {assignmentCounts[c.id] ?? 0}
+                {jobCounts[c.id] ?? 0}
+              </TableCell>
+              <TableCell className="text-center text-xs tabular-nums">
+                {projectCounts[c.id] ?? 0}
               </TableCell>
               <TableCell className="text-center">
                 {c.active ? (
