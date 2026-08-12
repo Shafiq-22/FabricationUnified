@@ -13,6 +13,7 @@ import { TentativePanel, type HistoricLookup } from "@/components/jobs/tentative
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ImportDialog } from "@/components/jobs/import-dialog";
 import { SectionMargins, type MarginMap, type OverrideMap } from "@/components/jobs/section-margins";
+import { QuoteActualExportButtons } from "@/components/pdf/quote-actual-export-buttons";
 import {
   replaceJobLines,
   copyQuoteToActual,
@@ -104,6 +105,8 @@ export function WorksheetPanels({
   equipmentOptions,
   stockOptions,
   marginOverrides,
+  companyName,
+  departmentName,
   inflationPct,
 }: {
   job: JobView;
@@ -133,6 +136,9 @@ export function WorksheetPanels({
   stockOptions: { id: string; label: string; unitCost: number | null }[];
   /** This job's own margin per section; missing means inherit from Settings. */
   marginOverrides: OverrideMap;
+  /** Letterhead for the internal quoted-vs-actual export. */
+  companyName: string;
+  departmentName: string;
   inflationPct: number;
 }) {
   const jobId = job.id as string;
@@ -312,6 +318,32 @@ export function WorksheetPanels({
                 </Button>
               </>
             )}
+            <span className="text-xs text-muted-foreground">Quoted vs actual:</span>
+            <QuoteActualExportButtons
+              data={{
+                companyName,
+                departmentName,
+                job: {
+                  job_code: job.job_code,
+                  site_code: job.site_code,
+                  site_name: job.site_name,
+                  description: job.description,
+                  status: job.status,
+                },
+                sections: [
+                  { name: "Material", quoted: mSub, actual: amSub, marginPct: effective.material, overridden: marginOverrides.material != null },
+                  { name: "Workforce", quoted: wSub, actual: awSub, marginPct: effective.workforce, overridden: marginOverrides.workforce != null },
+                  { name: "Consumables", quoted: cSub, actual: acSub, marginPct: effective.consumables, overridden: marginOverrides.consumables != null },
+                  { name: "Equipment", quoted: eSub, actual: aeSub, marginPct: effective.equipment, overridden: marginOverrides.equipment != null },
+                  { name: "Services", quoted: sSub, actual: asSub, marginPct: effective.services, overridden: marginOverrides.services != null },
+                ],
+                totalQuoted: qbm,
+                totalActual: actualCost ?? 0,
+                finalQuote,
+                fromStockValue,
+                generatedOn: new Date().toISOString().slice(0, 10),
+              }}
+            />
           </div>
           {editable && (
             <div className="flex flex-wrap items-center gap-2">

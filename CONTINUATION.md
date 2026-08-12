@@ -7,8 +7,9 @@
 > `CLAUDE QUICK START` + `MACHINE‑READABLE STATE` at the bottom. Keep edits surgical to save
 > tokens: change the lines that changed, don't rewrite the whole file.
 >
-> **Last updated:** after **Changes I (12/08/2026)** — **all six items delivered**, including the
-> re-cut role model (0049). Migrations 0001–0049 in repo; see **§5 migration bookkeeping**.
+> **Last updated:** after **Changes II (12/08/2026)** — all five items delivered, plus a P0 fix to
+> tier guards left inside function bodies by 0049 (see §14). Migrations 0001–0053 in repo; see
+> **§5 migration bookkeeping**.
 
 ---
 
@@ -18,12 +19,12 @@
 - **Stack:** Next.js 14 (App Router) + TypeScript · Supabase (Postgres + Auth + RLS + Realtime + Storage) · Tailwind + shadcn/ui (Radix) · `@react-pdf/renderer` · recharts · exceljs. Deployed on Vercel.
 - **Repo state:** branch is **per-session — read it from `git status`, don't trust a name written here.** Work to date landed on `claude/busy-mccarthy-W0FZV` (through `732a36e`); the audit pass ran on `claude/continuation-md-validation-0anxqi`. Push **only** to the branch the current session was assigned.
 - **Supabase project ref:** `gxupuxysfhmwdvztabtn` (region ap-south-1, **free tier — auto-pauses after ~7 days idle; has paused several times; restore via `restore_project` MCP tool or the dashboard**).
-- **DB migrations:** `supabase/migrations/0001…0049` (49 files, **52 live history rows**). Schema is in sync with live, but the file list and the live migration history are **not 1:1** — see **§5 migration bookkeeping** before counting. New schema work = new numbered migration file **and** apply it live via the Supabase MCP `apply_migration`.
+- **DB migrations:** `supabase/migrations/0001…0053` (53 files, **57 live history rows**). Schema is in sync with live, but the file list and the live migration history are **not 1:1** — see **§5 migration bookkeeping** before counting. New schema work = new numbered migration file **and** apply it live via the Supabase MCP `apply_migration`.
 - **Hard constraint (original + still in force):** **No AI/LLM API calls inside the app.** It is a data‑management tool. All "email" features are `mailto:` drafts, never sent by the app. Notifications are **in‑app only** (bell), by explicit user decision.
 - **Security model (do not break):** 3 tiers. Money columns masked from **Tier 2** (0049; it was Tier 1 before) at the DB level via definer "masking views" (`jobs_view`, `projects_view`, `inventory_items_view`) keyed on **`auth_can_see_money()`**; the money columns are additionally revoked from `authenticated` on the base tables, for every tier. See **AUTH & SECURITY**.
 - **Critical files:** `lib/types/index.ts` (aliases + enums), `lib/types/database.ts` (generated types — regenerate after every schema change), `lib/auth.ts`, `lib/supabase/{client,server,middleware}.ts`, `components/ui/table.tsx` (all tables centred + resizable), `lib/email-draft.ts`.
 - **Regression invariant:** after any change touching financials, the recompute must leave existing job quotes byte‑identical. Historically verified values were 2500.00/2750.00/0.1000 etc.; the live DB was renumbered/emptied for testing (0046) so re‑derive current live values before asserting.
-- **EXACT NEXT STEP:** There is **no committed pending task.** Changes I (12/08/2026) is fully delivered, including the re-cut role model (0049). Await the next `Changes_*.md`. The user drives work via dated `Changes_*.md` uploads. When one arrives: reproduce each reported bug against the live DB first (many "permission" bugs were RLS misconfigurations, not UI bugs), then implement + verify + commit per logical group. If asked to continue with nothing pending, ask the user for the next `Changes.md` or confirm the app is in acceptance.
+- **EXACT NEXT STEP:** There is **no committed pending task.** Changes I and Changes II (both 12/08/2026) are fully delivered. Await the next `Changes_*.md`. The user drives work via dated `Changes_*.md` uploads. When one arrives: reproduce each reported bug against the live DB first (many "permission" bugs were RLS misconfigurations, not UI bugs), then implement + verify + commit per logical group. If asked to continue with nothing pending, ask the user for the next `Changes.md` or confirm the app is in acceptance.
 
 ---
 
@@ -323,8 +324,12 @@ npx tsc --noEmit            # PRIMARY type gate — run after every change
 - **Timesheet costing:** each person costed at their **trade's** `labour_rates` normal/OT rate; the single `timesheet_normal_rate`/`_ot_rate` in settings are fallbacks only (0035). Job description/site/ref autofill from the selected job, never overwriting hand‑typed values.
 - **Notifications:** comment with `@mentions` → only mentioned users; no mentions → all collaborators (creator + commenters + timesheet‑with‑login + explicit watchers) minus author. Mute suppresses broadcasts but not mentions.
 - **Welder certificate expiry:** `cert_expiry_warn_days` (default 7) window; expiring rows get a `mailto:` renewal/expiry draft. Certificates carry scanned documents via `documents.welder_certificate_id` (shared, not copied).
-- **Margin toggle (Quotation tab, 0048 round):** a **display-only** switch. Off = every section shows its cost base and the summary reads "Cost before margin". Nothing is written and `recompute_job_financials` is untouched, so the regression invariant holds. Do not wire this to stored financials without revisiting §17.
+- **Section margins (0051, replacing the Changes I global toggle):** two different things share one panel. The **override** (`jobs.margin_*_pct`, nullable) is stored per job and really does move the quote — `recompute_job_financials` reads `coalesce(job override, app_config default)`, so the fallback lives in the database, not the UI. The **show tick** is a per-section display control that writes nothing. Override columns are money columns: SELECT is not granted on the base table, they are exposed through `jobs_view` behind `auth_can_see_money()`, and only UPDATE is granted. Proven either side of 0051 that a job with no overrides recomputes byte-identically.
 - **Quotation → Actual transfer:** `copyQuoteToActual` copies all five sections and **replaces** the Actual side (the UI confirms first), then recomputes once. Destination-only columns (`from_stock`, `inventory_item_id`) are omitted from the copy so they take their defaults.
+- **Job Notes (0053):** dated, per-job running number, collapsible panel. Numbering **never reuses** — `seq_no` is max+1 across every row for that job including soft-deleted ones, so deleting note 3 leaves a gap rather than renumbering. That is the *opposite* of the job/project code allocators, which deliberately reuse freed numbers: a code names a thing that no longer exists, whereas a numbered note is a reference someone may already have written down. The panel lives on the job page, **not** in the worksheet tabs, because the worksheet is money-gated and tier 2 would never see it. Distinct from `job_comments` — a note is a record, notifies nobody.
+- **Quoted-vs-Actual export (PDF + Excel):** an **internal** cost sheet, deliberately not an extension of the customer quotation PDF (which stays price-only — putting the cost base and margins on it would hand the client your mark-up). Both files are built in the browser with dynamically imported libraries.
+- **Material requests from the worksheet:** Quotation / Actual / Tentative each raise `job_materials` lines. Actual **skips `from_stock` lines** — material off the shelf was never bought, so it is not a purchase request. Lines are appended, never deduplicated: pressing the button twice is a real second request.
+- **Stock issues from the worksheet (0052):** a `from_stock` Actual line raises one `issue` movement keyed to that line (`inventory_movements.job_actual_material_id`, unique), so re-saving updates instead of stacking. `quantity_on_hand` is **fully derived** — `recompute_inventory_on_hand` re-sums the whole ledger and the trigger fires on DELETE too, so deleting the line gives the steel back by itself. The unique index must **not** be partial: `ON CONFLICT` cannot infer a predicate PostgREST does not send.
 - **In-stock actual material (0048):** `job_actual_materials.from_stock` + `inventory_item_id`. Picking a stock item prices the line at the item's carried `unit_cost` (only when the cell is still empty, so a typed figure is never overwritten) and implies `from_stock`; unticking clears the item. The Actual tab shows an **Actual vs Quoted** table per section with the stock-drawn share called out. Quotation lines deliberately have no such columns — a quote is a price regardless of where the steel later comes from.
 
 ---
@@ -358,12 +363,16 @@ npx tsc --noEmit            # PRIMARY type gate — run after every change
 | Handover + transfer notice draft | COMPLETE | handover/ | |
 | Records: timesheet, equipment, maintenance, transfers, master lists | COMPLETE | records/ | |
 | In‑app notifications + @mentions + watch | COMPLETE | notification-bell, comments-thread | in‑app only |
-| Margin on/off toggle (Quotation) | COMPLETE | worksheet-panels | display only, nothing written |
+| Per-section margins, per job | COMPLETE | section-margins, 0051 | override drives the real quote; show-tick is display only |
 | Quotation → Actual transfer | COMPLETE | worksheet/actions `copyQuoteToActual` | replaces Actual, confirms first |
 | In-stock actual material + Actual vs Quoted | COMPLETE | worksheet-panels, 0048 | `from_stock` + `inventory_item_id` |
 | Delete: Contacts / Sites / Labour Rates | COMPLETE | contacts, sites, settings actions | admin-only, in-use guards |
 | Tentative → Quotation re-pricing | COMPLETE | tentative-panel, `applyTentativeToQuote` | name match; unmatched lines untouched |
 | Re-cut tier model (T2 restricted) | COMPLETE | 0049 + `lib/types/index.ts` | see §6 predicate table |
+| Job Notes (dated, numbered, collapsible) | COMPLETE | job-notes, 0053 | outside the money gate — tier 2 sees it |
+| Quoted-vs-Actual export (PDF + Excel) | COMPLETE | pdf/quote-actual-* | INTERNAL sheet, separate from the client quotation |
+| Material request from worksheet tabs | COMPLETE | worksheet actions | quotation / actual / tentative |
+| Stock issues raised from Actual lines | COMPLETE | 0052 | one movement per line, keyed and idempotent |
 | Resizable table columns | COMPLETE | ui/table + use-resizable-columns | localStorage per table |
 | Global search | COMPLETE | search/ | `global_search` RPC, SECURITY INVOKER |
 | Email sending | NOT PLANNED | — | mailto: drafts only, by decision |
@@ -558,8 +567,8 @@ repository:
   clean: true
   head: 732a36e + CONTINUATION.md audit commits
   migrations:
-    files: 0001..0049 (49 in repo)
-    live_history_rows: 52
+    files: 0001..0053 (53 in repo)
+    live_history_rows: 57
     in_sync: true   # schema verified object-by-object; counts differ by design, see section 5
   tests: none
   gates_verified: [tsc --noEmit clean, next build green]

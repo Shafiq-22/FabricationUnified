@@ -11,6 +11,7 @@ import { JobStatusControl } from "@/components/jobs/job-status-control";
 import { WorksheetPanels } from "@/components/jobs/worksheet-panels";
 import { JobMetaForm } from "@/components/jobs/job-meta-form";
 import { CommentsThread } from "@/components/jobs/comments-thread";
+import { JobNotes, type JobNote } from "@/components/jobs/job-notes";
 import { QuotationPdfButton } from "@/components/pdf/quotation-pdf-button";
 import { DocumentUpload } from "@/components/documents/document-upload";
 import { DocumentsTable } from "@/components/documents/documents-table";
@@ -115,7 +116,7 @@ export default async function WorksheetPage({
     });
   }
 
-  const [{ data: comments }, { data: docs }] = await Promise.all([
+  const [{ data: comments }, { data: docs }, { data: notes }] = await Promise.all([
     supabase
       .from("job_comments")
       .select("*")
@@ -126,6 +127,14 @@ export default async function WorksheetPage({
       .select("*")
       .eq("job_id", params.id)
       .order("uploaded_at", { ascending: false }),
+    // Notes sit outside the money gate: tier 2 cannot see the worksheet but
+    // still needs the job's written record.
+    supabase
+      .from("job_notes")
+      .select("id, seq_no, body, created_by, created_at")
+      .eq("job_id", params.id)
+      .is("deleted_at", null)
+      .order("seq_no", { ascending: false }),
   ]);
 
   const [{ data: users }, { data: watch }] = await Promise.all([
@@ -229,6 +238,8 @@ export default async function WorksheetPage({
             equipment: job.margin_equipment_pct ?? null,
             services: job.margin_services_pct ?? null,
           }}
+          companyName={companyName}
+          departmentName={departmentName}
           inflationPct={Number(cfg.inflation_rate_pct ?? 0)}
         />
       ) : (
@@ -270,6 +281,14 @@ export default async function WorksheetPage({
             compact
           />
         </section>
+        <JobNotes
+          jobId={params.id}
+          notes={(notes ?? []) as JobNote[]}
+          authorNames={authorNames}
+          currentUserId={profile.id}
+          isAdmin={isAdmin(profile.role_tier)}
+          editable={editable}
+        />
         <JobMetaForm job={job} editable={editable} />
         <CommentsThread
           jobId={params.id}
