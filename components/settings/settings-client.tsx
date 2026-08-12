@@ -58,6 +58,8 @@ export function SettingsClient({
   inflationPct,
   certWarnDays,
   certNotifyEmail,
+  standardStart,
+  standardEnd,
 }: {
   roles: RoleConfig[];
   company: string;
@@ -71,6 +73,8 @@ export function SettingsClient({
   inflationPct: number;
   certWarnDays: number;
   certNotifyEmail: string;
+  standardStart: string;
+  standardEnd: string;
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -121,6 +125,8 @@ export function SettingsClient({
           inflationPct={inflationPct}
           certWarnDays={certWarnDays}
           certNotifyEmail={certNotifyEmail}
+          standardStart={standardStart}
+          standardEnd={standardEnd}
           pending={pending}
           onSave={(v) => run(() => updateTimesheetRates(v), "Timesheet rates saved")}
         />
@@ -353,6 +359,8 @@ function TimesheetRatesForm({
   inflationPct,
   certWarnDays,
   certNotifyEmail,
+  standardStart,
+  standardEnd,
   onSave,
   pending,
 }: {
@@ -360,6 +368,8 @@ function TimesheetRatesForm({
   inflationPct: number;
   certWarnDays: number;
   certNotifyEmail: string;
+  standardStart: string;
+  standardEnd: string;
   onSave: (v: Record<string, string>) => void;
   pending: boolean;
 }) {
@@ -368,8 +378,30 @@ function TimesheetRatesForm({
   const [inf, setInf] = useState(String(inflationPct));
   const [certDays, setCertDays] = useState(String(certWarnDays));
   const [certEmail, setCertEmail] = useState(certNotifyEmail);
+  const [start, setStart] = useState(standardStart);
+  const [end, setEnd] = useState(standardEnd);
   return (
     <div className="space-y-4">
+      <div className="space-y-2">
+        <Label className="text-[10px] uppercase text-muted-foreground">
+          Standard working hours
+        </Label>
+        <div className="flex items-end gap-2">
+          <div className="space-y-1">
+            <Label className="text-[10px] uppercase text-muted-foreground">Start</Label>
+            <Input type="time" value={start} onChange={(e) => setStart(e.target.value)} className="h-8 w-28 text-sm" />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-[10px] uppercase text-muted-foreground">End</Label>
+            <Input type="time" value={end} onChange={(e) => setEnd(e.target.value)} className="h-8 w-28 text-sm" />
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Applied to every timesheet line, so the shift no longer has to be typed against
+          each person. Hours worked are still entered per person as Normal and O/T.
+        </p>
+      </div>
+
       <div className="space-y-2">
         <Label className="text-[10px] uppercase text-muted-foreground">
           Yearly inflation (%)
@@ -446,6 +478,8 @@ function TimesheetRatesForm({
             inflation_rate_pct: inf,
             cert_expiry_warn_days: certDays,
             cert_expiry_notify_email: certEmail,
+            standard_start_time: start,
+            standard_end_time: end,
           })
         }
       >

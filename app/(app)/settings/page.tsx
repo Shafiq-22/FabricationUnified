@@ -69,6 +69,8 @@ export default async function SettingsPage({
             }}
             inflationPct={Number(cfg.inflation_rate_pct ?? 10)}
             certWarnDays={Number(cfg.cert_expiry_warn_days ?? 7)}
+            standardStart={cfg.standard_start_time ?? "07:00"}
+            standardEnd={cfg.standard_end_time ?? "17:00"}
             certNotifyEmail={cfg.cert_expiry_notify_email ?? ""}
           />
         )}

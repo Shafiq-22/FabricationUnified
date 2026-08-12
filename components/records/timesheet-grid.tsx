@@ -41,6 +41,7 @@ const cellCss =
 
 export function TimesheetGrid({
   date, personnel, entries, editable, normalRate, otRate, rateByTrade, jobs, sites,
+  standardStart, standardEnd,
 }: {
   date: string;
   personnel: Personnel[];
@@ -52,6 +53,9 @@ export function TimesheetGrid({
   rateByTrade?: Record<string, { normal: number; ot: number }>;
   jobs: JobOption[];
   sites: SiteOption[];
+  /** The shop's standard shift from Settings, applied to every line. */
+  standardStart: string;
+  standardEnd: string;
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -120,7 +124,10 @@ export function TimesheetGrid({
         return {
           personnel_id: p.id,
           job_id: c.job_id || null,
-          begin_time: c.begin_time, end_time: c.end_time,
+          // Written from the standard shift, not typed per person. The columns
+          // stay so the timesheet PDF still prints a shift and historic rows
+          // keep whatever was really typed at the time.
+          begin_time: standardStart, end_time: standardEnd,
           normal_hours: c.normal_hours === "" ? null : Number(c.normal_hours),
           ot_hours: c.ot_hours === "" ? null : Number(c.ot_hours),
           site: c.site, job_description: c.job_description, job_ref: c.job_ref,
@@ -154,7 +161,7 @@ export function TimesheetGrid({
         <table className="w-full text-xs tabular">
           <thead>
             <tr className="header-band border-b border-border">
-              {["#", "HO No", "Name", "Trade", "Begin", "End", "Nor", "O/T", "T~Hrs", "Site", "Job Name", "Job Description", "Job Ref"].map((h) => (
+              {["#", "HO No", "Name", "Trade", "Hours", "Nor", "O/T", "T~Hrs", "Site", "Job Name", "Job Description", "Job Ref"].map((h) => (
                 <th key={h} className="px-2 py-1.5 text-left font-semibold uppercase">{h}</th>
               ))}
               <th className="px-2 py-1.5 text-right font-semibold uppercase">Cost</th>
@@ -170,11 +177,12 @@ export function TimesheetGrid({
                   <td className="px-2 py-0.5 code-chip">{p.ho_no}</td>
                   <td className="whitespace-nowrap px-2 py-0.5">{p.name}</td>
                   <td className="px-2 py-0.5 text-muted-foreground">{p.trade}</td>
-                  {(["begin_time", "end_time"] as const).map((k) => (
-                    <td key={k} className="px-0.5 py-0.5">
-                      <input disabled={!editable} value={c[k]} onChange={(e) => set(p.id, k, e.target.value)} className={`${cellCss} w-16`} placeholder="--:--" />
-                    </td>
-                  ))}
+                  <td
+                    className="whitespace-nowrap px-2 py-0.5 text-muted-foreground"
+                    title="Standard working hours, set in Settings"
+                  >
+                    {standardStart}–{standardEnd}
+                  </td>
                   {(["normal_hours", "ot_hours"] as const).map((k) => (
                     <td key={k} className="px-0.5 py-0.5">
                       <input type="number" step="0.5" disabled={!editable} value={c[k]} onChange={(e) => set(p.id, k, e.target.value)} className={`${cellCss} w-14 text-right`} />

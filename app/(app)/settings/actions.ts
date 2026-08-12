@@ -95,6 +95,10 @@ const tsRatesSchema = z.object({
   inflation_rate_pct: z.coerce.number().min(0).max(100),
   cert_expiry_warn_days: z.coerce.number().int().min(1).max(365),
   cert_expiry_notify_email: z.string().trim(),
+  // The shop works a standard day; the timesheet applies these to every line
+  // instead of asking for a begin and an end against each person.
+  standard_start_time: z.string().trim().regex(/^\d{2}:\d{2}$/, "Use HH:MM, e.g. 07:00"),
+  standard_end_time: z.string().trim().regex(/^\d{2}:\d{2}$/, "Use HH:MM, e.g. 17:00"),
 });
 
 export async function updateTimesheetRates(values: Record<string, string>) {
@@ -113,6 +117,8 @@ export async function updateTimesheetRates(values: Record<string, string>) {
       { key: "inflation_rate_pct", value: String(parsed.data.inflation_rate_pct) },
       { key: "cert_expiry_warn_days", value: String(parsed.data.cert_expiry_warn_days) },
       { key: "cert_expiry_notify_email", value: parsed.data.cert_expiry_notify_email },
+      { key: "standard_start_time", value: parsed.data.standard_start_time },
+      { key: "standard_end_time", value: parsed.data.standard_end_time },
     ],
     { onConflict: "key" },
   );

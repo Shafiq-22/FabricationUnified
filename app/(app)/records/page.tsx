@@ -77,7 +77,11 @@ export default async function RecordsPage({
           ? await TransfersTab(supabase, profile.role_tier)
           : tab === "manage"
             ? await ManageTab(supabase, isAdmin)
-          : await TimesheetTab(supabase, searchParams, rates, rateByTrade, company, department);
+          : await TimesheetTab(
+              supabase, searchParams, rates, rateByTrade, company, department,
+              cfg.standard_start_time ?? "07:00",
+              cfg.standard_end_time ?? "17:00",
+            );
 
   return (
     <div>
@@ -139,6 +143,8 @@ async function TimesheetTab(
   rateByTrade: Record<string, { normal: number; ot: number }>,
   company: string,
   department: string,
+  standardStart: string,
+  standardEnd: string,
 ) {
   const view = sp.view === "monthly" ? "monthly" : "daily";
 
@@ -222,6 +228,8 @@ async function TimesheetTab(
         rateByTrade={rateByTrade}
         jobs={jobs}
         sites={sites}
+        standardStart={standardStart}
+        standardEnd={standardEnd}
       />
     </div>
   );
