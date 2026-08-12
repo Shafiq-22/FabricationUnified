@@ -44,6 +44,18 @@ export interface RollupRow {
   jobs: string[];
 }
 
+/** One worksheet material line, kept unmerged for the "All lines" view. */
+export interface MaterialLine {
+  id: string;
+  side: "Quoted" | "Actual";
+  jobCode: string;
+  name: string;
+  detail: string | null;
+  qty: number;
+  unitCost: number;
+  total: number;
+}
+
 export interface ProjectJob {
   id: string;
   job_code: string | null;
@@ -66,6 +78,7 @@ export function ProjectDetail({
   jobs,
   availableJobs,
   materials,
+  materialLines,
   consumables,
   workforce,
   documents,
@@ -79,6 +92,8 @@ export function ProjectDetail({
   jobs: ProjectJob[];
   availableJobs: any[];
   materials: RollupRow[];
+  /** Every material line, ungrouped. */
+  materialLines: MaterialLine[];
   consumables: RollupRow[];
   workforce: RollupRow[];
   documents: any[];
@@ -163,7 +178,11 @@ export function ProjectDetail({
           />
         )}
         {tab === "materials" && (
-          <RollupTable rows={materials} showMoney={showMoney} unitLabel="Qty" />
+          <MaterialsPanel
+            rollup={materials}
+            lines={materialLines}
+            showMoney={showMoney}
+          />
         )}
         {tab === "consumables" && (
           <RollupTable rows={consumables} showMoney={showMoney} unitLabel="Qty" />
@@ -314,6 +333,101 @@ function JobsTable({
           )}
         </TableBody>
       </Table>
+    </div>
+  );
+}
+
+/**
+ * Materials for a project, either merged by item or line by line.
+ *
+ * The rollup answers "how much steel does this project need"; it merges every
+ * line sharing a name, which hides which job each came from and how many
+ * separate entries there were. "All lines" is the default because that is the
+ * view that was asked for — the grouped one is still a click away.
+ */
+function MaterialsPanel({
+  rollup,
+  lines,
+  showMoney,
+}: {
+  rollup: RollupRow[];
+  lines: MaterialLine[];
+  showMoney: boolean;
+}) {
+  const [grouped, setGrouped] = useState(false);
+  const n = (v: number) => (v ? v.toLocaleString("en-AE", { maximumFractionDigits: 2 }) : "—");
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          type="button"
+          size="sm"
+          variant={grouped ? "outline" : "default"}
+          className="h-7"
+          onClick={() => setGrouped(false)}
+        >
+          All lines ({lines.length})
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant={grouped ? "default" : "outline"}
+          className="h-7"
+          onClick={() => setGrouped(true)}
+        >
+          Grouped by item ({rollup.length})
+        </Button>
+      </div>
+
+      {grouped ? (
+        <RollupTable rows={rollup} showMoney={showMoney} unitLabel="Qty" />
+      ) : lines.length === 0 ? (
+        <Empty>Nothing recorded on the worksheets of this project&apos;s jobs yet.</Empty>
+      ) : (
+        <div className="border border-border bg-card">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="text-center">Job</TableHead>
+                <TableHead className="text-center">Side</TableHead>
+                <TableHead className="text-center">Material</TableHead>
+                <TableHead className="text-center">Detail</TableHead>
+                <TableHead className="text-center">Qty</TableHead>
+                {showMoney && <TableHead className="text-center">Unit Cost</TableHead>}
+                {showMoney && <TableHead className="text-center">Total</TableHead>}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {lines.map((l) => (
+                <TableRow key={`${l.side}-${l.id}`}>
+                  <TableCell className="text-center">
+                    <span className="code-chip text-steel">{l.jobCode}</span>
+                  </TableCell>
+                  <TableCell className="text-center text-xs">
+                    <Badge variant={l.side === "Actual" ? "com" : "qtn"}>{l.side}</Badge>
+                  </TableCell>
+                  <TableCell className="text-xs font-medium">{l.name}</TableCell>
+                  <TableCell className="text-center text-xs text-muted-foreground">
+                    {l.detail ?? "—"}
+                  </TableCell>
+                  <TableCell className="text-right tabular text-xs">{n(l.qty)}</TableCell>
+                  {showMoney && (
+                    <TableCell className="text-right tabular text-xs">
+                      {formatAED(l.unitCost)}
+                    </TableCell>
+                  )}
+                  {showMoney && (
+                    <TableCell className="text-right tabular text-xs">
+                      {formatAED(l.total)}
+                    </TableCell>
+                  )}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
     </div>
   );
 }

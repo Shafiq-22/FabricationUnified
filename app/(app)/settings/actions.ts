@@ -53,6 +53,11 @@ const marginsSchema = z.object({
   material_margin: z.coerce.number().min(0).max(1000),
   workforce_margin: z.coerce.number().min(0).max(1000),
   consumables_margin: z.coerce.number().min(0).max(1000),
+  // Equipment and services margins have existed in app_config since 0034 and
+  // have always driven recompute_job_financials; Settings just never exposed
+  // them, so they could only be changed by editing the table directly.
+  equipment_margin: z.coerce.number().min(0).max(1000),
+  services_margin: z.coerce.number().min(0).max(1000),
 });
 
 export async function updateMargins(values: Record<string, string>) {
@@ -69,11 +74,14 @@ export async function updateMargins(values: Record<string, string>) {
       { key: "material_margin", value: String(parsed.data.material_margin) },
       { key: "workforce_margin", value: String(parsed.data.workforce_margin) },
       { key: "consumables_margin", value: String(parsed.data.consumables_margin) },
+      { key: "equipment_margin", value: String(parsed.data.equipment_margin) },
+      { key: "services_margin", value: String(parsed.data.services_margin) },
     ],
     { onConflict: "key" },
   );
   if (error) return { error: error.message };
-  // Re-derive every job's quote/final/P&L with the new margins.
+  // Re-price in-progress jobs that have no per-job override; the scoping
+  // lives in recompute_all_jobs (0057), not here.
   await supabase.rpc("recompute_all_jobs");
   revalidatePath("/settings");
   revalidatePath("/jobs");

@@ -60,6 +60,8 @@ export default async function SettingsPage({
               material: Number(cfg.material_margin ?? 15),
               workforce: Number(cfg.workforce_margin ?? 15),
               consumables: Number(cfg.consumables_margin ?? 15),
+              equipment: Number(cfg.equipment_margin ?? cfg.material_margin ?? 15),
+              services: Number(cfg.services_margin ?? cfg.material_margin ?? 15),
             }}
             timesheetRates={{
               normal: Number(cfg.timesheet_normal_rate ?? 30),

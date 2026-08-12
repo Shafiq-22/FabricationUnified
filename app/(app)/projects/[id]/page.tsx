@@ -12,7 +12,7 @@ import { formatAED } from "@/lib/utils";
 import { fmtDate } from "@/lib/date";
 import { ProjectDetail } from "@/components/projects/project-detail";
 import type { ProjectView } from "@/lib/types";
-import type { RollupRow, ProjectJob } from "@/components/projects/project-detail";
+import type { RollupRow, ProjectJob, MaterialLine } from "@/components/projects/project-detail";
 
 export const dynamic = "force-dynamic";
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -54,6 +54,7 @@ export default async function ProjectPage({ params }: { params: { id: string } }
 
   // Roll-ups across every job in the project. Empty project => skip the reads.
   let materials: RollupRow[] = [];
+  let materialLines: MaterialLine[] = [];
   let consumables: RollupRow[] = [];
   let workforce: RollupRow[] = [];
   let documents: any[] = [];
@@ -78,6 +79,27 @@ export default async function ProjectPage({ params }: { params: { id: string } }
       ]);
 
     materials = rollup(qm ?? [], am ?? [], jobCodes, "material_name", (r) => r.dimension ?? r.unit);
+    // Ungrouped view: every line as entered, so a material appearing on three
+    // jobs reads as three rows rather than one merged total.
+    const toLine = (r: any, side: "Quoted" | "Actual"): MaterialLine => ({
+      id: r.id as string,
+      side,
+      jobCode: jobCodes[r.job_id] ?? "—",
+      name: String(r.material_name ?? "").trim() || "—",
+      detail: r.dimension ?? r.unit ?? null,
+      qty: Number(r.qty ?? 0),
+      unitCost: Number(r.unit_cost ?? 0),
+      total: Number(r.total_cost ?? 0),
+    });
+    materialLines = [
+      ...(qm ?? []).map((r: any) => toLine(r, "Quoted")),
+      ...(am ?? []).map((r: any) => toLine(r, "Actual")),
+    ].sort(
+      (a, b) =>
+        a.jobCode.localeCompare(b.jobCode) ||
+        a.side.localeCompare(b.side) ||
+        a.name.localeCompare(b.name),
+    );
     consumables = rollup(qc ?? [], ac ?? [], jobCodes, "item_name", (r) => r.unit);
     workforce = rollupWorkforce(qw ?? [], aw ?? [], jobCodes);
     documents = docs ?? [];
@@ -163,6 +185,7 @@ export default async function ProjectPage({ params }: { params: { id: string } }
         jobs={jobs as ProjectJob[]}
         availableJobs={(freeJobs ?? []) as any[]}
         materials={materials}
+        materialLines={materialLines}
         consumables={consumables}
         workforce={workforce}
         documents={documents}

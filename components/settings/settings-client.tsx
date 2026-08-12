@@ -63,7 +63,10 @@ export function SettingsClient({
   company: string;
   department: string;
   rates: LabourRate[];
-  margins: { material: number; workforce: number; consumables: number };
+  margins: {
+    material: number; workforce: number; consumables: number;
+    equipment: number; services: number;
+  };
   timesheetRates: { normal: number; ot: number };
   inflationPct: number;
   certWarnDays: number;
@@ -108,7 +111,7 @@ export function SettingsClient({
         <MarginsForm
           margins={margins}
           pending={pending}
-          onSave={(v) => run(() => updateMargins(v), "Margins saved — jobs recomputed")}
+          onSave={(v) => run(() => updateMargins(v), "Margins saved — in-progress jobs re-priced")}
         />
       </Card>
 
@@ -284,18 +287,25 @@ function MarginsForm({
   onSave,
   pending,
 }: {
-  margins: { material: number; workforce: number; consumables: number };
+  margins: {
+    material: number; workforce: number; consumables: number;
+    equipment: number; services: number;
+  };
   onSave: (v: Record<string, string>) => void;
   pending: boolean;
 }) {
   const [m, setM] = useState(String(margins.material));
   const [w, setW] = useState(String(margins.workforce));
   const [c, setC] = useState(String(margins.consumables));
+  const [e, setE] = useState(String(margins.equipment));
+  const [sv, setSv] = useState(String(margins.services));
   return (
     <div className="space-y-3">
       <p className="text-xs text-muted-foreground">
         Applied to every job&apos;s quote: section Total = Sub-total × (1 + margin %).
-        Saving recomputes all jobs.
+        Saving re-prices <strong>in-progress jobs only</strong>, and skips any job whose
+        margins were set by hand on the job itself. Quoted, completed, delivered and
+        halted jobs keep the figures they were priced at.
       </p>
       <div className="grid grid-cols-3 gap-2">
         <div className="space-y-1">
@@ -308,13 +318,29 @@ function MarginsForm({
         </div>
         <div className="space-y-1">
           <Label className="text-[10px] uppercase text-muted-foreground">Consumables</Label>
-          <Input type="number" step="0.1" value={c} onChange={(e) => setC(e.target.value)} className="h-8 text-sm" />
+          <Input type="number" step="0.1" value={c} onChange={(ev) => setC(ev.target.value)} className="h-8 text-sm" />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-[10px] uppercase text-muted-foreground">Equipment</Label>
+          <Input type="number" step="0.1" value={e} onChange={(ev) => setE(ev.target.value)} className="h-8 text-sm" />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-[10px] uppercase text-muted-foreground">Services</Label>
+          <Input type="number" step="0.1" value={sv} onChange={(ev) => setSv(ev.target.value)} className="h-8 text-sm" />
         </div>
       </div>
       <Button
         size="sm"
         disabled={pending}
-        onClick={() => onSave({ material_margin: m, workforce_margin: w, consumables_margin: c })}
+        onClick={() =>
+          onSave({
+            material_margin: m,
+            workforce_margin: w,
+            consumables_margin: c,
+            equipment_margin: e,
+            services_margin: sv,
+          })
+        }
       >
         <Save className="h-3.5 w-3.5" /> Save Margins
       </Button>

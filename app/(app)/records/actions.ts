@@ -12,6 +12,8 @@ const optNum = z.preprocess(
   z.number().optional(),
 );
 const optStr = z.preprocess((v) => (v === "" ? undefined : v), z.string().optional());
+/** Selects submit the sentinel "none" for an empty choice; store that as NULL. */
+const pick = (v: string | undefined) => (v && v !== "none" ? v : null);
 
 async function requireEngineer() {
   const profile = await getProfile();
@@ -29,6 +31,12 @@ const personSchema = z.object({
   ho_no: optStr,
   name: z.string().trim().min(1, "Name is required"),
   trade: optStr,
+  // The form has collected these three since the Position/Site columns were
+  // added, and the table renders them — but they were missing from this schema,
+  // so zod stripped them and every save silently discarded the values.
+  site_id: optStr,
+  welder_qualification: optStr,
+  qualification_expiry: optStr,
 });
 
 export async function addPersonnel(values: Record<string, string>) {
@@ -41,6 +49,9 @@ export async function addPersonnel(values: Record<string, string>) {
     ho_no: parsed.data.ho_no ?? null,
     name: parsed.data.name,
     trade: parsed.data.trade ?? null,
+    site_id: pick(parsed.data.site_id),
+    welder_qualification: parsed.data.welder_qualification ?? null,
+    qualification_expiry: parsed.data.qualification_expiry ?? null,
     created_by: profile.id,
   });
   if (error) return { error: error.message };
@@ -57,6 +68,9 @@ export async function updatePersonnel(id: string, values: Record<string, string>
     ho_no: parsed.data.ho_no ?? null,
     name: parsed.data.name,
     trade: parsed.data.trade ?? null,
+    site_id: pick(parsed.data.site_id),
+    welder_qualification: parsed.data.welder_qualification ?? null,
+    qualification_expiry: parsed.data.qualification_expiry ?? null,
   }).eq("id", id);
   if (error) return { error: error.message };
   revalidatePath("/records");
