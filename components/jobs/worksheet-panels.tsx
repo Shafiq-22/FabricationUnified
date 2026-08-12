@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Percent, ArrowRightLeft } from "lucide-react";
+import { Percent, ArrowRightLeft, ClipboardCopy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/lib/hooks/use-toast";
 import { EditableTable } from "@/components/jobs/editable-table";
@@ -12,9 +12,11 @@ import { AnalyticsPanel } from "@/components/jobs/analytics-panel";
 import { TentativePanel, type HistoricLookup } from "@/components/jobs/tentative-panel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ImportDialog } from "@/components/jobs/import-dialog";
+import { SectionMargins, type MarginMap, type OverrideMap } from "@/components/jobs/section-margins";
 import {
   replaceJobLines,
   copyQuoteToActual,
+  copyWorksheetToProcurement,
   type Row,
 } from "@/app/(app)/jobs/[id]/worksheet/actions";
 import { formatAED } from "@/lib/utils";
@@ -101,6 +103,7 @@ export function WorksheetPanels({
   actualServices,
   equipmentOptions,
   stockOptions,
+  marginOverrides,
   inflationPct,
 }: {
   job: JobView;
@@ -128,6 +131,8 @@ export function WorksheetPanels({
   equipmentOptions: { id: string; label: string; bare: number; driver: number }[];
   /** Stock an Actual material line can be drawn from, with its carried cost. */
   stockOptions: { id: string; label: string; unitCost: number | null }[];
+  /** This job's own margin per section; missing means inherit from Settings. */
+  marginOverrides: OverrideMap;
   inflationPct: number;
 }) {
   const jobId = job.id as string;
@@ -153,11 +158,37 @@ export function WorksheetPanels({
     return null;
   };
 
-  // Cost-control view: with margins off the Quotation tab shows the bare cost
-  // base instead of the marked-up figures. Display only — nothing is written,
-  // so the stored quote and the margins in Settings are untouched.
-  const [showMargins, setShowMargins] = useState(true);
-  const withMargin = (pct: number) => (showMargins ? pct : null);
+  // Per-section cost-control view. Each section can have its mark-up hidden
+  // independently; this is display only and writes nothing. The margin values
+  // themselves are the job's overrides falling back to the Settings defaults.
+  const [shown, setShown] = useState({
+    material: true, workforce: true, consumables: true, equipment: true, services: true,
+  });
+  const effective: MarginMap = {
+    material: marginOverrides.material ?? margins.material,
+    workforce: marginOverrides.workforce ?? margins.workforce,
+    consumables: marginOverrides.consumables ?? margins.consumables,
+    equipment: marginOverrides.equipment ?? margins.equipment,
+    services: marginOverrides.services ?? margins.services,
+  };
+  const withMargin = (section: keyof MarginMap) =>
+    shown[section] ? effective[section] : null;
+  const showMargins = Object.values(shown).some(Boolean);
+
+  const requestMaterials = (source: "quotation" | "actual" | "tentative") => {
+    startTransfer(async () => {
+      const res = await copyWorksheetToProcurement(jobId, source);
+      if (res.error) {
+        toast({ variant: "destructive", title: "Could not raise request", description: res.error });
+      } else {
+        toast({
+          title: "Sent to Procurement",
+          description: `${res.count ?? 0} material request line(s) raised from ${source}.`,
+        });
+        router.refresh();
+      }
+    });
+  };
 
   const transferToActual = () => {
     if (
@@ -239,36 +270,47 @@ export function WorksheetPanels({
 
         {/* QUOTATION */}
         <TabsContent value="quotation" className="space-y-4">
+          <SectionMargins
+            jobId={jobId}
+            defaults={margins}
+            overrides={marginOverrides}
+            shown={shown}
+            onShownChange={setShown}
+            editable={editable}
+          />
+          {!showMargins && (
+            <p className="text-xs text-amber">
+              Some sections are showing cost before margin — display only, nothing is saved.
+            </p>
+          )}
           <div className="flex flex-wrap items-center gap-2">
-            <Button
-              type="button"
-              variant={showMargins ? "outline" : "default"}
-              size="sm"
-              className="h-7"
-              onClick={() => setShowMargins((v) => !v)}
-              title="Show the cost base without margins, for cost control"
-            >
-              <Percent className="h-3.5 w-3.5" />
-              Margins: {showMargins ? "On" : "Off"}
-            </Button>
-            {!showMargins && (
-              <span className="text-xs text-amber">
-                Showing cost before margin — display only, nothing is saved.
-              </span>
-            )}
             {editable && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-7"
-                disabled={transferring}
-                onClick={transferToActual}
-                title="Copy every quoted line into the Actual tab"
-              >
-                <ArrowRightLeft className="h-3.5 w-3.5" />
-                {transferring ? "Copying…" : "Copy to Actual"}
-              </Button>
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7"
+                  disabled={transferring}
+                  onClick={transferToActual}
+                  title="Copy every quoted line into the Actual tab"
+                >
+                  <ArrowRightLeft className="h-3.5 w-3.5" />
+                  {transferring ? "Copying…" : "Copy to Actual"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7"
+                  disabled={transferring}
+                  onClick={() => requestMaterials("quotation")}
+                  title="Raise Job Material Request lines in Procurement from the quoted MTO"
+                >
+                  <ClipboardCopy className="h-3.5 w-3.5" />
+                  Job Material Request
+                </Button>
+              </>
             )}
           </div>
           {editable && (
@@ -289,7 +331,7 @@ export function WorksheetPanels({
             editable={editable}
             onSave={save("job_quote_materials")}
             computeTotal={(r) => Number(r.qty || 0) * Number(r.unit_cost || 0)}
-            marginPct={withMargin(margins.material)}
+            marginPct={withMargin("material")}
             groupBy="part_ref"
           />
           <WorkforceEditor
@@ -299,7 +341,7 @@ export function WorksheetPanels({
             rows={quoteWorkforce}
             editable={editable}
             rates={rates}
-            marginPct={withMargin(margins.workforce)}
+            marginPct={withMargin("workforce")}
           />
           <EditableTable
             title="Consumables"
@@ -308,7 +350,7 @@ export function WorksheetPanels({
             editable={editable}
             onSave={save("job_quote_consumables")}
             computeTotal={(r) => Number(r.qty || 0) * Number(r.unit_cost || 0)}
-            marginPct={withMargin(margins.consumables)}
+            marginPct={withMargin("consumables")}
             groupBy="part_ref"
           />
           <EquipmentTable
@@ -317,7 +359,7 @@ export function WorksheetPanels({
             options={equipmentOptions}
             editable={editable}
             onSave={save("job_quote_equipment")}
-            marginPct={withMargin(margins.equipment)}
+            marginPct={withMargin("equipment")}
           />
           <EditableTable
             title="Service Charges"
@@ -326,7 +368,7 @@ export function WorksheetPanels({
             editable={editable}
             onSave={save("job_quote_services")}
             computeTotal={(r) => Number(r.qty || 0) * Number(r.unit_cost || 0)}
-            marginPct={withMargin(margins.services)}
+            marginPct={withMargin("services")}
             groupBy="part_ref"
             emptyHint="Bought-in work: galvanising, NDT, blasting, transport…"
           />
@@ -342,6 +384,25 @@ export function WorksheetPanels({
 
         {/* ACTUAL (cost only, no margin) */}
         <TabsContent value="actual" className="space-y-4">
+          {editable && (
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-7"
+                disabled={transferring}
+                onClick={() => requestMaterials("actual")}
+                title="Raise Job Material Request lines from what was actually used (stock-drawn lines are skipped)"
+              >
+                <ClipboardCopy className="h-3.5 w-3.5" />
+                Job Material Request
+              </Button>
+              <span className="text-xs text-muted-foreground">
+                Lines marked In Stock are skipped — they were not bought for this job.
+              </span>
+            </div>
+          )}
           <EditableTable
             title="Actual Material MTO"
             columns={actualMatCols(stockOptions)}

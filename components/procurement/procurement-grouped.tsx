@@ -1,8 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ChevronDown, ChevronRight, ExternalLink, Mail } from "lucide-react";
+import { ChevronDown, ChevronRight, ExternalLink, Mail, Trash2 } from "lucide-react";
+import { deleteJobMaterial } from "@/app/(app)/procurement/actions";
+import { deleteConsumable } from "@/app/(app)/consumables/actions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -57,6 +60,8 @@ export function ProcurementGrouped({
   companyName,
   departmentName,
   emptyLabel = "No material records match these filters.",
+  canDelete = false,
+  kind = "material",
 }: {
   buckets: ProjectBucket[];
   supplierEmails: Record<string, string>;
@@ -64,6 +69,10 @@ export function ProcurementGrouped({
   companyName: string;
   departmentName: string;
   emptyLabel?: string;
+  /** Grouped is the default view, so it carries the row actions too. */
+  canDelete?: boolean;
+  /** Which register these rows came from — decides the delete to call. */
+  kind?: "material" | "consumable";
 }) {
   const [open, setOpen] = useState<Record<string, boolean>>(() =>
     buckets.length > 0 ? { [buckets[0].projectCode]: true } : {},
@@ -122,6 +131,8 @@ export function ProcurementGrouped({
                     senderName={senderName}
                     companyName={companyName}
                     departmentName={departmentName}
+                    canDelete={canDelete}
+                    kind={kind}
                   />
                 ))}
               </div>
@@ -140,6 +151,8 @@ function JobPanel({
   senderName,
   companyName,
   departmentName,
+  canDelete,
+  kind,
 }: {
   job: JobBucket;
   projectCode: string | null;
@@ -147,8 +160,25 @@ function JobPanel({
   senderName: string;
   companyName: string;
   departmentName: string;
+  canDelete: boolean;
+  kind: "material" | "consumable";
 }) {
   const { toast } = useToast();
+  const router = useRouter();
+  const [pending, start] = useTransition();
+
+  const remove = (id: string, label: string) => {
+    if (!confirm(`Delete "${label}" from this job?`)) return;
+    start(async () => {
+      const res = kind === "consumable" ? await deleteConsumable(id) : await deleteJobMaterial(id);
+      if (res.error)
+        toast({ variant: "destructive", title: "Could not delete", description: res.error });
+      else {
+        toast({ title: "Deleted", description: label });
+        router.refresh();
+      }
+    });
+  };
 
   // A draft asks for what has not arrived yet; delivered lines are history.
   const outstanding = useMemo(
@@ -250,6 +280,7 @@ function JobPanel({
             <TableHead>Ordered</TableHead>
             <TableHead>Delivered</TableHead>
             <TableHead>Total</TableHead>
+            {canDelete && <TableHead className="w-8" />}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -282,6 +313,19 @@ function JobPanel({
               <TableCell className="text-right tabular text-xs">
                 {formatAED(r.total_price)}
               </TableCell>
+              {canDelete && (
+                <TableCell className="px-1">
+                  <button
+                    type="button"
+                    disabled={pending}
+                    onClick={() => remove(r.id, r.item_name ?? "this line")}
+                    className="text-muted-foreground hover:text-destructive disabled:opacity-40"
+                    title="Delete line"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </TableCell>
+              )}
             </TableRow>
           ))}
         </TableBody>

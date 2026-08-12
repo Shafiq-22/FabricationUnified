@@ -2,10 +2,13 @@
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeftRight } from "lucide-react";
+import { ArrowLeftRight, ClipboardCopy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/lib/hooks/use-toast";
-import { applyTentativeToQuote } from "@/app/(app)/jobs/[id]/worksheet/actions";
+import {
+  applyTentativeToQuote,
+  copyWorksheetToProcurement,
+} from "@/app/(app)/jobs/[id]/worksheet/actions";
 import { formatAED } from "@/lib/utils";
 
 export interface TentativeItem {
@@ -94,6 +97,30 @@ export function TentativePanel({
     });
   };
 
+  const requestMaterials = () => {
+    if (!jobId) return;
+    startApply(async () => {
+      // Send the figures on screen, so the request carries the same indicative
+      // prices the user is reading rather than the stale quoted ones.
+      const res = await copyWorksheetToProcurement(
+        jobId,
+        "tentative",
+        applicable
+          .filter((r) => r.kind === "Material")
+          .map((r) => ({ name: r.name, unitCost: r.adjusted as number })),
+      );
+      if (res.error) {
+        toast({ variant: "destructive", title: "Could not raise request", description: res.error });
+      } else {
+        toast({
+          title: "Sent to Procurement",
+          description: `${res.count ?? 0} material request line(s) raised at tentative prices.`,
+        });
+        router.refresh();
+      }
+    });
+  };
+
   return (
     <div className="panel-surface">
       <div className="flex flex-wrap items-start justify-between gap-2 border-b border-panel-border px-3 py-2">
@@ -107,18 +134,32 @@ export function TentativePanel({
           </p>
         </div>
         {editable && jobId && applicable.length > 0 && (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="h-7 shrink-0"
-            disabled={applying}
-            onClick={applyToQuote}
-            title="Write these unit costs onto the matching Quotation lines"
-          >
-            <ArrowLeftRight className="h-3.5 w-3.5" />
-            {applying ? "Applying…" : "Apply to Quotation"}
-          </Button>
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-7"
+              disabled={applying}
+              onClick={applyToQuote}
+              title="Write these unit costs onto the matching Quotation lines"
+            >
+              <ArrowLeftRight className="h-3.5 w-3.5" />
+              {applying ? "Applying…" : "Apply to Quotation"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-7"
+              disabled={applying}
+              onClick={requestMaterials}
+              title="Raise Job Material Request lines in Procurement at these tentative prices"
+            >
+              <ClipboardCopy className="h-3.5 w-3.5" />
+              Job Material Request
+            </Button>
+          </div>
         )}
       </div>
       <div className="overflow-x-auto">

@@ -259,6 +259,150 @@ export async function applyTentativeToQuote(
   return { error: null, updated };
 }
 
+/**
+ * Raise Job Material Request lines in Procurement from a worksheet section.
+ *
+ * The rough sheet has had this since it was built; the worksheet tabs had no
+ * route to Procurement at all, so a quoted or actually-used material had to be
+ * retyped. Sources differ only in where the lines and prices come from:
+ *   quotation — the quoted MTO, at its quoted unit cost
+ *   actual    — what was really used, at its actual cost, skipping anything
+ *               drawn from stock (that was never bought, so it is not a request)
+ *   tentative — the quoted MTO at the re-priced historic figures the user is
+ *               looking at, passed in the same way applyTentativeToQuote does
+ *
+ * Lines are appended, never deduplicated against what Procurement already
+ * holds: pressing this twice is a real second request, and silently swallowing
+ * it would hide that.
+ */
+export async function copyWorksheetToProcurement(
+  jobId: string,
+  source: "quotation" | "actual" | "tentative",
+  tentativePrices?: { name: string; unitCost: number }[],
+): Promise<{ error: string | null; count?: number }> {
+  const profile = await getProfile();
+  if (!canSeeFinancials(profile.role_tier))
+    return { error: "You are not allowed to read the worksheet." };
+
+  const supabase = createClient();
+  const table = source === "actual" ? "job_actual_materials" : "job_quote_materials";
+
+  const { data, error } = await supabase
+    .from(table)
+    .select("*")
+    .eq("job_id", jobId)
+    .order("seq_no");
+  if (error) return { error: error.message };
+
+  const norm = (s: unknown) => String(s ?? "").trim().toLowerCase();
+  const priceFor = new Map(
+    (tentativePrices ?? []).map((p) => [norm(p.name), p.unitCost]),
+  );
+
+  const today = new Date().toISOString().slice(0, 10);
+  const rows = (data ?? [])
+    .map((row) => {
+      const r = row as Record<string, unknown>;
+      // Material already on the shelf was not purchased for this job.
+      if (source === "actual" && r.from_stock === true) return null;
+
+      const name = String(r.material_name ?? "").trim();
+      if (!name) return null;
+
+      const unitCost =
+        source === "tentative"
+          ? priceFor.get(norm(name)) ?? Number(r.unit_cost ?? 0)
+          : Number(r.unit_cost ?? 0);
+      const qty = r.qty == null ? null : Number(r.qty);
+
+      return {
+        job_id: jobId,
+        request_date: today,
+        item_name: name,
+        dimension: (r.dimension as string) ?? null,
+        unit: (r.unit as string) ?? null,
+        qty,
+        unit_price: Number.isFinite(unitCost) && unitCost > 0 ? unitCost : null,
+        total_price:
+          qty != null && Number.isFinite(unitCost) && unitCost > 0 ? qty * unitCost : null,
+        created_by: profile.id,
+      };
+    })
+    .filter(Boolean);
+
+  if (rows.length === 0) {
+    return {
+      error:
+        source === "actual"
+          ? "Nothing to request — the Actual materials are empty, or every line came from stock."
+          : "Nothing to request — add Material MTO lines first.",
+    };
+  }
+
+  const { error: insErr } = await supabase.from("job_materials").insert(rows as never);
+  if (insErr) return { error: insErr.message };
+
+  revalidatePath("/procurement");
+  revalidatePath(`/jobs/${jobId}/worksheet`);
+  return { error: null, count: rows.length };
+}
+
+/** The five costed sections, in the order the Quotation tab shows them. */
+export const MARGIN_SECTIONS = [
+  { key: "material", column: "margin_material_pct", label: "Material" },
+  { key: "workforce", column: "margin_workforce_pct", label: "Workforce" },
+  { key: "consumables", column: "margin_consumables_pct", label: "Consumables" },
+  { key: "equipment", column: "margin_equipment_pct", label: "Equipment" },
+  { key: "services", column: "margin_services_pct", label: "Services" },
+] as const;
+
+export type MarginSection = (typeof MARGIN_SECTIONS)[number]["key"];
+
+/**
+ * Set this job's own margin per section. A null (blank) entry clears the
+ * override so the section falls back to the Settings default — that fallback
+ * lives in recompute_job_financials, not here, so the database stays the one
+ * authority on what a job is worth.
+ *
+ * Unlike the old display-only toggle this really does move the quote, so it
+ * recomputes and revalidates the job lists and dashboard afterwards.
+ */
+export async function setJobMargins(
+  jobId: string,
+  overrides: Partial<Record<MarginSection, number | null>>,
+): Promise<{ error: string | null }> {
+  const profile = await getProfile();
+  if (!canSeeFinancials(profile.role_tier))
+    return { error: "You are not allowed to change margins." };
+
+  const patch: Record<string, number | null> = {};
+  for (const s of MARGIN_SECTIONS) {
+    if (!(s.key in overrides)) continue;
+    const v = overrides[s.key];
+    if (v == null) {
+      patch[s.column] = null;
+      continue;
+    }
+    if (!Number.isFinite(v) || v < -100 || v > 1000)
+      return { error: `${s.label} margin must be a percentage between -100 and 1000.` };
+    patch[s.column] = v;
+  }
+  if (Object.keys(patch).length === 0) return { error: "Nothing to save." };
+
+  const supabase = createClient();
+  // Column names are built from MARGIN_SECTIONS, so the typed client cannot
+  // narrow the patch shape — same cast the other dynamic writes here use.
+  const { error } = await supabase.from("jobs").update(patch as never).eq("id", jobId);
+  if (error) return { error: error.message };
+
+  await supabase.rpc("recompute_job_financials", { p_job_id: jobId });
+
+  revalidatePath(`/jobs/${jobId}/worksheet`);
+  revalidatePath("/jobs");
+  revalidatePath("/dashboard");
+  return { error: null };
+}
+
 export async function addComment(
   jobId: string,
   body: string,

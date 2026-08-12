@@ -220,6 +220,8 @@ async function ProcurementSection(
             senderName={senderName}
             companyName={cfg.company_name ?? "Six Construct"}
             departmentName={cfg.department_name ?? "Steel Fabrication"}
+            canDelete={canDelete}
+            kind="material"
           />
         ) : (
           <ProcurementManager rows={rows} jobOptions={jobOptions} jobCodes={jobCodes} editable={editable} canDelete={canDelete} supplierOptions={supplierOptions} />
@@ -278,6 +280,8 @@ async function ConsumablesSection(
             companyName={cfg.company_name ?? "Six Construct"}
             departmentName={cfg.department_name ?? "Steel Fabrication"}
             emptyLabel="No consumables recorded this month."
+            canDelete={canDelete}
+            kind="consumable"
           />
         ) : (
           <ConsumablesManager

@@ -1931,6 +1931,11 @@ export type Database = {
           job_code: string | null
           lpo_ref: string | null
           margin: number
+          margin_consumables_pct: number | null
+          margin_equipment_pct: number | null
+          margin_material_pct: number | null
+          margin_services_pct: number | null
+          margin_workforce_pct: number | null
           pl_percentage: number | null
           profit_loss: number | null
           project_id: string | null
@@ -1962,6 +1967,11 @@ export type Database = {
           job_code?: string | null
           lpo_ref?: string | null
           margin?: number
+          margin_consumables_pct?: number | null
+          margin_equipment_pct?: number | null
+          margin_material_pct?: number | null
+          margin_services_pct?: number | null
+          margin_workforce_pct?: number | null
           pl_percentage?: number | null
           profit_loss?: number | null
           project_id?: string | null
@@ -1993,6 +2003,11 @@ export type Database = {
           job_code?: string | null
           lpo_ref?: string | null
           margin?: number
+          margin_consumables_pct?: number | null
+          margin_equipment_pct?: number | null
+          margin_material_pct?: number | null
+          margin_services_pct?: number | null
+          margin_workforce_pct?: number | null
           pl_percentage?: number | null
           profit_loss?: number | null
           project_id?: string | null
@@ -3224,6 +3239,11 @@ export type Database = {
           job_code: string | null
           lpo_ref: string | null
           margin: number | null
+          margin_consumables_pct: number | null
+          margin_equipment_pct: number | null
+          margin_material_pct: number | null
+          margin_services_pct: number | null
+          margin_workforce_pct: number | null
           pl_percentage: number | null
           profit_loss: number | null
           project_id: string | null
@@ -3362,6 +3382,8 @@ export type Database = {
         Args: { p_password: string; p_user_id: string }
         Returns: undefined
       }
+      auth_can_act_on_job: { Args: { p_job_id: string }; Returns: boolean }
+      auth_can_see_money: { Args: never; Returns: boolean }
       auth_is_admin: { Args: never; Returns: boolean }
       auth_user_tier: { Args: never; Returns: number }
       cfg_num: { Args: { p_default: number; p_key: string }; Returns: number }

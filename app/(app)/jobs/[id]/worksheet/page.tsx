@@ -222,6 +222,13 @@ export default async function WorksheetPage({
           actualServices={as_}
           equipmentOptions={equipmentOptions}
           stockOptions={stockOptions}
+          marginOverrides={{
+            material: job.margin_material_pct ?? null,
+            workforce: job.margin_workforce_pct ?? null,
+            consumables: job.margin_consumables_pct ?? null,
+            equipment: job.margin_equipment_pct ?? null,
+            services: job.margin_services_pct ?? null,
+          }}
           inflationPct={Number(cfg.inflation_rate_pct ?? 0)}
         />
       ) : (
