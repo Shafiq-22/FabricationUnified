@@ -97,6 +97,40 @@ export async function toggleContactActive(id: string, active: boolean) {
   return { error: null };
 }
 
+/**
+ * Remove a contact outright. Deactivating keeps them out of the pickers while
+ * preserving history, so that stays the softer option offered alongside this;
+ * a contact still assigned to a job or project is refused rather than dragging
+ * its assignments out with it.
+ */
+export async function deleteContact(id: string) {
+  const profile = await getProfile();
+  if (profile.role_tier < 3) return { error: "Only administrators may delete contacts." };
+
+  const supabase = createClient();
+  const { count } = await supabase
+    .from("contact_assignments")
+    .select("id", { count: "exact", head: true })
+    .eq("contact_id", id);
+  if (count && count > 0)
+    return {
+      error: `This contact is assigned to ${count} job/project record${count === 1 ? "" : "s"} — remove those assignments first, or deactivate the contact instead.`,
+    };
+
+  const { error } = await supabase.from("contacts").delete().eq("id", id);
+  if (error) {
+    return {
+      error:
+        error.code === "23503"
+          ? "This contact is referenced by existing records — deactivate it instead."
+          : error.message,
+    };
+  }
+  revalidatePath("/contacts");
+  revalidatePath("/sites");
+  return { error: null };
+}
+
 // ---- Assignments ------------------------------------------------------
 const assignmentSchema = z
   .object({

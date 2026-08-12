@@ -1106,7 +1106,9 @@ export type Database = {
       job_actual_materials: {
         Row: {
           dimension: string | null
+          from_stock: boolean
           id: string
+          inventory_item_id: string | null
           job_id: string
           material_name: string | null
           part_ref: string | null
@@ -1118,7 +1120,9 @@ export type Database = {
         }
         Insert: {
           dimension?: string | null
+          from_stock?: boolean
           id?: string
+          inventory_item_id?: string | null
           job_id: string
           material_name?: string | null
           part_ref?: string | null
@@ -1130,7 +1134,9 @@ export type Database = {
         }
         Update: {
           dimension?: string | null
+          from_stock?: boolean
           id?: string
+          inventory_item_id?: string | null
           job_id?: string
           material_name?: string | null
           part_ref?: string | null
@@ -1141,6 +1147,27 @@ export type Database = {
           unit_cost?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "job_actual_materials_inventory_item_id_fkey"
+            columns: ["inventory_item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_actual_materials_inventory_item_id_fkey"
+            columns: ["inventory_item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_actual_materials_inventory_item_id_fkey"
+            columns: ["inventory_item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_low_stock"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "job_actual_materials_job_id_fkey"
             columns: ["job_id"]

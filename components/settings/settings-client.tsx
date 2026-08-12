@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Pencil, Save } from "lucide-react";
+import { Plus, Pencil, Save, Trash2 } from "lucide-react";
 import {
   updateRoleName,
   updateCompanyConfig,
@@ -12,6 +12,7 @@ import {
   addLabourRate,
   updateLabourRate,
   toggleLabourRate,
+  deleteLabourRate,
 } from "@/app/(app)/settings/actions";
 import { RecordFormDialog, type FieldDef } from "@/components/records/record-form-dialog";
 import { Button } from "@/components/ui/button";
@@ -190,6 +191,19 @@ export function SettingsClient({
                         onClick={() => run(() => toggleLabourRate(rt.id, !rt.active), "Updated")}
                       >
                         {rt.active ? "Disable" : "Enable"}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                        disabled={pending}
+                        title="Delete trade rate"
+                        onClick={() => {
+                          if (confirm(`Delete the "${rt.designation}" rate? Timesheets already costed keep their figures.`))
+                            run(() => deleteLabourRate(rt.id), "Deleted");
+                        }}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>
                   </TableCell>

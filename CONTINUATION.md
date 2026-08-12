@@ -7,9 +7,9 @@
 > `CLAUDE QUICK START` + `MACHINE‑READABLE STATE` at the bottom. Keep edits surgical to save
 > tokens: change the lines that changed, don't rewrite the whole file.
 >
-> **Last updated:** after the CONTINUATION.md audit (validated every claim against the repo, the
-> live DB, `tsc --noEmit` and `next build`; corrected 9 discrepancies and dropped the dead
-> `@tanstack/react-table` dep). Migrations 0001–0047 in repo; see **§5 migration bookkeeping**.
+> **Last updated:** after **Changes I (12/08/2026)** — items 1, 3, 4, 5(a) and 6 delivered;
+> item 2 (role model) and item 5(b) (quotation→tentative) are **awaiting the user's answer**,
+> see §19. Migrations 0001–0048 in repo; see **§5 migration bookkeeping**.
 
 ---
 
@@ -19,12 +19,13 @@
 - **Stack:** Next.js 14 (App Router) + TypeScript · Supabase (Postgres + Auth + RLS + Realtime + Storage) · Tailwind + shadcn/ui (Radix) · `@react-pdf/renderer` · recharts · exceljs. Deployed on Vercel.
 - **Repo state:** branch is **per-session — read it from `git status`, don't trust a name written here.** Work to date landed on `claude/busy-mccarthy-W0FZV` (through `732a36e`); the audit pass ran on `claude/continuation-md-validation-0anxqi`. Push **only** to the branch the current session was assigned.
 - **Supabase project ref:** `gxupuxysfhmwdvztabtn` (region ap-south-1, **free tier — auto-pauses after ~7 days idle; has paused several times; restore via `restore_project` MCP tool or the dashboard**).
-- **DB migrations:** `supabase/migrations/0001…0047` (47 files). Schema is in sync with live, but the file list and the live migration history are **not 1:1** — see **§5 migration bookkeeping** before counting. New schema work = new numbered migration file **and** apply it live via the Supabase MCP `apply_migration`.
+- **DB migrations:** `supabase/migrations/0001…0048` (48 files). Schema is in sync with live, but the file list and the live migration history are **not 1:1** — see **§5 migration bookkeeping** before counting. New schema work = new numbered migration file **and** apply it live via the Supabase MCP `apply_migration`.
 - **Hard constraint (original + still in force):** **No AI/LLM API calls inside the app.** It is a data‑management tool. All "email" features are `mailto:` drafts, never sent by the app. Notifications are **in‑app only** (bell), by explicit user decision.
 - **Security model (do not break):** 3 tiers. Money columns masked from Tier 1 at the DB level via definer "masking views" (`jobs_view`, `projects_view`, `inventory_items_view`) + column‑level SELECT grants; base‑table row SELECT policies exist too. See **AUTH & SECURITY**.
 - **Critical files:** `lib/types/index.ts` (aliases + enums), `lib/types/database.ts` (generated types — regenerate after every schema change), `lib/auth.ts`, `lib/supabase/{client,server,middleware}.ts`, `components/ui/table.tsx` (all tables centred + resizable), `lib/email-draft.ts`.
 - **Regression invariant:** after any change touching financials, the recompute must leave existing job quotes byte‑identical. Historically verified values were 2500.00/2750.00/0.1000 etc.; the live DB was renumbered/emptied for testing (0046) so re‑derive current live values before asserting.
-- **EXACT NEXT STEP:** There is **no committed pending task.** The user drives work via dated `Changes_*.md` uploads. When one arrives: reproduce each reported bug against the live DB first (many "permission" bugs were RLS misconfigurations, not UI bugs), then implement + verify + commit per logical group. If asked to continue with nothing pending, ask the user for the next `Changes.md` or confirm the app is in acceptance.
+- **EXACT NEXT STEP:** **Changes I (12/08/2026) is part-delivered.** Two items are blocked on the user and nothing else should start until they answer — see §19: (a) **item 2, the role model**, which as written gives Tier 1 *and* Tier 3 everything and moves financials away from Tier 2, inverting the masking predicate, and asks for delete "within assigned project/job" though **no user↔job/project assignment exists in the schema**; (b) **item 5(b)**, quotation→tentative, where Tentative already auto-derives from the quote.
+- **Older note:** There is **no committed pending task** beyond the above. The user drives work via dated `Changes_*.md` uploads. When one arrives: reproduce each reported bug against the live DB first (many "permission" bugs were RLS misconfigurations, not UI bugs), then implement + verify + commit per logical group. If asked to continue with nothing pending, ask the user for the next `Changes.md` or confirm the app is in acceptance.
 
 ---
 
@@ -290,6 +291,9 @@ npx tsc --noEmit            # PRIMARY type gate — run after every change
 - **Timesheet costing:** each person costed at their **trade's** `labour_rates` normal/OT rate; the single `timesheet_normal_rate`/`_ot_rate` in settings are fallbacks only (0035). Job description/site/ref autofill from the selected job, never overwriting hand‑typed values.
 - **Notifications:** comment with `@mentions` → only mentioned users; no mentions → all collaborators (creator + commenters + timesheet‑with‑login + explicit watchers) minus author. Mute suppresses broadcasts but not mentions.
 - **Welder certificate expiry:** `cert_expiry_warn_days` (default 7) window; expiring rows get a `mailto:` renewal/expiry draft. Certificates carry scanned documents via `documents.welder_certificate_id` (shared, not copied).
+- **Margin toggle (Quotation tab, 0048 round):** a **display-only** switch. Off = every section shows its cost base and the summary reads "Cost before margin". Nothing is written and `recompute_job_financials` is untouched, so the regression invariant holds. Do not wire this to stored financials without revisiting §17.
+- **Quotation → Actual transfer:** `copyQuoteToActual` copies all five sections and **replaces** the Actual side (the UI confirms first), then recomputes once. Destination-only columns (`from_stock`, `inventory_item_id`) are omitted from the copy so they take their defaults.
+- **In-stock actual material (0048):** `job_actual_materials.from_stock` + `inventory_item_id`. Picking a stock item prices the line at the item's carried `unit_cost` (only when the cell is still empty, so a typed figure is never overwritten) and implies `from_stock`; unticking clears the item. The Actual tab shows an **Actual vs Quoted** table per section with the stock-drawn share called out. Quotation lines deliberately have no such columns — a quote is a price regardless of where the steel later comes from.
 
 ---
 
@@ -322,6 +326,10 @@ npx tsc --noEmit            # PRIMARY type gate — run after every change
 | Handover + transfer notice draft | COMPLETE | handover/ | |
 | Records: timesheet, equipment, maintenance, transfers, master lists | COMPLETE | records/ | |
 | In‑app notifications + @mentions + watch | COMPLETE | notification-bell, comments-thread | in‑app only |
+| Margin on/off toggle (Quotation) | COMPLETE | worksheet-panels | display only, nothing written |
+| Quotation → Actual transfer | COMPLETE | worksheet/actions `copyQuoteToActual` | replaces Actual, confirms first |
+| In-stock actual material + Actual vs Quoted | COMPLETE | worksheet-panels, 0048 | `from_stock` + `inventory_item_id` |
+| Delete: Contacts / Sites / Labour Rates | COMPLETE | contacts, sites, settings actions | admin-only, in-use guards |
 | Resizable table columns | COMPLETE | ui/table + use-resizable-columns | localStorage per table |
 | Global search | COMPLETE | search/ | `global_search` RPC, SECURITY INVOKER |
 | Email sending | NOT PLANNED | — | mailto: drafts only, by decision |
@@ -364,6 +372,8 @@ npx tsc --noEmit            # PRIMARY type gate — run after every change
 - PoC duplicate contact on job + its project (0045 unique indexes + view dedup).
 - `requisition` doc_type in app but not in DB check constraint → insert failure (fixed 0047).
 - Column SELECT permission denied on masked tables for updates (0031).
+- **Saving a worksheet section that mixed saved and new rows failed with `null value in column "id" … violates not-null constraint`** (Changes I item 6). Not a DB fault — every line table has `gen_random_uuid()`. PostgREST builds one INSERT for a batch from the **union of the objects' keys**, so a batch containing any row with an `id` sent `id => NULL` for the rows without one instead of falling back to the default. Fixed by minting the id server-side in `replaceJobLines` so every object has the same shape. Reproduced and re-verified live. **Watch for this in any other multi-row upsert.**
+- **Contacts, Sites and Labour Rates could only be deactivated, never deleted** (Changes I item 1). The DB policies (`con_del`, `sites_admin_del`, `lr_admin_del`) had existed all along — the server actions and buttons were simply missing. Added, admin-only, with in-use guards.
 
 ### OPEN / KNOWN
 - None tracked as blocking. Working tree clean, build green as of `732a36e`.
@@ -447,7 +457,30 @@ Live DB was also **renumbered/cleaned** (0046 + manual): user emptied jobs/proje
 - **P2:** Consider a real notifications page (currently bell‑only); optional welder‑certificate scheduled expiry emails (needs the email decision revisited); consider deleting the now‑dead `app/(app)/clients/page.tsx` redirect and `components/projects/clients-manager.tsx` if nothing links to them.
 - **P3:** Broader test coverage; performance review of dashboard/rollup queries at real data volume.
 
-**EXACT NEXT STEP:** Ask the user for the next `Changes_*.md` (or whether to proceed to acceptance/production hardening). Do not start speculative refactors.
+### Changes I (12/08/2026) — open items, BLOCKED ON THE USER
+
+**Item 2 — role model.** As written: Tier 1 "exclusive access to everything", Tier 2 "full
+operational edit, can't see financials, can delete within assigned project/job", Tier 3
+"exclusive access to everything". This is **not** a tweak to the current model, it inverts it:
+
+- Today money is revealed by `auth_user_tier() >= 2` in the three masking views. The request makes
+  **Tier 2 the only tier without financials**, so the predicate becomes roughly `tier <> 2`. That
+  touches `jobs_view`, `projects_view`, `inventory_items_view`, the column grants, and every
+  `showMoney`/`canSeeFinancials` call site. §17 says do not change this without discussing.
+- Tier 1 and Tier 3 would become **identical**, which is worth confirming before building.
+- "delete within assigned project/job" has **no schema representation** — there is no user↔job or
+  user↔project assignment table. `job_collaborators()` derives something similar (creator,
+  commenters, timesheet-linked staff, watchers) and could serve, or a real assignment table could
+  be added. This must be settled before the delete policies can be written.
+
+**Item 5(b) — quotation → tentative.** Tentative is a read-only estimator that **already**
+auto-derives from the quote's Material and Consumable lines and re-prices them from
+`historic_prices`. There is nothing to "transfer". The plausible real asks are: extend it to the
+other three sections (workforce/equipment/services — none of which have procurement history), or
+push its re-priced figures **back into** the quotation as unit costs. Needs the user to say which.
+
+**EXACT NEXT STEP:** Get answers on items 2 and 5(b) above, then implement. Do not guess at the
+tier model — it is the security boundary. Do not start speculative refactors.
 
 ---
 
@@ -473,8 +506,8 @@ repository:
   clean: true
   head: 732a36e + CONTINUATION.md audit commits
   migrations:
-    files: 0001..0047 (47 in repo)
-    live_history_rows: 48
+    files: 0001..0048 (48 in repo)
+    live_history_rows: 49
     in_sync: true   # schema verified object-by-object; counts differ by design, see section 5
   tests: none
   gates_verified: [tsc --noEmit clean, next build green]
@@ -489,7 +522,10 @@ issues:
     - migration files vs live history counts differ (bookkeeping only)
 next_action:
   priority: P0
-  task: await next Changes.md; reproduce each reported bug against live DB before fixing
+  task: >-
+    Changes I (12/08/2026) part-delivered. BLOCKED on the user for item 2 (role model —
+    inverts the money-masking predicate and needs an assignment concept that does not exist)
+    and item 5b (quotation→tentative — Tentative already auto-derives). See section 19.
 maintenance:
   keep_this_file_updated: true
   update_when: [new migration, new/changed feature, new/resolved bug, changed decision]

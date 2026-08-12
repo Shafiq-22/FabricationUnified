@@ -189,3 +189,29 @@ export async function toggleLabourRate(id: string, active: boolean) {
   revalidatePath("/settings");
   return { error: null };
 }
+
+/**
+ * Remove a trade rate. Timesheets cost each person at their trade's rate, so
+ * deleting one changes nothing already costed (those rows keep their own
+ * figures) but does take the trade out of circulation for good.
+ */
+export async function deleteLabourRate(id: string) {
+  try {
+    await requireAdmin();
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+  const supabase = createClient();
+  const { error } = await supabase.from("labour_rates").delete().eq("id", id);
+  if (error) {
+    return {
+      error:
+        error.code === "23503"
+          ? "This trade is referenced by existing records — deactivate it instead."
+          : error.message,
+    };
+  }
+  revalidatePath("/settings");
+  revalidatePath("/records");
+  return { error: null };
+}

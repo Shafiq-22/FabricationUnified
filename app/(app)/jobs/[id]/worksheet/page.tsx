@@ -44,6 +44,7 @@ export default async function WorksheetPage({
   let am: any[] = [], aw: any[] = [], ac: any[] = [];
   let qe: any[] = [], ae: any[] = [], qs: any[] = [], as_: any[] = [];
   let equipmentOptions: { id: string; label: string; bare: number; driver: number }[] = [];
+  let stockOptions: { id: string; label: string; unitCost: number | null }[] = [];
   let rates: { designation: string; rate: number }[] = [];
   const historic: HistoricLookup = {};
   const margins = { material: 15, workforce: 15, consumables: 15, equipment: 15, services: 15 };
@@ -61,7 +62,7 @@ export default async function WorksheetPage({
   departmentName = cfg.department_name ?? departmentName;
 
   if (showMoney) {
-    const [qmR, qwR, qcR, amR, awR, acR, rateR, histR, qeR, aeR, qsR, asR, eqR] =
+    const [qmR, qwR, qcR, amR, awR, acR, rateR, histR, qeR, aeR, qsR, asR, eqR, stkR] =
       await Promise.all([
       supabase.from("job_quote_materials").select("*").eq("job_id", params.id).order("seq_no"),
       supabase.from("job_quote_workforce").select("*").eq("job_id", params.id).order("seq_no"),
@@ -80,6 +81,13 @@ export default async function WorksheetPage({
         .select("id, sixco_no, machine, bare_rate, driver_rate")
         .eq("active", true)
         .order("machine"),
+      // Stock the Actual side can be costed against, read through the masking
+      // view so the unit cost obeys the same tier rules as everything else.
+      supabase
+        .from("inventory_items_view")
+        .select("id, description, dimensions, material_grade, unit_cost, quantity_on_hand")
+        .eq("active", true)
+        .order("description"),
     ]);
     qm = qmR.data ?? []; qw = qwR.data ?? []; qc = qcR.data ?? [];
     am = amR.data ?? []; aw = awR.data ?? []; ac = acR.data ?? [];
@@ -95,6 +103,15 @@ export default async function WorksheetPage({
       bare: Number(e.bare_rate ?? 0),
       driver: Number(e.driver_rate ?? 0),
     }));
+    stockOptions = (stkR.data ?? []).map((s: any) => {
+      const spec = [s.dimensions, s.material_grade].filter(Boolean).join(" · ");
+      const onHand = s.quantity_on_hand == null ? "" : ` (${s.quantity_on_hand} on hand)`;
+      return {
+        id: s.id as string,
+        label: `${s.description}${spec ? ` — ${spec}` : ""}${onHand}`,
+        unitCost: s.unit_cost == null ? null : Number(s.unit_cost),
+      };
+    });
   }
 
   const [{ data: comments }, { data: docs }] = await Promise.all([
@@ -203,6 +220,7 @@ export default async function WorksheetPage({
           quoteServices={qs}
           actualServices={as_}
           equipmentOptions={equipmentOptions}
+          stockOptions={stockOptions}
           inflationPct={Number(cfg.inflation_rate_pct ?? 0)}
         />
       ) : (

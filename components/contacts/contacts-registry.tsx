@@ -2,11 +2,12 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Pencil, Search, Mail, Phone } from "lucide-react";
+import { Plus, Pencil, Search, Mail, Phone, Trash2 } from "lucide-react";
 import {
   createContact,
   updateContact,
   toggleContactActive,
+  deleteContact,
 } from "@/app/(app)/contacts/actions";
 import { RecordFormDialog, type FieldDef } from "@/components/records/record-form-dialog";
 import { Button } from "@/components/ui/button";
@@ -37,12 +38,14 @@ export function ContactsRegistry({
   siteOptions,
   assignmentCounts,
   canEdit,
+  canDelete = false,
 }: {
   contacts: Contact[];
   siteNames: Record<string, string>;
   siteOptions: { value: string; label: string }[];
   assignmentCounts: Record<string, number>;
   canEdit: boolean;
+  canDelete?: boolean;
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -93,6 +96,20 @@ export function ContactsRegistry({
         toast({ variant: "destructive", title: "Failed", description: res.error });
       else router.refresh();
     });
+
+  const remove = (id: string, name: string) => {
+    if (!confirm(`Delete contact "${name}"? Deactivating keeps them out of the pickers but preserves history.`))
+      return;
+    start(async () => {
+      const res = await deleteContact(id);
+      if (res.error)
+        toast({ variant: "destructive", title: "Could not delete", description: res.error });
+      else {
+        toast({ title: "Deleted", description: name });
+        router.refresh();
+      }
+    });
+  };
 
   return (
     <div className="border border-border bg-card">
@@ -231,6 +248,18 @@ export function ContactsRegistry({
                     >
                       {c.active ? "Deactivate" : "Activate"}
                     </Button>
+                    {canDelete && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                        disabled={pending}
+                        onClick={() => remove(c.id, c.name)}
+                        title="Delete contact"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
                   </div>
                 </TableCell>
               )}

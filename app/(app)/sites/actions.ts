@@ -75,3 +75,38 @@ export async function toggleSiteActive(id: string, active: boolean) {
   revalidatePath("/sites");
   return { error: null };
 }
+
+/**
+ * Remove a site. Job codes embed the site code, so a site that any job still
+ * points at is refused — deactivating hides it from the pickers without
+ * orphaning those codes.
+ */
+export async function deleteSite(id: string) {
+  try {
+    await requireAdmin();
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+  const supabase = createClient();
+
+  const { count } = await supabase
+    .from("jobs")
+    .select("id", { count: "exact", head: true })
+    .eq("site_id", id);
+  if (count && count > 0)
+    return {
+      error: `${count} job${count === 1 ? "" : "s"} still reference this site — deactivate it instead so existing job codes keep their meaning.`,
+    };
+
+  const { error } = await supabase.from("sites").delete().eq("id", id);
+  if (error) {
+    return {
+      error:
+        error.code === "23503"
+          ? "This site is referenced by existing records — deactivate it instead."
+          : error.message,
+    };
+  }
+  revalidatePath("/sites");
+  return { error: null };
+}

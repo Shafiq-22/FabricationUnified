@@ -1,5 +1,6 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/auth";
@@ -7,7 +8,17 @@ import { getProfile } from "@/lib/auth";
 // Editable columns per worksheet child table (computed cols are excluded).
 const CHILD_TABLES = {
   job_quote_materials: ["part_ref", "material_name", "dimension", "unit", "qty", "unit_cost"],
-  job_actual_materials: ["part_ref", "material_name", "dimension", "unit", "qty", "unit_cost"],
+  // Actual lines also record whether the material came out of existing stock.
+  job_actual_materials: [
+    "part_ref",
+    "material_name",
+    "dimension",
+    "unit",
+    "qty",
+    "unit_cost",
+    "inventory_item_id",
+    "from_stock",
+  ],
   job_quote_workforce: ["part_ref", "designation", "qty", "hrs_per_person", "date", "rate_aed_per_hr"],
   job_actual_workforce: ["part_ref", "designation", "qty", "hrs_per_person", "date", "rate_aed_per_hr"],
   job_quotation_summary: ["item_name", "unit", "qty", "unit_cost"],
@@ -37,8 +48,8 @@ const NUMERIC = new Set([
 ]);
 const DATE = new Set(["date"]);
 // Selects submit "" for "no machine"; booleans arrive as "true"/"false" strings.
-const UUID = new Set(["equipment_id"]);
-const BOOL = new Set(["with_driver"]);
+const UUID = new Set(["equipment_id", "inventory_item_id"]);
+const BOOL = new Set(["with_driver", "from_stock"]);
 
 function sanitize(key: string, value: unknown): unknown {
   if (value === "" || value === undefined) return null;
@@ -87,9 +98,18 @@ export async function replaceJobLines(
     if (error) return { error: error.message };
   }
 
+  // Every row carries an id, including brand-new ones. PostgREST builds one
+  // INSERT for the whole batch from the union of the objects' keys, so a batch
+  // mixing saved rows (with an id) and new rows (without) would send id => NULL
+  // for the new ones and trip the not-null constraint rather than falling back
+  // to the column's gen_random_uuid() default. Minting the id here keeps every
+  // object the same shape.
   const payload = rows.map((r, i) => {
-    const obj: Record<string, unknown> = { job_id: jobId, seq_no: i + 1 };
-    if (r.id) obj.id = r.id;
+    const obj: Record<string, unknown> = {
+      id: r.id || randomUUID(),
+      job_id: jobId,
+      seq_no: i + 1,
+    };
     for (const k of allowed) obj[k] = sanitize(k, r[k]);
     return obj;
   });
@@ -107,6 +127,72 @@ export async function replaceJobLines(
   revalidatePath("/jobs");
   revalidatePath("/dashboard");
   return { error: null };
+}
+
+/** Quote section -> the Actual section it seeds. Both sides share a shape. */
+const QUOTE_TO_ACTUAL = {
+  job_quote_materials: "job_actual_materials",
+  job_quote_workforce: "job_actual_workforce",
+  job_quote_consumables: "job_actual_consumables",
+  job_quote_equipment: "job_actual_equipment",
+  job_quote_services: "job_actual_services",
+} as const satisfies Partial<Record<ChildTable, ChildTable>>;
+
+/**
+ * Seed the Actual worksheet from the Quotation, section by section, so the job
+ * starts from what was quoted and is then corrected against what really
+ * happened. This **replaces** whatever the Actual side currently holds — the
+ * caller confirms first. Financials are recomputed once at the end.
+ */
+export async function copyQuoteToActual(
+  jobId: string,
+): Promise<{ error: string | null; copied?: number }> {
+  const profile = await getProfile();
+  if (profile.role_tier < 2) return { error: "You are not allowed to edit worksheets." };
+
+  const supabase = createClient();
+  let copied = 0;
+
+  for (const [src, dest] of Object.entries(QUOTE_TO_ACTUAL) as [ChildTable, ChildTable][]) {
+    const { data, error: readErr } = await supabase
+      .from(src)
+      .select("*")
+      .eq("job_id", jobId)
+      .order("seq_no");
+    if (readErr) return { error: readErr.message };
+
+    const { error: delErr } = await supabase.from(dest).delete().eq("job_id", jobId);
+    if (delErr) return { error: delErr.message };
+
+    if (!data?.length) continue;
+
+    const cols = CHILD_TABLES[dest];
+    const payload = data.map((row, i) => {
+      const from = row as Record<string, unknown>;
+      const obj: Record<string, unknown> = {
+        id: randomUUID(),
+        job_id: jobId,
+        seq_no: i + 1,
+      };
+      // Only carry columns the quote side actually has. Destination-only
+      // columns (from_stock, inventory_item_id) are left out entirely so they
+      // take their defaults — every row here omits them identically, so the
+      // batch still has one uniform shape.
+      for (const k of cols) if (k in from) obj[k] = from[k];
+      return obj;
+    });
+
+    const { error: insErr } = await supabase.from(dest).insert(payload as never);
+    if (insErr) return { error: insErr.message };
+    copied += payload.length;
+  }
+
+  await supabase.rpc("recompute_job_financials", { p_job_id: jobId });
+
+  revalidatePath(`/jobs/${jobId}/worksheet`);
+  revalidatePath("/jobs");
+  revalidatePath("/dashboard");
+  return { error: null, copied };
 }
 
 export async function addComment(

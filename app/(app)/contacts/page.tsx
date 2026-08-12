@@ -133,6 +133,7 @@ export default async function ContactsPage({
               .map((s) => ({ value: s.id, label: `${s.code} — ${s.name}` }))}
             assignmentCounts={countBy(assignmentRows, (a) => a.contact_id)}
             canEdit={canEdit}
+            canDelete={profile.role_tier >= 3}
           />
         ) : (
           <ContactsByEntity

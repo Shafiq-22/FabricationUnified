@@ -3,8 +3,8 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Plus, Pencil, Search } from "lucide-react";
-import { createSite, updateSite, toggleSiteActive } from "@/app/(app)/sites/actions";
+import { Plus, Pencil, Search, Trash2 } from "lucide-react";
+import { createSite, updateSite, toggleSiteActive, deleteSite } from "@/app/(app)/sites/actions";
 import { RecordFormDialog, type FieldDef } from "@/components/records/record-form-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,6 +61,20 @@ export function SitesManager({
       if (res.error) toast({ variant: "destructive", title: "Failed", description: res.error });
       else router.refresh();
     });
+
+  const remove = (id: string, code: string) => {
+    if (!confirm(`Delete site "${code}"? Sites still used by a job cannot be deleted — deactivate those instead.`))
+      return;
+    start(async () => {
+      const res = await deleteSite(id);
+      if (res.error)
+        toast({ variant: "destructive", title: "Could not delete", description: res.error });
+      else {
+        toast({ title: "Deleted", description: code });
+        router.refresh();
+      }
+    });
+  };
 
   return (
     <div className="border border-border bg-card">
@@ -150,6 +164,16 @@ export function SitesManager({
                     onClick={() => toggle(s.id, !s.active)}
                   >
                     {s.active ? "Deactivate" : "Activate"}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                    disabled={pending}
+                    onClick={() => remove(s.id, s.code)}
+                    title="Delete site"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 </div>
               </TableCell>

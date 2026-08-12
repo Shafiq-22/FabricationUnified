@@ -12,10 +12,14 @@ import type { Row } from "@/app/(app)/jobs/[id]/worksheet/actions";
 export interface EditCol {
   key: string;
   label: string;
-  type?: "text" | "number" | "date";
+  type?: "text" | "number" | "date" | "select" | "checkbox";
   align?: "left" | "right";
   step?: string;
   placeholder?: string;
+  /** Choices for `type: "select"`. An empty value is always offered first. */
+  options?: { value: string; label: string }[];
+  /** Placeholder label for the empty choice of a select. */
+  emptyOption?: string;
 }
 
 type LocalRow = Record<string, unknown> & { _key: string; id?: string };
@@ -37,6 +41,7 @@ export function EditableTable({
   emptyHint = "No rows yet.",
   marginPct = null,
   groupBy,
+  derive,
 }: {
   title: string;
   columns: EditCol[];
@@ -49,6 +54,15 @@ export function EditableTable({
   marginPct?: number | null;
   /** Column to band the rows by, e.g. part_ref for Job -> Part -> items. */
   groupBy?: string;
+  /**
+   * Fill in sibling cells when one changes — e.g. picking a stock item also
+   * sets the unit cost. Returns the extra fields to merge into the row.
+   */
+  derive?: (
+    col: string,
+    value: unknown,
+    row: Record<string, unknown>,
+  ) => Record<string, unknown> | null | undefined;
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -59,7 +73,13 @@ export function EditableTable({
   const [pending, start] = useTransition();
 
   const set = (key: string, col: string, value: unknown) => {
-    setRows((rs) => rs.map((r) => (r._key === key ? { ...r, [col]: value } : r)));
+    setRows((rs) =>
+      rs.map((r) => {
+        if (r._key !== key) return r;
+        const next = { ...r, [col]: value };
+        return { ...next, ...(derive?.(col, value, next) ?? {}) };
+      }),
+    );
     setDirty(true);
   };
   const add = () => {
@@ -186,7 +206,37 @@ export function EditableTable({
               <tr className="border-b border-panel-border/60">
                 {columns.map((c) => (
                   <td key={c.key} className="px-1 py-0.5">
-                    {editable ? (
+                    {!editable ? (
+                      <span className={c.align === "right" ? "block text-right" : ""}>
+                        {c.type === "checkbox"
+                          ? r[c.key]
+                            ? "Yes"
+                            : "—"
+                          : c.type === "select"
+                            ? (c.options?.find((o) => o.value === r[c.key])?.label ?? "")
+                            : ((r[c.key] as string) ?? "")}
+                      </span>
+                    ) : c.type === "checkbox" ? (
+                      <input
+                        type="checkbox"
+                        checked={r[c.key] === true || r[c.key] === "true"}
+                        onChange={(e) => set(r._key, c.key, e.target.checked)}
+                        className="mx-auto block h-3.5 w-3.5 accent-steel"
+                      />
+                    ) : c.type === "select" ? (
+                      <select
+                        value={(r[c.key] as string | undefined) ?? ""}
+                        onChange={(e) => set(r._key, c.key, e.target.value)}
+                        className="h-7 w-full border-0 bg-transparent px-1 text-xs outline-none focus:bg-secondary/50 focus:ring-1 focus:ring-steel"
+                      >
+                        <option value="">{c.emptyOption ?? "—"}</option>
+                        {(c.options ?? []).map((o) => (
+                          <option key={o.value} value={o.value}>
+                            {o.label}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
                       <input
                         type={c.type ?? "text"}
                         step={c.step}
@@ -197,10 +247,6 @@ export function EditableTable({
                           c.align === "right" ? "text-right" : ""
                         }`}
                       />
-                    ) : (
-                      <span className={c.align === "right" ? "block text-right" : ""}>
-                        {(r[c.key] as string) ?? ""}
-                      </span>
                     )}
                   </td>
                 ))}
