@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { requireTier } from "@/lib/auth";
+import { requireAccess } from "@/lib/auth";
 import { PageHeader } from "@/components/layout/page-header";
 import { ProjectForm, type SelectableJob } from "@/components/projects/project-form";
 
@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 export default async function NewProjectPage() {
-  await requireTier(2);
+  await requireAccess("all");
   const supabase = createClient();
 
   const [{ data: sites }, { data: jobs }] = await Promise.all([

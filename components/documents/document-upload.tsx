@@ -32,7 +32,9 @@ const MAX_MB = 50;
 
 export function DocumentUpload({
   jobOptions,
+  projectOptions = [],
   defaultJobId,
+  defaultProjectId,
   label = "Upload Document",
   certificateId,
   defaultDocType = "drawing",
@@ -41,7 +43,11 @@ export function DocumentUpload({
   icon,
 }: {
   jobOptions: { value: string; label: string }[];
+  /** Offered when no job is chosen, so contracts and specs can be filed
+   *  against the project itself. Omit to hide the field entirely. */
+  projectOptions?: { value: string; label: string }[];
   defaultJobId?: string;
+  defaultProjectId?: string;
   label?: string;
   /** Attach the upload to a welder certificate instead of a job. */
   certificateId?: string;
@@ -55,6 +61,7 @@ export function DocumentUpload({
   const [open, setOpen] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [jobId, setJobId] = useState(defaultJobId ?? "none");
+  const [projectId, setProjectId] = useState(defaultProjectId ?? "none");
   const [docType, setDocType] = useState<string>(defaultDocType);
   const [title, setTitle] = useState("");
   const [revision, setRevision] = useState("");
@@ -66,6 +73,7 @@ export function DocumentUpload({
   const reset = () => {
     setFiles([]);
     setJobId(defaultJobId ?? "none");
+    setProjectId(defaultProjectId ?? "none");
     setDocType(defaultDocType);
     setTitle("");
     setRevision("");
@@ -106,6 +114,9 @@ export function DocumentUpload({
         }
         const res = await registerDocument({
           job_id: jobId,
+          // A job carries its own project; sending both would be ignored by
+          // the trigger anyway, so only send the project when there is no job.
+          project_id: jobId === "none" ? projectId : undefined,
           welder_certificate_id: certificateId,
           doc_type: docType,
           title: files.length === 1 ? title || file.name : file.name,
@@ -232,6 +243,28 @@ export function DocumentUpload({
                 </SelectContent>
               </Select>
             </div>
+            )}
+            {!certificateId && jobId === "none" && projectOptions.length > 0 && (
+              <div className="col-span-2 space-y-1.5">
+                <Label className="text-xs">Project</Label>
+                <Select value={projectId} onValueChange={setProjectId}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">— Not project-specific —</SelectItem>
+                    {projectOptions.map((p) => (
+                      <SelectItem key={p.value} value={p.value}>
+                        {p.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground">
+                  For contracts, specifications and anything else that belongs to
+                  the project rather than to one job.
+                </p>
+              </div>
             )}
             {files.length <= 1 && (
               <div className="col-span-2 space-y-1.5">

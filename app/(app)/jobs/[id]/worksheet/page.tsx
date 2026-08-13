@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/auth";
 import { canEdit, canSeeFinancials, isAdmin, type JobView } from "@/lib/types";
 import { fmtDate, daysBetween } from "@/lib/date";
-import { formatAED, formatPercent } from "@/lib/utils";
+import { formatAED } from "@/lib/utils";
 import { PageHeader } from "@/components/layout/page-header";
 import { JobStatusControl } from "@/components/jobs/job-status-control";
 import { WorksheetPanels } from "@/components/jobs/worksheet-panels";

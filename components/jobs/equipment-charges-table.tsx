@@ -114,7 +114,14 @@ export function EquipmentTable({
   return (
     <div className="panel-surface">
       <div className="flex items-center justify-between border-b border-panel-border px-3 py-2">
-        <h3 className="text-xs font-semibold uppercase tracking-wide">{title}</h3>
+        <div className="min-w-0">
+          <h3 className="text-xs font-semibold uppercase tracking-wide">{title}</h3>
+          <p className="text-[11px] text-muted-foreground">
+            Machine time costed to this job. Separate from the monthly plant
+            usage register in Personnel &amp; Equipment, which records a daily
+            status per machine and is not attributed to jobs.
+          </p>
+        </div>
         {editable && (
           <div className="flex items-center gap-1.5">
             <Button

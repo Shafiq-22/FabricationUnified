@@ -29,6 +29,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { DocumentUpload } from "@/components/documents/document-upload";
 import { useToast } from "@/lib/hooks/use-toast";
 import { cn, formatAED } from "@/lib/utils";
 import { fmtDate } from "@/lib/date";
@@ -75,6 +76,7 @@ type Tab = "jobs" | "materials" | "consumables" | "workforce" | "people" | "docu
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export function ProjectDetail({
   projectId,
+  projectLabel,
   jobs,
   availableJobs,
   materials,
@@ -89,6 +91,8 @@ export function ProjectDetail({
   canDelete,
 }: {
   projectId: string;
+  /** Human label for the project, used when filing a document against it. */
+  projectLabel: string;
   jobs: ProjectJob[];
   availableJobs: any[];
   materials: RollupRow[];
@@ -191,7 +195,15 @@ export function ProjectDetail({
           <RollupTable rows={workforce} showMoney={showMoney} unitLabel="Hours" />
         )}
         {tab === "people" && <PeopleList contacts={contacts} />}
-        {tab === "documents" && <DocumentsList documents={documents} jobs={jobs} />}
+        {tab === "documents" && (
+          <DocumentsList
+            documents={documents}
+            jobs={jobs}
+            projectId={projectId}
+            projectLabel={projectLabel}
+            canEdit={canEdit}
+          />
+        )}
       </div>
     </div>
   );
@@ -557,22 +569,48 @@ function PeopleList({ contacts }: { contacts: any[] }) {
   );
 }
 
-function DocumentsList({ documents, jobs }: { documents: any[]; jobs: ProjectJob[] }) {
+function DocumentsList({
+  documents,
+  jobs,
+  projectId,
+  projectLabel,
+  canEdit,
+}: {
+  documents: any[];
+  jobs: ProjectJob[];
+  projectId: string;
+  projectLabel: string;
+  canEdit: boolean;
+}) {
   const codes: Record<string, string> = Object.fromEntries(
     jobs.map((j) => [j.id, j.job_code ?? ""]),
   );
+  // Filing against the project itself is for contracts and specifications;
+  // anything uploaded against one of its jobs lands here on its own.
+  const upload = canEdit ? (
+    <DocumentUpload
+      jobOptions={jobs.map((j) => ({ value: j.id, label: j.job_code ?? "" }))}
+      projectOptions={[{ value: projectId, label: projectLabel }]}
+      defaultProjectId={projectId}
+      label="Upload"
+      triggerVariant="outline"
+    />
+  ) : null;
+
   if (documents.length === 0)
     return (
-      <Empty>
-        No documents on this project.{" "}
-        <Link href="/documents?view=project" className="text-primary hover:underline">
-          Upload one
-        </Link>{" "}
-        against any of its jobs and it appears here automatically.
-      </Empty>
+      <div className="space-y-3">
+        {upload && <div className="flex justify-end">{upload}</div>}
+        <Empty>
+          No documents on this project. Upload one here, or against any of its
+          jobs — job documents appear here automatically.
+        </Empty>
+      </div>
     );
   return (
-    <div className="border border-border bg-card">
+    <div className="space-y-3">
+      {upload && <div className="flex justify-end">{upload}</div>}
+      <div className="border border-border bg-card">
       <Table>
         <TableHeader>
           <TableRow>
@@ -607,6 +645,7 @@ function DocumentsList({ documents, jobs }: { documents: any[]; jobs: ProjectJob
           ))}
         </TableBody>
       </Table>
+      </div>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { requireTier, getRoleNames } from "@/lib/auth";
+import { requireAccess, getRoleNames } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/layout/page-header";
 import { SettingsClient } from "@/components/settings/settings-client";
@@ -16,7 +16,7 @@ export default async function SettingsPage({
 }: {
   searchParams: { tab?: Tab };
 }) {
-  const profile = await requireTier(3);
+  const profile = await requireAccess("admin");
   const tab: Tab = searchParams.tab ?? "general";
   const supabase = createClient();
 

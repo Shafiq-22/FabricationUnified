@@ -238,7 +238,7 @@ So: `list_migrations` will never match `ls supabase/migrations` exactly. Compare
 
 - **Auth:** Supabase email/password. Cookie session refreshed in middleware. `getProfile()` (React‑cached) resolves profile; signs out inactive users. 8‑hour idle logout (`components/layout/inactivity-logout.tsx`, `NEXT_PUBLIC_INACTIVITY_TIMEOUT_MINUTES`).
 - **Admin user creation:** `admin_create_user` / `admin_reset_password` RPCs (SECURITY DEFINER). Manually‑created `auth.users` rows must have `''` (not NULL) for `confirmation_token`, `recovery_token`, `email_change`, `email_change_token_new` or GoTrue login fails (see FAILED APPROACHES / migration 0010).
-- **Tier gating:** UI via `nav.ts` `minTier` + `requireTier()`; **enforced at DB** via RLS. Money masked via definer views + column grants.
+- **Tier gating:** UI via `nav.ts` `access` + `requireAccess(level)`, both resolving through `hasAccess()` — **never** compare tier numbers, they stopped being ordinal in 0049 (tier 1 is an administrator, and `tier >= minTier` locked it out of five routes). Levels are `"all"` / `"money"` / `"admin"`. **Enforced at DB** via RLS. Money masked via definer views + column grants.
 - **The three predicates (0049) — change these together, never one alone:**
   | Question | Database | TypeScript (`lib/types/index.ts`) | True for |
   |---|---|---|---|

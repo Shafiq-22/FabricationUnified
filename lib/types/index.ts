@@ -35,7 +35,6 @@ export type Supplier = T["suppliers"]["Row"];
 export type DocumentRow = T["documents"]["Row"];
 export type Project = T["projects"]["Row"];
 export type ProjectView = V["projects_view"]["Row"];
-export type Rfq = T["rfqs"]["Row"];
 export type InspectionReport = T["inspection_reports"]["Row"];
 export type Ncr = T["ncrs"]["Row"];
 export type MaintenanceRecord = T["maintenance_records"]["Row"];
@@ -95,14 +94,6 @@ export const PROJECT_STATUSES = [
   { value: "installed", label: "Installed", badge: "com" },
   { value: "closed", label: "Closed", badge: "secondary" },
   { value: "lost", label: "Lost", badge: "hal" },
-] as const;
-
-export const RFQ_STATUSES = [
-  { value: "open", label: "Open", badge: "inp" },
-  { value: "quoted", label: "Quoted", badge: "qtn" },
-  { value: "won", label: "Won", badge: "com" },
-  { value: "lost", label: "Lost", badge: "hal" },
-  { value: "cancelled", label: "Cancelled", badge: "secondary" },
 ] as const;
 
 export const DOC_TYPES = [
@@ -190,3 +181,18 @@ export const TIER_DEFAULT_NAMES: Record<Tier, string> = {
 export const canEdit = (tier: Tier) => tier >= 1;
 export const canSeeFinancials = (tier: Tier) => tier !== 2;
 export const isAdmin = (tier: Tier) => tier === 1 || tier === 3;
+
+/*
+ * What a route or a nav item requires. Tier numbers stopped being ordinal in
+ * 0049, so `tier >= someMinimum` is always wrong now — it read tier 1 (an
+ * administrator) as the least privileged and locked it out of five routes.
+ * Access is named instead, and resolves through the predicates above.
+ *
+ *   "all"   — every signed-in tier
+ *   "money" — tiers allowed to see financials (1 and 3)
+ *   "admin" — administrators (1 and 3)
+ */
+export type AccessLevel = "all" | "money" | "admin";
+
+export const hasAccess = (tier: Tier, level: AccessLevel) =>
+  level === "all" ? true : level === "money" ? canSeeFinancials(tier) : isAdmin(tier);

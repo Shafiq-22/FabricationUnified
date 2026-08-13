@@ -87,6 +87,53 @@ export async function updateJobMaterial(id: string, values: Record<string, strin
   return { error: null };
 }
 
+/**
+ * Patch just the fields procurement chases day to day — who it was ordered
+ * from, the PR and LPO numbers, and the order / delivery dates — so the
+ * grouped view (the default one) can be worked in directly instead of
+ * switching to the flat view for every change.
+ *
+ * Only the keys actually sent are written, so editing one cell never blanks
+ * the rest of the row. `supplier` (the legacy free-text column) is kept in
+ * step with `supplier_id`, exactly as the full-row editor does.
+ */
+const INLINE_FIELDS = ["supplier_id", "pr_no", "lpo_no", "order_date", "delivery_date"] as const;
+
+type InlinePatch = Partial<Record<(typeof INLINE_FIELDS)[number] | "supplier", string | null>>;
+
+export async function updateProcurementLine(
+  kind: "material" | "consumable",
+  id: string,
+  values: Record<string, string>,
+) {
+  const profile = await getProfile();
+  if (!canEdit(profile.role_tier)) return { error: "Not authorized." };
+
+  const patch: InlinePatch = {};
+  for (const k of INLINE_FIELDS) {
+    if (!(k in values)) continue;
+    const raw = (values[k] ?? "").trim();
+    patch[k] = raw === "" || raw === "none" ? null : raw;
+  }
+  if (Object.keys(patch).length === 0) return { error: null };
+  if ("supplier_id" in patch) patch.supplier = await supplierNameFor(patch.supplier_id);
+
+  const supabase = createClient();
+  // Both registers carry these same five columns; the row type differs, hence
+  // the cast (the keys themselves are fixed by INLINE_FIELDS above).
+  const { error } = await supabase
+    .from(kind === "consumable" ? "consumables" : "job_materials")
+    .update(patch as never)
+    .eq("id", id);
+  if (error) return { error: error.message };
+  revalidatePath("/procurement");
+  if (kind === "consumable") {
+    revalidatePath("/consumables");
+    revalidatePath("/dashboard");
+  }
+  return { error: null };
+}
+
 export async function deleteJobMaterial(id: string) {
   const profile = await getProfile();
   if (!isAdmin(profile.role_tier)) return { error: "Only administrators may delete." };

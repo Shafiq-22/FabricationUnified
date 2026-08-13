@@ -55,8 +55,6 @@ const TARGET_FIELDS: Record<ImportTarget, { key: string; label: string; numeric?
   ],
 };
 
-const NONE = "__none__";
-
 export function ImportDialog({
   jobId,
   target,

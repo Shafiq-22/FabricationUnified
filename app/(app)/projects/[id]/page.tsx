@@ -182,6 +182,7 @@ export default async function ProjectPage({ params }: { params: { id: string } }
 
       <ProjectDetail
         projectId={params.id}
+        projectLabel={`${p.project_code ?? ""} — ${p.name ?? ""}`}
         jobs={jobs as ProjectJob[]}
         availableJobs={(freeJobs ?? []) as any[]}
         materials={materials}

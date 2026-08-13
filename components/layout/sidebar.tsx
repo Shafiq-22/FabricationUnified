@@ -6,13 +6,13 @@ import { usePathname } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NAV_ITEMS } from "./nav";
-import type { Tier } from "@/lib/types";
+import { hasAccess, type Tier } from "@/lib/types";
 
 export function Sidebar({ tier }: { tier: Tier }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
 
-  const items = NAV_ITEMS.filter((i) => tier >= i.minTier);
+  const items = NAV_ITEMS.filter((i) => hasAccess(tier, i.access));
 
   return (
     <aside

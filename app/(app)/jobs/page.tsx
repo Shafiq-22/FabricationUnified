@@ -5,6 +5,7 @@ import { canEdit, canSeeFinancials, isAdmin, type JobView } from "@/lib/types";
 import { fmtDate } from "@/lib/date";
 import { formatAED, formatPercent } from "@/lib/utils";
 import { PageHeader } from "@/components/layout/page-header";
+import { CapNotice } from "@/components/layout/cap-notice";
 import { JobStatusBadge } from "@/components/jobs/job-status-badge";
 import { DeleteJobButton } from "@/components/jobs/delete-job-button";
 import { JobsFilterBar } from "@/components/jobs/jobs-filter-bar";
@@ -32,9 +33,10 @@ export default async function JobsPage({
   const canDelete = isAdmin(profile.role_tier);
   const supabase = createClient();
 
+  // Exact count alongside the capped page, so a truncated list can say so.
   let query = supabase
     .from("jobs_view")
-    .select("*")
+    .select("*", { count: "exact" })
     .order("created_at", { ascending: false })
     .limit(2000);
 
@@ -45,7 +47,10 @@ export default async function JobsPage({
     if (term) query = query.or(`job_code.ilike.%${term}%,description.ilike.%${term}%`);
   }
 
-  const { data } = await query;
+  const { data, count } = await query;
+  // Before the client-side month filter narrows it further — the notice is
+  // about what the query fetched, not about what the filter kept.
+  const fetched = (data ?? []).length;
   let jobs = (data ?? []) as JobView[];
   if (searchParams.month) jobs = jobs.filter((j) => monthOf(j) === searchParams.month);
 
@@ -68,7 +73,8 @@ export default async function JobsPage({
 
       <JobsFilterBar sites={sites ?? []} />
 
-      <div className="p-6">
+      <div className="space-y-3 p-6">
+        <CapNotice shown={fetched} total={count} />
         <div className="border border-border bg-card">
           <Table>
             <TableHeader>

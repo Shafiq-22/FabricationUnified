@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
-import type { SessionProfile, Tier } from "@/lib/types";
+import { hasAccess, type AccessLevel, type SessionProfile, type Tier } from "@/lib/types";
 
 /**
  * Resolve the signed-in user's profile (with role display name). Redirects to
@@ -42,10 +42,17 @@ export const getProfile = cache(async (): Promise<SessionProfile> => {
   };
 });
 
-/** Require a minimum tier for a page; redirect to /dashboard otherwise. */
-export async function requireTier(min: Tier): Promise<SessionProfile> {
+/**
+ * Gate a page on a named access level; redirect to /dashboard otherwise.
+ *
+ * This replaced the old `requireTier(min)`, which compared tier numbers with
+ * `<`. Since 0049 the numbers are not ordinal — tier 1 is an administrator —
+ * so that comparison locked the most privileged role out of Settings, Sites,
+ * Procurement, Personnel & Equipment and project creation.
+ */
+export async function requireAccess(level: AccessLevel): Promise<SessionProfile> {
   const profile = await getProfile();
-  if (profile.role_tier < min) redirect("/dashboard");
+  if (!hasAccess(profile.role_tier, level)) redirect("/dashboard");
   return profile;
 }
 

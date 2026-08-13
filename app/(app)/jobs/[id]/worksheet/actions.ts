@@ -384,8 +384,8 @@ export async function copyWorksheetToProcurement(
         unit: (r.unit as string) ?? null,
         qty,
         unit_price: Number.isFinite(unitCost) && unitCost > 0 ? unitCost : null,
-        total_price:
-          qty != null && Number.isFinite(unitCost) && unitCost > 0 ? qty * unitCost : null,
+        // total_price is GENERATED ALWAYS on job_materials -- writing it makes
+        // Postgres reject the whole insert. It computes itself from qty * unit_price.
         created_by: profile.id,
       };
     })

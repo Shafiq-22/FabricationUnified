@@ -2,7 +2,8 @@
 const nextConfig = {
   reactStrictMode: true,
   eslint: {
-    // Lint is run explicitly in CI; do not fail production builds on lint.
+    // Lint, types and the smoke tests run as their own CI job
+    // (.github/workflows/ci.yml); a deploy build does not repeat them.
     ignoreDuringBuilds: true,
   },
 };

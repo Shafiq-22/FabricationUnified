@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Percent, ArrowRightLeft, ClipboardCopy } from "lucide-react";
+import { ArrowRightLeft, ClipboardCopy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/lib/hooks/use-toast";
 import { EditableTable } from "@/components/jobs/editable-table";
@@ -51,12 +51,6 @@ const svcCols = [
   { key: "unit_cost", label: "Unit Cost", type: "number" as const, align: "right" as const, step: "0.01" },
 ];
 
-const eqpCols = [
-  PART,
-  { key: "description", label: "Machine / Plant", type: "text" as const, placeholder: "Sixco no. or hired-in plant" },
-  { key: "hours", label: "Hours", type: "number" as const, align: "right" as const, step: "0.01" },
-  { key: "rate_aed_per_hr", label: "Rate/hr", type: "number" as const, align: "right" as const, step: "0.01" },
-];
 
 /**
  * Actual material columns: the quoted set plus where the material came from.

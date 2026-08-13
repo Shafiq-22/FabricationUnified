@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { requireTier } from "@/lib/auth";
+import { requireAccess } from "@/lib/auth";
 import { currentMonthKey, monthLabel, fmtDate } from "@/lib/date";
 import { formatAED, cn } from "@/lib/utils";
 import { PageHeader } from "@/components/layout/page-header";
+import { CapNotice } from "@/components/layout/cap-notice";
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { MonthSelector } from "@/components/dashboard/month-selector";
 import { CsvExportButton } from "@/components/records/csv-export-button";
@@ -27,6 +28,7 @@ import type { JobMaterial, Consumable, HistoricPrice, Supplier } from "@/lib/typ
 import { isAdmin } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 const PROC_CSV = [
   { key: "request_date", label: "Request Date" }, { key: "order_date", label: "Order Date" },
@@ -70,7 +72,7 @@ export default async function ProcurementPage({
     tab?: Tab; job?: string; supplier?: string; month?: string; q?: string; group?: string;
   };
 }) {
-  const profile = await requireTier(2);
+  const profile = await requireAccess("all");
   const tab: Tab = searchParams.tab ?? "procurement";
   const supabase = createClient();
   const canDelete = isAdmin(profile.role_tier);
@@ -164,13 +166,14 @@ async function ProcurementSection(
   const grouped = (sp.group ?? "project") !== "flat";
   let query = supabase
     .from("job_materials")
-    .select("*")
+    .select("*", { count: "exact" })
     .is("deleted_at", null)
     .order("order_date", { ascending: false, nullsFirst: false })
     .limit(3000);
   if (sp.job) query = query.eq("job_id", sp.job);
   if (sp.supplier) query = query.ilike("supplier", `%${sp.supplier}%`);
-  const { data } = await query;
+  const { data, count } = await query;
+  const fetched = (data ?? []).length;
   let rows = (data ?? []) as JobMaterial[];
   if (sp.month) rows = rows.filter((r) => monthOf(r.order_date) === sp.month);
 
@@ -213,7 +216,8 @@ async function ProcurementSection(
           <CsvExportButton filename="procurement.csv" columns={PROC_CSV} rows={csvRows as any} />
         </div>
       </div>
-      <div className="p-6 pt-4">
+      <div className="space-y-3 p-6 pt-4">
+        <CapNotice shown={fetched} total={count} />
         {grouped ? (
           <ProcurementGrouped
             buckets={buckets}
@@ -221,6 +225,8 @@ async function ProcurementSection(
             senderName={senderName}
             companyName={cfg.company_name ?? "Six Construct"}
             departmentName={cfg.department_name ?? "Steel Fabrication"}
+            editable={editable}
+            supplierOptions={supplierOptions}
             canDelete={canDelete}
             kind="material"
           />
@@ -286,6 +292,8 @@ async function ConsumablesSection(
             companyName={cfg.company_name ?? "Six Construct"}
             departmentName={cfg.department_name ?? "Steel Fabrication"}
             emptyLabel="No consumables recorded this month."
+            editable={editable}
+            supplierOptions={supplierOptions}
             canDelete={canDelete}
             kind="consumable"
           />
@@ -304,12 +312,17 @@ async function ConsumablesSection(
 }
 
 async function HistoricSection(supabase: any, sp: any) {
-  let query = supabase.from("historic_prices").select("*").order("item_name").limit(2000);
+  let query = supabase
+    .from("historic_prices")
+    .select("*", { count: "exact" })
+    .order("item_name")
+    .limit(2000);
   if (sp.q) query = query.ilike("item_name", `%${String(sp.q).replace(/[%,]/g, " ").trim()}%`);
-  const { data } = await query;
+  const { data, count } = await query;
   const rows = (data ?? []) as HistoricPrice[];
   return (
-    <div className="p-6">
+    <div className="space-y-3 p-6">
+      <CapNotice shown={rows.length} total={count} hint="Search by item name to narrow it." />
       <div className="border border-border bg-card">
         <div className="border-b border-border px-4 py-2 text-xs text-muted-foreground">
           Recorded procurement prices by item &amp; supplier ({rows.length})

@@ -100,8 +100,7 @@ export default async function ContactsPage({
         title: p.name ?? "",
         subtitle: `${jobIds.length} job(s)`,
         status: p.status ?? null,
-        // Project detail pages land in step C; the list is the target until then.
-        href: "/projects",
+        href: `/projects/${p.id}`,
         assigned,
         workforce: dedupeWorkforce(workforceRows.filter((w) => jobIds.includes(w.job_id ?? ""))),
       };

@@ -11,6 +11,11 @@ const optStr = z.preprocess((v) => (v === "" ? undefined : v), z.string().option
 
 const metaSchema = z.object({
   job_id: optStr,
+  // A document may be filed straight against a project (a contract, a
+  // specification) with no job. When a job IS given, tg_document_sync_project
+  // overwrites project_id with the job's own project, so this is ignored then
+  // rather than able to contradict it.
+  project_id: optStr,
   welder_certificate_id: optStr,
   doc_type: z.enum(["drawing", "requisition", "certificate", "invoice", "po", "inspection_report", "photo", "email", "other"]),
   title: optStr,
@@ -36,6 +41,7 @@ export async function registerDocument(values: Record<string, unknown>) {
   const supabase = createClient();
   const { error } = await supabase.from("documents").insert({
     job_id: v.job_id && v.job_id !== "none" ? v.job_id : null,
+    project_id: v.project_id && v.project_id !== "none" ? v.project_id : null,
     welder_certificate_id:
       v.welder_certificate_id && v.welder_certificate_id !== "none"
         ? v.welder_certificate_id
@@ -58,6 +64,7 @@ export async function registerDocument(values: Record<string, unknown>) {
 
   revalidatePath("/documents");
   if (v.job_id) revalidatePath(`/jobs/${v.job_id}/worksheet`);
+  if (v.project_id && v.project_id !== "none") revalidatePath(`/projects/${v.project_id}`);
   if (v.welder_certificate_id) revalidatePath("/qa");
   return { error: null };
 }
@@ -95,8 +102,9 @@ export async function updateDocument(id: string, values: Record<string, string>)
 
 /** Short-lived signed URL — the bucket is private, so nothing is public. */
 export async function getDownloadUrl(filePath: string) {
-  const profile = await getProfile();
-  if (profile.role_tier < 1) return { error: "Not authorized.", url: null };
+  // getProfile() is the gate: it redirects when there is no session. Every
+  // signed-in tier may read documents, so there is nothing further to check.
+  await getProfile();
   const supabase = createClient();
   const { data, error } = await supabase.storage.from(DOCUMENTS_BUCKET).createSignedUrl(filePath, 60);
   if (error) return { error: error.message, url: null };
@@ -109,8 +117,9 @@ export async function getDownloadUrl(filePath: string) {
  * the tab open; still short and still signed against the private bucket.
  */
 export async function getViewUrl(filePath: string) {
-  const profile = await getProfile();
-  if (profile.role_tier < 1) return { error: "Not authorized.", url: null };
+  // getProfile() is the gate: it redirects when there is no session. Every
+  // signed-in tier may read documents, so there is nothing further to check.
+  await getProfile();
   const supabase = createClient();
   const { data, error } = await supabase.storage
     .from(DOCUMENTS_BUCKET)

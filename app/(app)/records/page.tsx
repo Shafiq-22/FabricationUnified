@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { addMonths, parseISO, format, getDaysInMonth } from "date-fns";
 import { createClient } from "@/lib/supabase/server";
-import { requireTier } from "@/lib/auth";
+import { requireAccess } from "@/lib/auth";
 import { currentMonthKey, monthLabel, fmtDate } from "@/lib/date";
 import { cn } from "@/lib/utils";
 import { dayCost } from "@/lib/equipment";
 import { PageHeader } from "@/components/layout/page-header";
+import { CapNotice } from "@/components/layout/cap-notice";
 import { MonthSelector } from "@/components/dashboard/month-selector";
 import { DateSelector } from "@/components/records/date-selector";
 import { TimesheetGrid, type JobOption, type SiteOption } from "@/components/records/timesheet-grid";
@@ -16,7 +17,12 @@ import { TransfersManager, type TransferRow } from "@/components/records/transfe
 import { MaintenanceManager } from "@/components/records/maintenance-manager";
 import { TimesheetPdfButton } from "@/components/pdf/timesheet-pdf-button";
 import { EquipmentPdfButton } from "@/components/pdf/equipment-pdf-button";
-import { isAdmin as isAdminTier } from "@/lib/types";
+import {
+  isAdmin as isAdminTier,
+  canEdit as canEditTier,
+  canSeeFinancials,
+  type Tier,
+} from "@/lib/types";
 import type {
   Personnel,
   Equipment,
@@ -35,7 +41,7 @@ export default async function RecordsPage({
 }: {
   searchParams: { tab?: Tab; date?: string; month?: string; view?: string };
 }) {
-  const profile = await requireTier(2);
+  const profile = await requireAccess("all");
   const tab: Tab = searchParams.tab ?? "timesheet";
   const isAdmin = isAdminTier(profile.role_tier);
   const supabase = createClient();
@@ -272,14 +278,20 @@ async function EquipmentTab(supabase: any, sp: any, company: string, department:
           filename={`equipment-record-${month}.pdf`}
         />
       </div>
+      <p className="text-[11px] text-muted-foreground">
+        A daily status per machine, costed at that machine&apos;s bare and driver
+        rates. This register is deliberately independent of the equipment
+        charges on a job worksheet — it is not attributed to jobs, so the two
+        figures are not expected to reconcile.
+      </p>
       <EquipmentUsageGrid month={month} equipment={equip} usage={use} editable />
     </div>
   );
 }
 
-async function MaintenanceTab(supabase: any, tier: number) {
-  const [{ data: records }, { data: equipment }, { data: personnel }] = await Promise.all([
-    supabase.from("maintenance_records").select("*").order("performed_on", { ascending: false }).limit(1000),
+async function MaintenanceTab(supabase: any, tier: Tier) {
+  const [{ data: records, count }, { data: equipment }, { data: personnel }] = await Promise.all([
+    supabase.from("maintenance_records").select("*", { count: "exact" }).order("performed_on", { ascending: false }).limit(1000),
     supabase.from("equipment").select("*").order("created_at"),
     supabase.from("personnel").select("id, name").eq("active", true).order("name"),
   ]);
@@ -291,15 +303,16 @@ async function MaintenanceTab(supabase: any, tier: number) {
     (personnel ?? []).map((p: any) => [p.id as string, p.name as string]),
   );
   return (
-    <div className="p-6">
+    <div className="space-y-3 p-6">
+      <CapNotice shown={(records ?? []).length} total={count} hint="" />
       <MaintenanceManager
         rows={(records ?? []) as MaintenanceRecord[]}
         equipment={(equipment ?? []) as Equipment[]}
         personnelOptions={personnelOptions}
         personnelNames={personnelNames}
-        showMoney={tier >= 2}
-        canEdit={tier >= 2}
-        canDelete={tier >= 3}
+        showMoney={canSeeFinancials(tier)}
+        canEdit={canEditTier(tier)}
+        canDelete={isAdminTier(tier)}
       />
     </div>
   );
@@ -331,7 +344,7 @@ async function ManageTab(supabase: any, isAdmin: boolean) {
   );
 }
 
-async function TransfersTab(supabase: any, tier: number) {
+async function TransfersTab(supabase: any, tier: Tier) {
   const [{ data: transfers }, { data: personnel }, { data: sites }] = await Promise.all([
     supabase.from("personnel_transfers").select("*").order("requested_on", { ascending: false }),
     supabase.from("personnel").select("id, name, trade, ho_no").eq("active", true).order("name"),
@@ -359,8 +372,8 @@ async function TransfersTab(supabase: any, tier: number) {
         personnelOptions={personnelOptions}
         siteNames={siteNames}
         siteOptions={siteOptions}
-        canEdit={tier >= 2}
-        canDelete={tier >= 3}
+        canEdit={canEditTier(tier)}
+        canDelete={isAdminTier(tier)}
       />
     </div>
   );

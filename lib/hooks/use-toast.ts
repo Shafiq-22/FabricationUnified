@@ -18,6 +18,8 @@ type ToasterToast = ToastProps & {
   action?: ToastActionElement;
 };
 
+// Kept as a const object so the action union below can be derived from it.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const actionTypes = {
   ADD_TOAST: "ADD_TOAST",
   UPDATE_TOAST: "UPDATE_TOAST",

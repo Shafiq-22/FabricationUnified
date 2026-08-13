@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/auth";
 import { PageHeader } from "@/components/layout/page-header";
+import { CapNotice } from "@/components/layout/cap-notice";
 import { DocumentUpload } from "@/components/documents/document-upload";
 import { DocumentsTable } from "@/components/documents/documents-table";
 import { DocumentsFilters } from "@/components/documents/documents-filters";
@@ -30,7 +31,7 @@ export default async function DocumentsPage({
 
   let query = supabase
     .from("documents")
-    .select("*")
+    .select("*", { count: "exact" })
     // Administrators can see soft-deleted rows by policy (0042), so the list
     // has to exclude them itself or a "deleted" document stays on screen.
     .is("deleted_at", null)
@@ -47,7 +48,7 @@ export default async function DocumentsPage({
     }
   }
 
-  const [{ data: docs }, { data: jobs }, { data: projects }, { data: users }, { data: certs }] =
+  const [{ data: docs, count: docCount }, { data: jobs }, { data: projects }, { data: users }, { data: certs }] =
     await Promise.all([
       query,
       supabase
@@ -69,6 +70,10 @@ export default async function DocumentsPage({
   const projectRows = (projects ?? []) as any[];
 
   const jobOptions = jobRows.map((j) => ({ value: j.id as string, label: j.job_code ?? "" }));
+  const projectOptions = projectRows.map((p) => ({
+    value: p.id as string,
+    label: `${p.project_code ?? ""} — ${p.name ?? ""}`,
+  }));
   const jobCodes: Record<string, string> = Object.fromEntries(
     jobRows.map((j) => [j.id as string, j.job_code ?? ""]),
   );
@@ -92,12 +97,13 @@ export default async function DocumentsPage({
   return (
     <div>
       <PageHeader title="Documents" description={`${rows.length} document(s)`}>
-        {canEdit && <DocumentUpload jobOptions={jobOptions} />}
+        {canEdit && <DocumentUpload jobOptions={jobOptions} projectOptions={projectOptions} />}
       </PageHeader>
 
       <DocumentsFilters jobs={jobOptions} />
 
-      <div className="p-6">
+      <div className="space-y-3 p-6">
+        <CapNotice shown={rows.length} total={docCount} />
         {view === "date" ? (
           // Flat, newest first — the closest thing to "just show me everything".
           <DocumentsGrouped

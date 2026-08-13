@@ -4,7 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ChevronDown, ChevronRight, ExternalLink, Mail, Trash2 } from "lucide-react";
-import { deleteJobMaterial } from "@/app/(app)/procurement/actions";
+import { deleteJobMaterial, updateProcurementLine } from "@/app/(app)/procurement/actions";
 import { deleteConsumable } from "@/app/(app)/consumables/actions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -38,6 +38,59 @@ export interface GroupedRow {
   total_price: number | null;
 }
 
+/** Matches the inline cells used on the worksheet tables. */
+const CELL =
+  "h-7 w-full min-w-[6rem] border-0 bg-transparent px-1 text-xs outline-none focus:bg-secondary/50 focus:ring-1 focus:ring-steel disabled:opacity-50";
+
+/**
+ * A text cell that keeps its own draft while being typed in and reports the
+ * value once, on blur or Enter — one write per edit instead of one per
+ * keystroke, and no cursor jump from the refresh that follows.
+ */
+function BlurInput({
+  value,
+  placeholder,
+  disabled,
+  onCommit,
+}: {
+  value: string | null | undefined;
+  placeholder?: string;
+  disabled?: boolean;
+  onCommit: (v: string) => void;
+}) {
+  const [draft, setDraft] = useState(value ?? "");
+  const [focused, setFocused] = useState(false);
+  // While the field is not being edited it follows the row, so a refresh or
+  // an edit made elsewhere is reflected here.
+  const shown = focused ? draft : (value ?? "");
+
+  return (
+    <input
+      type="text"
+      value={shown}
+      placeholder={placeholder}
+      disabled={disabled}
+      onFocus={() => {
+        setDraft(value ?? "");
+        setFocused(true);
+      }}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={() => {
+        setFocused(false);
+        if (draft !== (value ?? "")) onCommit(draft);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") e.currentTarget.blur();
+        if (e.key === "Escape") {
+          setDraft(value ?? "");
+          e.currentTarget.blur();
+        }
+      }}
+      className={CELL}
+    />
+  );
+}
+
 export interface JobBucket {
   jobId: string | null;
   jobCode: string;
@@ -60,6 +113,8 @@ export function ProcurementGrouped({
   companyName,
   departmentName,
   emptyLabel = "No material records match these filters.",
+  editable = false,
+  supplierOptions = [],
   canDelete = false,
   kind = "material",
 }: {
@@ -70,6 +125,8 @@ export function ProcurementGrouped({
   departmentName: string;
   emptyLabel?: string;
   /** Grouped is the default view, so it carries the row actions too. */
+  editable?: boolean;
+  supplierOptions?: { value: string; label: string }[];
   canDelete?: boolean;
   /** Which register these rows came from — decides the delete to call. */
   kind?: "material" | "consumable";
@@ -131,6 +188,8 @@ export function ProcurementGrouped({
                     senderName={senderName}
                     companyName={companyName}
                     departmentName={departmentName}
+                    editable={editable}
+                    supplierOptions={supplierOptions}
                     canDelete={canDelete}
                     kind={kind}
                   />
@@ -151,6 +210,8 @@ function JobPanel({
   senderName,
   companyName,
   departmentName,
+  editable,
+  supplierOptions,
   canDelete,
   kind,
 }: {
@@ -160,12 +221,25 @@ function JobPanel({
   senderName: string;
   companyName: string;
   departmentName: string;
+  editable: boolean;
+  supplierOptions: { value: string; label: string }[];
   canDelete: boolean;
   kind: "material" | "consumable";
 }) {
   const { toast } = useToast();
   const router = useRouter();
   const [pending, start] = useTransition();
+
+  // One cell at a time: the action writes only the key it is handed, so
+  // saving a PR number cannot blank the supplier next to it.
+  const save = (id: string, field: string, value: string) => {
+    start(async () => {
+      const res = await updateProcurementLine(kind, id, { [field]: value });
+      if (res.error)
+        toast({ variant: "destructive", title: "Could not save", description: res.error });
+      else router.refresh();
+    });
+  };
 
   const remove = (id: string, label: string) => {
     if (!confirm(`Delete "${label}" from this job?`)) return;
@@ -295,16 +369,73 @@ function JobPanel({
                 {r.qty ?? "—"} {r.unit ?? ""}
               </TableCell>
               <TableCell className="text-xs text-muted-foreground">
-                {r.supplier ?? "—"}
+                {editable ? (
+                  <select
+                    value={r.supplier_id ?? ""}
+                    disabled={pending}
+                    onChange={(e) => save(r.id, "supplier_id", e.target.value)}
+                    className={CELL}
+                  >
+                    <option value="">— Unassigned —</option>
+                    {/* A supplier that has since been deactivated still has to
+                        show, or the row would silently read as unassigned. */}
+                    {r.supplier_id && !supplierOptions.some((o) => o.value === r.supplier_id) && (
+                      <option value={r.supplier_id}>{r.supplier ?? "(inactive supplier)"}</option>
+                    )}
+                    {supplierOptions.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  (r.supplier ?? "—")
+                )}
               </TableCell>
               <TableCell className="font-mono text-[11px] text-muted-foreground">
-                {[r.pr_no, r.lpo_no].filter(Boolean).join(" / ") || "—"}
+                {editable ? (
+                  <div className="flex items-center gap-1">
+                    <BlurInput
+                      value={r.pr_no}
+                      placeholder="PR"
+                      disabled={pending}
+                      onCommit={(v) => save(r.id, "pr_no", v)}
+                    />
+                    <span className="text-muted-foreground">/</span>
+                    <BlurInput
+                      value={r.lpo_no}
+                      placeholder="LPO"
+                      disabled={pending}
+                      onCommit={(v) => save(r.id, "lpo_no", v)}
+                    />
+                  </div>
+                ) : (
+                  [r.pr_no, r.lpo_no].filter(Boolean).join(" / ") || "—"
+                )}
               </TableCell>
               <TableCell className="text-center text-xs text-muted-foreground">
-                {fmtDate(r.order_date)}
+                {editable ? (
+                  <input
+                    type="date"
+                    value={r.order_date ?? ""}
+                    disabled={pending}
+                    onChange={(e) => save(r.id, "order_date", e.target.value)}
+                    className={CELL}
+                  />
+                ) : (
+                  fmtDate(r.order_date)
+                )}
               </TableCell>
               <TableCell className="text-center text-xs">
-                {r.delivery_date ? (
+                {editable ? (
+                  <input
+                    type="date"
+                    value={r.delivery_date ?? ""}
+                    disabled={pending}
+                    onChange={(e) => save(r.id, "delivery_date", e.target.value)}
+                    className={CELL}
+                  />
+                ) : r.delivery_date ? (
                   <Badge variant="com">{fmtDate(r.delivery_date)}</Badge>
                 ) : (
                   <Badge variant="inp">Pending</Badge>

@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/layout/page-header";
+import { CapNotice } from "@/components/layout/cap-notice";
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { InspectionsManager, NcrsManager } from "@/components/qa/qa-managers";
 import { CertificatesManager, type CertificateRow } from "@/components/qa/certificates-manager";
@@ -22,8 +23,8 @@ export default async function QaPage({ searchParams }: { searchParams: { tab?: T
   const supabase = createClient();
 
   const [
-    { data: inspections },
-    { data: ncrs },
+    { data: inspections, count: inspectionCount },
+    { data: ncrs, count: ncrCount },
     { data: jobs },
     { data: personnel },
     { data: projects },
@@ -32,8 +33,8 @@ export default async function QaPage({ searchParams }: { searchParams: { tab?: T
     { data: cfgRows },
     { data: certFiles },
   ] = await Promise.all([
-      supabase.from("inspection_reports").select("*").is("deleted_at", null).order("inspected_at", { ascending: false }).limit(1000),
-      supabase.from("ncrs").select("*").is("deleted_at", null).order("raised_at", { ascending: false }).limit(1000),
+      supabase.from("inspection_reports").select("*", { count: "exact" }).is("deleted_at", null).order("inspected_at", { ascending: false }).limit(1000),
+      supabase.from("ncrs").select("*", { count: "exact" }).is("deleted_at", null).order("raised_at", { ascending: false }).limit(1000),
       supabase.from("jobs_view").select("id, job_code").order("created_at", { ascending: false }).limit(2000),
       supabase.from("personnel").select("id, name, trade").eq("active", true).order("name"),
       supabase.from("projects_view").select("id, project_code, name").order("project_code"),
@@ -128,7 +129,11 @@ export default async function QaPage({ searchParams }: { searchParams: { tab?: T
         />
       </div>
 
-      <div className="p-6">
+      <div className="space-y-3 p-6">
+        {tab === "inspections" && (
+          <CapNotice shown={inspectionRows.length} total={inspectionCount} hint="" />
+        )}
+        {tab === "ncrs" && <CapNotice shown={ncrRows.length} total={ncrCount} hint="" />}
         {tab === "certificates" ? (
           <CertificatesManager
             rows={certRows}

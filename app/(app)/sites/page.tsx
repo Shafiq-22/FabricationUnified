@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { requireTier } from "@/lib/auth";
+import { requireAccess } from "@/lib/auth";
 import { PageHeader } from "@/components/layout/page-header";
 import { SitesManager, type SiteContact } from "@/components/sites/sites-manager";
 import type { Site } from "@/lib/types";
@@ -7,7 +7,7 @@ import type { Site } from "@/lib/types";
 export const dynamic = "force-dynamic";
 
 export default async function SitesPage() {
-  await requireTier(3);
+  await requireAccess("admin");
   const supabase = createClient();
   const [{ data }, { data: contacts }] = await Promise.all([
     supabase.from("sites").select("*").order("code"),

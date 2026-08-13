@@ -13,28 +13,32 @@ import {
   Settings,
   type LucideIcon,
 } from "lucide-react";
-import type { Tier } from "@/lib/types";
+import type { AccessLevel } from "@/lib/types";
 
 export interface NavItem {
   href: string;
   label: string;
   icon: LucideIcon;
-  minTier: Tier;
+  /**
+   * Named access level, not a tier number — tier numbers are not ordinal
+   * (see the tier model in lib/types). "all" is every signed-in tier.
+   */
+  access: AccessLevel;
 }
 
 /** Ordered to follow the workflow: plan → execute → support → admin. */
 export const NAV_ITEMS: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, minTier: 1 },
-  { href: "/projects", label: "Projects", icon: FolderKanban, minTier: 1 },
-  { href: "/jobs", label: "Jobs", icon: ClipboardList, minTier: 1 },
-  { href: "/contacts", label: "Point of Contact", icon: Contact, minTier: 1 },
-  { href: "/documents", label: "Documents", icon: FileText, minTier: 1 },
-  { href: "/procurement", label: "Procurement", icon: Truck, minTier: 2 },
-  { href: "/inventory", label: "Inventory", icon: Boxes, minTier: 1 },
-  { href: "/qa", label: "Quality", icon: ShieldCheck, minTier: 1 },
-  { href: "/handover", label: "Handover", icon: PackageCheck, minTier: 1 },
-  { href: "/records", label: "Personnel & Equip", icon: HardHat, minTier: 2 },
-  { href: "/sites", label: "Sites", icon: MapPin, minTier: 3 },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, access: "all" },
+  { href: "/projects", label: "Projects", icon: FolderKanban, access: "all" },
+  { href: "/jobs", label: "Jobs", icon: ClipboardList, access: "all" },
+  { href: "/contacts", label: "Point of Contact", icon: Contact, access: "all" },
+  { href: "/documents", label: "Documents", icon: FileText, access: "all" },
+  { href: "/procurement", label: "Procurement", icon: Truck, access: "all" },
+  { href: "/inventory", label: "Inventory", icon: Boxes, access: "all" },
+  { href: "/qa", label: "Quality", icon: ShieldCheck, access: "all" },
+  { href: "/handover", label: "Handover", icon: PackageCheck, access: "all" },
+  { href: "/records", label: "Personnel & Equip", icon: HardHat, access: "all" },
+  { href: "/sites", label: "Sites", icon: MapPin, access: "admin" },
   // Users now lives inside Settings as a sub-tab.
-  { href: "/settings", label: "Settings", icon: Settings, minTier: 3 },
+  { href: "/settings", label: "Settings", icon: Settings, access: "admin" },
 ];

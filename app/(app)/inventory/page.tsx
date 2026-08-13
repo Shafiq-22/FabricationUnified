@@ -4,6 +4,7 @@ import { getProfile } from "@/lib/auth";
 import { canEdit as canEditTier, canSeeFinancials, isAdmin } from "@/lib/types";
 import { cn, formatAED } from "@/lib/utils";
 import { PageHeader } from "@/components/layout/page-header";
+import { CapNotice } from "@/components/layout/cap-notice";
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { InventoryManager } from "@/components/inventory/inventory-manager";
 import { MovementsTable } from "@/components/inventory/movements-table";
@@ -51,13 +52,15 @@ export default async function InventoryPage({
     : null;
 
   let movements: InventoryMovement[] = [];
+  let movementCount: number | null = null;
   if (tab === "movements") {
-    const { data } = await supabase
+    const { data, count } = await supabase
       .from("inventory_movements")
-      .select("*")
+      .select("*", { count: "exact" })
       .order("moved_on", { ascending: false })
       .limit(1000);
     movements = (data ?? []) as InventoryMovement[];
+    movementCount = count;
   }
   const itemNames: Record<string, string> = Object.fromEntries(
     items.map((i) => [i.id ?? "", i.description ?? ""]),
@@ -89,7 +92,14 @@ export default async function InventoryPage({
         )}
       </div>
 
-      <div className="p-6">
+      <div className="space-y-3 p-6">
+        {tab === "movements" && (
+          <CapNotice
+            shown={movements.length}
+            total={movementCount}
+            hint="Older movements are still on the item they belong to."
+          />
+        )}
         {tab === "stock" ? (
           <InventoryManager
             rows={items}
