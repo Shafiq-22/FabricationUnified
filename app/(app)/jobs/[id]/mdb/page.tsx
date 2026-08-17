@@ -80,7 +80,7 @@ export default async function MdbPage({ params }: { params: { id: string } }) {
       .order("seq_no"),
     supabase
       .from("documents")
-      .select("id, title, original_filename, doc_type, revision")
+      .select("id, title, original_filename, doc_type, revision, file_path, mime_type")
       .eq("job_id", params.id)
       .is("deleted_at", null)
       .order("uploaded_at", { ascending: false }),
@@ -100,6 +100,9 @@ export default async function MdbPage({ params }: { params: { id: string } }) {
     title: d.title ?? d.original_filename ?? "Untitled document",
     doc_type: d.doc_type,
     revision: d.revision,
+    // Needed to fetch the file when assembling the complete PDF.
+    file_path: d.file_path,
+    mime_type: d.mime_type,
   }));
   const docById = new Map(jobDocuments.map((d) => [d.id, d]));
 

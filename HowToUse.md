@@ -15,7 +15,8 @@ place:
 - **Projects** and the **jobs** that make them up.
 - Each job's **worksheet** — quoted costs, actual costs, and the profit/loss
   between them.
-- A **Manufacturing Data Book** per job — the handover dossier, exported to Word.
+- A **Manufacturing Data Book** per job — the handover dossier, exported as a
+  single PDF with its certificates merged in, or as a Word shell.
 - **Procurement** (material requests, orders, deliveries), **consumables**, and
   a **historic price** memory built from past orders.
 - **Inventory** with a movement ledger, low‑stock flags and remnants.
@@ -295,11 +296,23 @@ Linking a document to a *Pending* section moves it to *Included*. Chapter
 headers have **mark-all** buttons. You can retitle or remove sections and **add
 a section** the standard layout doesn't carry.
 
-**Exporting.** **Download Word** produces a real `.docx`: cover page, index,
-and one divider page per section, with a running header and page numbers.
-Sections marked *Not applicable* stay in the index (so the client can see they
-were considered) but get no divider page. The MDB indexes documents rather than
-embedding them — revise a file in Documents and the book follows.
+**Exporting.** Two buttons, for two different jobs:
+
+| Button | Produces | Use it for |
+|---|---|---|
+| **Download complete PDF** | One PDF: cover, index, then each divider **followed by the actual certificates and reports** attached to it | The book you issue to the client |
+| **Word (dividers only)** | A `.docx` of the cover, index and dividers | Editing wording, or printing tabs to file paper copies behind |
+
+Both mark *Not applicable* sections in the index (so the client can see they
+were considered) but give them no divider page.
+
+The complete PDF merges **PDFs and JPEG/PNG images**. Anything else — a Word or
+Excel attachment — has no pages to merge, so it is left out and listed
+afterwards in a "could not be merged" report naming the file and its section.
+You are told what is missing rather than handed a book that looks complete.
+
+Assembly happens in your browser and can take a moment on a large book; the
+button shows progress section by section.
 
 #### Rough Sheet / Cut List (`/jobs/[id]/roughsheet`)
 
@@ -470,8 +483,8 @@ Pipe Rack Modules PR‑01 to PR‑06"**.
 10. **Watch it roll up.** The project now shows job count 1, quoted 47,000, actual
    44,832; the dashboard KPIs and charts include it for the month.
 11. **Close out.** Change the job status to *Completed* — the code becomes
-    `BAF-COM-AP4-AUG-002` (the rest of the code is preserved). Download the MDB
-    as Word and issue it with the handover.
+    `BAF-COM-AP4-AUG-002` (the rest of the code is preserved). Download the
+    complete MDB PDF and issue it with the handover.
 
 ---
 
@@ -551,8 +564,11 @@ Pipe Rack Modules PR‑01 to PR‑06"**.
 - **No relationship "Graph" screen** is wired into the navigation, despite older
   references to one.
 - **The `rfqs` table exists in the database but is unused by the app.**
-- **The MDB export indexes documents, it does not embed them.** The Word file
-  contains the cover, index and dividers; the certificates and reports
-  themselves are inserted behind each divider (or printed from Documents).
+- **The MDB Word export is dividers only** — use *Download complete PDF* for a
+  single file with the certificates merged in. Word cannot flow PDF pages
+  inline, which is why the complete book is a PDF.
+- **Only PDFs and JPEG/PNG images can be merged** into the complete PDF. Word
+  and Excel attachments are reported and must be added by hand — converting
+  them to PDF before upload avoids this.
 - **Automated tests are smoke‑level only** — they cover the access model and a
   guard against writing generated columns; they are not a full regression suite.

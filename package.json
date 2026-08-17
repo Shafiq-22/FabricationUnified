@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test": "node --test \"tests/*.test.mts\"",
+    "test": "node --import ./tests/stubs/register.mjs --test \"tests/*.test.mts\"",
     "check": "npm run typecheck && npm run lint && npm test"
   },
   "dependencies": {
@@ -33,6 +33,7 @@
     "exceljs": "^4.4.0",
     "lucide-react": "^0.439.0",
     "next": "14.2.18",
+    "pdf-lib": "^1.17.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.53.1",

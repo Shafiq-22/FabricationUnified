@@ -39,7 +39,9 @@ import { useToast } from "@/lib/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { MDB_CHAPTERS, MDB_STATUSES, mdbStatusMeta } from "@/lib/mdb/template";
 import { MdbDownloadButton } from "./mdb-download-button";
+import { MdbAssembleButton } from "./mdb-assemble-button";
 import type { MdbDocData } from "./mdb-document";
+import type { AssembleInput } from "./mdb-assemble";
 
 export interface MdbHeader {
   id: string;
@@ -68,7 +70,7 @@ export interface MdbSection {
   status: string;
   doc_reference: string | null;
   notes: string | null;
-  documents: { id: string; title: string; doc_type: string | null; revision: string | null }[];
+  documents: JobDocumentOption[];
 }
 
 export interface JobDocumentOption {
@@ -76,6 +78,9 @@ export interface JobDocumentOption {
   title: string;
   doc_type: string | null;
   revision: string | null;
+  /** Storage path + type, used to merge the file into the complete PDF. */
+  file_path: string;
+  mime_type: string | null;
 }
 
 const CELL =
@@ -139,6 +144,22 @@ export function MdbBuilder({
     [sections],
   );
 
+  const baseSections = sections.map((s) => ({
+    chapter_no: s.chapter_no,
+    chapter_title: s.chapter_title,
+    section_no: s.section_no,
+    section_title: s.section_title,
+    code: s.code,
+    status: s.status,
+    doc_reference: s.doc_reference,
+    notes: s.notes,
+    documents: s.documents.map((d) => ({
+      title: d.title,
+      doc_type: d.doc_type,
+      revision: d.revision,
+    })),
+  }));
+
   const docData: MdbDocData = {
     companyName: header.company_name,
     companyAddress: header.company_address,
@@ -154,19 +175,21 @@ export function MdbBuilder({
     notes: header.notes,
     jobCode,
     generatedOn: new Date().toISOString().slice(0, 10),
-    sections: sections.map((s) => ({
-      chapter_no: s.chapter_no,
-      chapter_title: s.chapter_title,
-      section_no: s.section_no,
-      section_title: s.section_title,
-      code: s.code,
-      status: s.status,
-      doc_reference: s.doc_reference,
-      notes: s.notes,
-      documents: s.documents.map((d) => ({
+    sections: baseSections,
+  };
+
+  // Same book, plus the storage paths the assembler needs to pull each file.
+  const assembleData: AssembleInput = {
+    ...docData,
+    sections: baseSections.map((s, i) => ({
+      ...s,
+      sourceDocuments: sections[i].documents.map((d) => ({
+        id: d.id,
         title: d.title,
         doc_type: d.doc_type,
         revision: d.revision,
+        file_path: d.file_path,
+        mime_type: d.mime_type,
       })),
     })),
   };
@@ -188,6 +211,12 @@ export function MdbBuilder({
           <MdbDownloadButton
             data={docData}
             filename={`${header.document_no || jobCode || "MDB"}-Rev${header.revision || "A"}`}
+            label="Word (dividers only)"
+            variant="outline"
+          />
+          <MdbAssembleButton
+            data={assembleData}
+            filename={`${header.document_no || jobCode || "MDB"}-Rev${header.revision || "A"}-complete`}
           />
         </div>
       </div>
