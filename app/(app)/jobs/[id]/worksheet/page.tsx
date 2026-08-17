@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Ruler, ArrowLeft } from "lucide-react";
+import { Ruler, ArrowLeft, BookText } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/auth";
 import { canEdit, canSeeFinancials, isAdmin, type JobView } from "@/lib/types";
@@ -172,6 +172,11 @@ export default async function WorksheetPage({
         <Button asChild variant="outline" size="sm">
           <Link href={`/jobs/${params.id}/roughsheet`}>
             <Ruler className="h-4 w-4" /> Rough Sheet
+          </Link>
+        </Button>
+        <Button asChild variant="outline" size="sm">
+          <Link href={`/jobs/${params.id}/mdb`}>
+            <BookText className="h-4 w-4" /> MDB
           </Link>
         </Button>
         {showMoney && (

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, BookText } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/auth";
 import { PageHeader } from "@/components/layout/page-header";
@@ -110,6 +110,11 @@ export default async function RoughSheetPage({
         <Button asChild variant="ghost" size="sm">
           <Link href={`/jobs/${params.id}/worksheet`}>
             <ArrowLeft className="h-4 w-4" /> Worksheet
+          </Link>
+        </Button>
+        <Button asChild variant="ghost" size="sm">
+          <Link href={`/jobs/${params.id}/mdb`}>
+            <BookText className="h-4 w-4" /> MDB
           </Link>
         </Button>
         {editable && (

@@ -1471,6 +1471,183 @@ export type Database = {
           },
         ]
       }
+      job_mdb: {
+        Row: {
+          company_address: string | null
+          company_name: string | null
+          created_at: string
+          created_by: string | null
+          customer: string | null
+          customer_project_number: string | null
+          deleted_at: string | null
+          document_no: string | null
+          id: string
+          job_id: string
+          notes: string | null
+          product: string | null
+          product_type: string | null
+          project_name: string | null
+          project_number: string | null
+          revision: string
+          tag_number: string | null
+          updated_at: string
+        }
+        Insert: {
+          company_address?: string | null
+          company_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          customer?: string | null
+          customer_project_number?: string | null
+          deleted_at?: string | null
+          document_no?: string | null
+          id?: string
+          job_id: string
+          notes?: string | null
+          product?: string | null
+          product_type?: string | null
+          project_name?: string | null
+          project_number?: string | null
+          revision?: string
+          tag_number?: string | null
+          updated_at?: string
+        }
+        Update: {
+          company_address?: string | null
+          company_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          customer?: string | null
+          customer_project_number?: string | null
+          deleted_at?: string | null
+          document_no?: string | null
+          id?: string
+          job_id?: string
+          notes?: string | null
+          product?: string | null
+          product_type?: string | null
+          project_name?: string | null
+          project_number?: string | null
+          revision?: string
+          tag_number?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_mdb_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_mdb_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: true
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_mdb_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: true
+            referencedRelation: "jobs_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_mdb_section_documents: {
+        Row: {
+          created_at: string
+          document_id: string
+          id: string
+          section_id: string
+        }
+        Insert: {
+          created_at?: string
+          document_id: string
+          id?: string
+          section_id: string
+        }
+        Update: {
+          created_at?: string
+          document_id?: string
+          id?: string
+          section_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_mdb_section_documents_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_mdb_section_documents_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "job_mdb_sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_mdb_sections: {
+        Row: {
+          chapter_no: string
+          chapter_title: string
+          code: string | null
+          created_at: string
+          doc_reference: string | null
+          id: string
+          mdb_id: string
+          notes: string | null
+          section_no: string
+          section_title: string
+          seq_no: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          chapter_no: string
+          chapter_title: string
+          code?: string | null
+          created_at?: string
+          doc_reference?: string | null
+          id?: string
+          mdb_id: string
+          notes?: string | null
+          section_no: string
+          section_title: string
+          seq_no: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          chapter_no?: string
+          chapter_title?: string
+          code?: string | null
+          created_at?: string
+          doc_reference?: string | null
+          id?: string
+          mdb_id?: string
+          notes?: string | null
+          section_no?: string
+          section_title?: string
+          seq_no?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_mdb_sections_mdb_id_fkey"
+            columns: ["mdb_id"]
+            isOneToOne: false
+            referencedRelation: "job_mdb"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       job_notes: {
         Row: {
           body: string
