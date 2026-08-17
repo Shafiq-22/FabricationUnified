@@ -15,6 +15,7 @@ place:
 - **Projects** and the **jobs** that make them up.
 - Each job's **worksheet** — quoted costs, actual costs, and the profit/loss
   between them.
+- A **Manufacturing Data Book** per job — the handover dossier, exported to Word.
 - **Procurement** (material requests, orders, deliveries), **consumables**, and
   a **historic price** memory built from past orders.
 - **Inventory** with a movement ledger, low‑stock flags and remnants.
@@ -263,6 +264,43 @@ Below the tabs (visible to all tiers, including tier 2): **Documents**, **Notes*
 (a plain per‑job record), **Job details** form, and a realtime **Comments**
 thread with @‑mentions and a watch toggle.
 
+#### Manufacturing Data Book (`/jobs/[id]/mdb`)
+
+The dossier handed to the client on completion — the index of every certificate,
+report and drawing proving the item was built and tested as specified. Open it
+with the **MDB** button on the worksheet or rough sheet header. Any tier can
+compile it (it is a quality record, not a costing one).
+
+**Creating it.** A new job has no MDB. Choose either:
+
+- **Structural steel preset** — marks the 28 sections a typical steel job needs
+  as *Included* and the rest *Not applicable*.
+- **All sections pending** — leaves every section for you to work through.
+
+Both create the same standard 52 sections across 12 chapters, and everything
+stays editable. The cover page is pre-filled from the job, its project and the
+company name in Settings.
+
+**Filling it in.** Per section you can set:
+
+| Field | What it does |
+|---|---|
+| Status | *Included* / *Pending* / *Not applicable* |
+| Reference | Document number and revision, printed in the index and on the divider |
+| Note | Free text printed on the divider page |
+| Tab code | The marker on the divider (ITP, WPS, RT…) |
+| Documents | Link files already uploaded against this job |
+
+Linking a document to a *Pending* section moves it to *Included*. Chapter
+headers have **mark-all** buttons. You can retitle or remove sections and **add
+a section** the standard layout doesn't carry.
+
+**Exporting.** **Download Word** produces a real `.docx`: cover page, index,
+and one divider page per section, with a running header and page numbers.
+Sections marked *Not applicable* stay in the index (so the client can see they
+were considered) but get no divider page. The MDB indexes documents rather than
+embedding them — revise a file in Documents and the book follows.
+
 #### Rough Sheet / Cut List (`/jobs/[id]/roughsheet`)
 
 Enter the **cut list** (profiles: type, dimension, grade, length, qty) and
@@ -416,20 +454,24 @@ Pipe Rack Modules PR‑01 to PR‑06"**.
 4. **(Optional) Plan the steel.** Rough Sheet → enter the cut list; read the
    Order List (nesting‑aware) and the In‑Stock column; **Copy to Job Material
    Request**.
-5. **Raise procurement.** From the worksheet, **Job Material Request** pushes the
+5. **Start the MDB (optional, but easiest early).** Worksheet → **MDB** → create
+   with the structural preset. Link certificates and reports to their sections as
+   they arrive rather than hunting for them at handover.
+6. **Raise procurement.** From the worksheet, **Job Material Request** pushes the
    MTO into Procurement. Assign supplier / PR / LPO and mark deliveries there.
-6. **Draw from stock where relevant.** On the **Actual** tab, tick *In Stock* and
+7. **Draw from stock where relevant.** On the **Actual** tab, tick *In Stock* and
    pick the stock item for anything taken from the yard — it prices from
    inventory and is excluded from re‑ordering.
-7. **Record actuals.** Fill the Actual tab as work proceeds. With actual cost
+8. **Record actuals.** Fill the Actual tab as work proceeds. With actual cost
    **44,832**, P&L is **2,168** (4.61%). The **Actual vs Quoted** table shows the
    variances.
-8. **Quality & handover.** Log inspections/NCRs in Quality; track drawings in
+9. **Quality & handover.** Log inspections/NCRs in Quality; track drawings in
    Handover.
-9. **Watch it roll up.** The project now shows job count 1, quoted 47,000, actual
+10. **Watch it roll up.** The project now shows job count 1, quoted 47,000, actual
    44,832; the dashboard KPIs and charts include it for the month.
-10. **Close out.** Change the job status to *Completed* — the code becomes
-    `BAF-COM-AP4-AUG-002` (the rest of the code is preserved).
+11. **Close out.** Change the job status to *Completed* — the code becomes
+    `BAF-COM-AP4-AUG-002` (the rest of the code is preserved). Download the MDB
+    as Word and issue it with the handover.
 
 ---
 
@@ -509,5 +551,8 @@ Pipe Rack Modules PR‑01 to PR‑06"**.
 - **No relationship "Graph" screen** is wired into the navigation, despite older
   references to one.
 - **The `rfqs` table exists in the database but is unused by the app.**
+- **The MDB export indexes documents, it does not embed them.** The Word file
+  contains the cover, index and dividers; the certificates and reports
+  themselves are inserted behind each divider (or printed from Documents).
 - **Automated tests are smoke‑level only** — they cover the access model and a
   guard against writing generated columns; they are not a full regression suite.
